@@ -1,11 +1,3 @@
----
-name: "Backend Feature"
-about: "백엔드 기능 개발 이슈"
-title: "[BE] "
-labels: ["backend", "feature"]
-assignees: ""
----
-
 ## 기능 설명
 
 구현하려는 백엔드 기능을 설명해주세요.
@@ -18,7 +10,7 @@ assignees: ""
 - [ ] Service 로직 구현
 - [ ] Controller 구현
 - [ ] 예외 처리
-- [ ] Swagger 문서화
+- [ ] API 문서화
 - [ ] 테스트
 
 ## API 명세
@@ -46,3 +38,5 @@ assignees: ""
 ## 참고 사항
 
 ERD, 기획서, 정책, 프론트 요구사항 등 참고할 내용을 작성해주세요.
+
+/label ~backend ~feature
