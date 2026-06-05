@@ -1,12 +1,7 @@
 package com.nyamnyam.coach.global.exception;
 
-import lombok.Getter;
+import com.nyamnyam.coach.global.exception.errorcode.ErrorCode;
 
-/**
- * 서비스 레이어에서 발생하는 비즈니스 예외.
- * ErrorCode에 정의된 상태코드와 메시지를 함께 담아 GlobalExceptionHandler에서 처리된다.
- */
-@Getter
 public class BusinessException extends RuntimeException {
 
     private final ErrorCode errorCode;
@@ -19,5 +14,9 @@ public class BusinessException extends RuntimeException {
     public BusinessException(ErrorCode errorCode, String message) {
         super(message);
         this.errorCode = errorCode;
+    }
+
+    public ErrorCode getErrorCode() {
+        return errorCode;
     }
 }

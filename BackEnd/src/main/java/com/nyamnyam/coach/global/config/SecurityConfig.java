@@ -2,6 +2,8 @@ package com.nyamnyam.coach.global.config;
 
 import com.nyamnyam.coach.auth.jwt.JwtAuthenticationFilter;
 import com.nyamnyam.coach.auth.jwt.JwtTokenProvider;
+import com.nyamnyam.coach.global.security.CustomAccessDeniedHandler;
+import com.nyamnyam.coach.global.security.CustomAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,6 +30,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
 
     // ─────────────────────────────────────────
     // 인증 없이 허용할 경로
@@ -55,6 +59,11 @@ public class SecurityConfig {
             // 기본 인증 UI 비활성화
             .httpBasic(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable)
+
+            // Security 필터 단계의 인증/인가 실패 응답 포맷 통일
+            .exceptionHandling(exception -> exception
+                    .authenticationEntryPoint(authenticationEntryPoint)
+                    .accessDeniedHandler(accessDeniedHandler))
 
             // 인가 설정
             .authorizeHttpRequests(auth -> auth
