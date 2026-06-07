@@ -10,6 +10,7 @@ import com.nyamnyam.coach.auth.jwt.JwtTokenProvider;
 import com.nyamnyam.coach.auth.service.AuthService;
 import com.nyamnyam.coach.global.config.SecurityConfig;
 import com.nyamnyam.coach.global.exception.errorcode.CommonErrorCode;
+import com.nyamnyam.coach.user.service.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,9 @@ class SecurityConfigTest {
 
     @MockBean
     private AuthService authService;
+
+    @MockBean
+    private UserService userService;
 
     @Test
     @DisplayName("회원가입은 인증 없이 호출할 수 있다")

@@ -64,4 +64,42 @@ class UserRepositoryTest {
         assertThat(userRepository.existsByNickname("duplicate")).isTrue();
         assertThat(userRepository.existsByNickname("missing")).isFalse();
     }
+
+    @Test
+    @DisplayName("닉네임을 수정하고 updatedAt을 갱신한다")
+    void updateProfile() {
+        User user = User.builder()
+                .email("update@example.com")
+                .passwordHash("encoded-password")
+                .nickname("before")
+                .status("ACTIVE")
+                .build();
+        userRepository.save(user);
+
+        int updatedCount = userRepository.updateProfile(user.getUserId(), "after");
+
+        User updatedUser = userRepository.findById(user.getUserId()).orElseThrow();
+        assertThat(updatedCount).isEqualTo(1);
+        assertThat(updatedUser.getNickname()).isEqualTo("after");
+        assertThat(updatedUser.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("회원을 비활성화하고 탈퇴 시각을 기록한다")
+    void deactivate() {
+        User user = User.builder()
+                .email("deactivate@example.com")
+                .passwordHash("encoded-password")
+                .nickname("deactivate")
+                .status("ACTIVE")
+                .build();
+        userRepository.save(user);
+
+        int updatedCount = userRepository.deactivate(user.getUserId());
+
+        User deactivatedUser = userRepository.findById(user.getUserId()).orElseThrow();
+        assertThat(updatedCount).isEqualTo(1);
+        assertThat(deactivatedUser.getStatus()).isEqualTo("INACTIVE");
+        assertThat(deactivatedUser.getDeactivatedAt()).isNotNull();
+    }
 }

@@ -84,4 +84,21 @@
         FROM users
         WHERE nickname = #{nickname}
     </select>
+
+    <update id="updateProfile">
+        UPDATE users
+        SET
+            nickname = #{nickname},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="deactivate">
+        UPDATE users
+        SET
+            status = 'INACTIVE',
+            deactivated_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
 </mapper>
