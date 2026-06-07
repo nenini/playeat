@@ -50,7 +50,7 @@
 - 이메일 인증
 - 비밀번호 찾기
 
-내 정보 조회 API는 선택 사항이다. 프론트에서 로그인 직후 사용자 식별이 필요하면 최소 응답을 로그인 응답에 포함하고, `/users/me`는 다음 단계로 미룬다.
+내 정보 조회 API는 선택 사항이다. 프론트에서 로그인 직후 사용자 식별이 필요하면 최소 응답을 로그인 응답에 포함하고, `/api/v1/users/me`는 다음 단계로 미룬다.
 
 ## 현재 백엔드 기준
 
@@ -59,6 +59,8 @@
 - Spring Boot: 3.3.5
 - 기본 패키지: `com.nyamnyam.coach`
 - API context path: `/api`
+- API version prefix: `/v1`
+- 최종 API prefix: `/api/v1`
 - User 저장소: MySQL + MyBatis
 - Refresh token 저장소: Redis + `StringRedisTemplate`
 - 인증 관련 기존 파일:
@@ -72,6 +74,28 @@
   - `BackEnd/src/main/java/com/nyamnyam/coach/global/exception/BusinessException.java`
   - `BackEnd/src/main/java/com/nyamnyam/coach/global/exception/errorcode/AuthErrorCode.java`
   - `BackEnd/src/main/java/com/nyamnyam/coach/global/exception/errorcode/UserErrorCode.java`
+
+## 노션 API 목록 대조 결과
+
+노션 `API 명세 (1)`의 Auth API는 다음 4개다.
+
+| 기능 | 노션 API | 이번 문서 반영 |
+|---|---|---|
+| 회원가입 | `POST /api/v1/auth/signup` | 포함 |
+| 로그인 | `POST /api/v1/auth/login` | 포함 |
+| 로그아웃 | `POST /api/v1/auth/logout` | 포함 |
+| 토큰 재발급 | `POST /api/v1/auth/refresh` | 포함 |
+
+노션의 User API는 다음 단계 범위로 둔다.
+
+- `GET /api/v1/users/me`
+- `PATCH /api/v1/users/me`
+- `DELETE /api/v1/users/me`
+- `POST /api/v1/users/me/onboarding`
+- `GET /api/v1/users/me/health-profile`
+- `PATCH /api/v1/users/me/health-profile`
+
+따라서 이번 1차 User & Auth 기반 문서에서는 Auth 4개 API만 구현 대상으로 잡고, User 상세 조회/수정/탈퇴/온보딩/건강 프로필 API는 제외한다.
 
 ## 작업 분해 원칙
 
@@ -95,7 +119,7 @@ SQL만 따로 오래 끌지 않는다. SQL은 Repository와 Mapper가 동작하�
 [BE][Auth] 작업 내용
 ```
 
-이번 1차 구현은 User 작업도 인증 기반에 포함되므로 이슈 라벨은 대부분 `[Auth]`로 통일한다. DB 기반처럼 범위가 명확한 경우만 `[DB]`를 사용한다.
+이번 1차 구현은 User 작업도 인증 기반에 포함되므로 이슈 라벨은 `[Auth]`로 통일한다. Refresh token은 MySQL 테이블이 아니라 Redis에 저장하므로 별도 `[DB]` 이슈로 분리하지 않는다.
 
 ## Git 브랜치명 전략
 
@@ -105,26 +129,26 @@ SQL만 따로 오래 끌지 않는다. SQL은 Repository와 Mapper가 동작하�
 feature/{issue-number}-{short-purpose}
 ```
 
-팀 컨벤션상 `feature/#3-auth-schema`처럼 `#`를 넣어도 된다. PowerShell에서는 반드시 따옴표로 감싸서 사용한다.
+팀 컨벤션상 `feature/#3-auth-storage`처럼 `#`를 넣어도 된다. PowerShell에서는 반드시 따옴표로 감싸서 사용한다.
 
 ```powershell
-git switch -c "feature/#3-auth-schema"
+git switch -c "feature/#3-auth-storage"
 ```
 
 ## 추천 이슈 및 브랜치 목록
 
 | 순서 | Git 이슈명 | 브랜치명 | 핵심 범위 |
 |---:|---|---|---|
-| 1 | `[BE][DB] User/Auth 인증 기반 저장소 작성` | `feature/#3-auth-schema` | `users`, User Entity/Repository/Mapper, RefreshToken Redis Repository |
+| 1 | `[BE][Auth] User/Auth 인증 기반 저장소 작성` | `feature/#3-auth-storage` | `users`, User Entity/Repository/Mapper, RefreshToken Redis Repository |
 | 2 | `[BE][Auth] 회원가입 로그인 토큰 API 구현` | `feature/#4-auth-api` | 회원가입, 로그인, 토큰 재발급, 로그아웃 |
 | 3 | `[BE][Auth] 인증 접근 제어 및 통합 검증` | `feature/#5-auth-security-test` | SecurityConfig 정리, 인증 실패 응답, auth 흐름 테스트 |
 
-## Issue 1. `[BE][DB] User/Auth 인증 기반 저장소 작성`
+## Issue 1. `[BE][Auth] User/Auth 인증 기반 저장소 작성`
 
 브랜치:
 
 ```text
-feature/#3-auth-schema
+feature/#3-auth-storage
 ```
 
 목적:
@@ -153,14 +177,15 @@ feature/#3-auth-schema
 - `BackEnd/src/main/java/com/nyamnyam/coach/auth/repository/RefreshTokenRepository.java`
 - `BackEnd/src/test/java/com/nyamnyam/coach/user/repository/UserRepositoryTest.java`
 - `BackEnd/src/test/java/com/nyamnyam/coach/auth/repository/RefreshTokenRepositoryTest.java`
-- `BackEnd/src/test/resources/test-auth-schema.sql`
+- `BackEnd/src/test/resources/test-user-schema.sql`
 
 제외 파일:
 
 - `BackEnd/src/main/java/com/nyamnyam/coach/auth/entity/RefreshToken.java`
 - `BackEnd/src/main/resources/mappers/auth/RefreshTokenMapper.xml`
+- `BackEnd/src/test/resources/test-refresh-token-schema.sql`
 
-Refresh token을 Redis로 옮겼으므로 위 두 파일은 만들지 않는다.
+Refresh token을 Redis로 저장하므로 위 파일들은 만들지 않는다. `schema.sql`, `init.sql`, 테스트 SQL에도 `refresh_tokens` 테이블을 추가하지 않는다.
 
 권장 `users` SQL:
 
@@ -239,6 +264,212 @@ mvn test "-Dtest=UserRepositoryTest,RefreshTokenRepositoryTest"
 feature/#4-auth-api
 ```
 
+GitLab 이슈 제목:
+
+```text
+[BE][Auth] 회원가입 로그인 토큰 API 구현
+```
+
+라벨:
+
+```text
+backend ~feature
+```
+
+### GitLab 이슈 내용
+
+````markdown
+## 기능 설명
+
+인증이 필요한 백엔드 API를 구현하기 전에 사용할 회원가입, 로그인, access token 재발급, 로그아웃 API를 구현한다.
+
+사용자 계정 정보는 MySQL의 `users` 테이블에 저장하고, refresh token은 원문이 아니라 hash 값으로 변환해 Redis에 저장한다. 로그인 성공 시 access token과 refresh token을 발급하고, 토큰 재발급 시 기존 refresh token을 폐기한 뒤 새 refresh token을 저장한다. 로그아웃 시 전달받은 refresh token hash에 해당하는 Redis key를 삭제한다.
+
+## 작업 상세 내용
+
+- Entity / Domain 설계
+  - 기존 User Entity를 사용한다.
+  - 별도 RefreshToken Entity는 만들지 않는다.
+  - refresh token은 Redis 기반 `RefreshTokenRepository`로 관리한다.
+- DTO 작성
+  - `SignupRequest`
+  - `LoginRequest`
+  - `TokenRefreshRequest`
+  - `LogoutRequest`
+  - `SignupResponse`
+  - `LoginResponse`
+  - `TokenRefreshResponse`
+- Repository 작성
+  - 기존 `UserRepository`를 사용한다.
+  - 기존 `RefreshTokenRepository`를 사용한다.
+- Service 로직 구현
+  - 회원가입 시 이메일, 닉네임 중복을 검증한다.
+  - 비밀번호는 BCrypt로 암호화해 저장한다.
+  - 로그인 시 이메일과 비밀번호를 검증한다.
+  - 로그인 성공 시 access token과 refresh token을 발급한다.
+  - refresh token은 hash로 변환해 Redis에 TTL과 함께 저장한다.
+  - 토큰 재발급 시 refresh token 유효성을 확인하고 기존 refresh token을 삭제한 뒤 새 refresh token을 저장한다.
+  - 로그아웃 시 요청 refresh token에 해당하는 Redis key를 삭제한다.
+- Controller 구현
+  - Spring `server.servlet.context-path`가 `/api`이므로 컨트롤러 base path는 `/v1/auth`로 작성한다.
+  - `/api/v1/auth/signup`
+  - `/api/v1/auth/login`
+  - `/api/v1/auth/refresh`
+  - `/api/v1/auth/logout`
+- 예외 처리
+  - 중복 이메일: `EMAIL_ALREADY_EXISTS`
+  - 중복 닉네임: `NICKNAME_ALREADY_EXISTS`
+  - 로그인 실패: `INVALID_CREDENTIALS`
+  - refresh token 누락 또는 유효하지 않은 토큰: Auth 관련 ErrorCode 사용
+  - 비즈니스 예외는 `BusinessException`으로 처리한다.
+- API 문서화
+  - Swagger에서 auth API 4개가 보이도록 `AuthController`에 OpenAPI annotation을 작성한다.
+  - 요청/응답 DTO에 `@Schema` 설명과 예시 값을 작성한다.
+  - 각 API의 성공 응답과 주요 실패 응답을 `@ApiResponse`로 문서화한다.
+  - 로그아웃 API는 access token 인증이 필요하다는 점을 Swagger에 표시한다.
+  - `BackEnd/README.md`에는 Swagger 접속 경로와 auth API 실행 순서를 짧게 정리한다.
+- 테스트
+  - `AuthControllerTest`
+  - `AuthServiceTest`
+  - 회원가입 성공/실패
+  - 로그인 성공/실패
+  - 토큰 재발급 성공/실패
+  - 로그아웃 성공
+  - refresh token Redis 저장, TTL 설정, 삭제 검증
+
+## API 명세
+
+| Method | URL | 설명 |
+|---|---|---|
+| POST | `/api/v1/auth/signup` | 회원가입 |
+| POST | `/api/v1/auth/login` | 로그인 |
+| POST | `/api/v1/auth/refresh` | access token 재발급 |
+| POST | `/api/v1/auth/logout` | 로그아웃 |
+
+### POST `/api/v1/auth/signup`
+
+Request
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password1234",
+  "nickname": "냠냠이"
+}
+```
+
+Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "userId": 1,
+    "email": "user@example.com",
+    "nickname": "냠냠이"
+  },
+  "message": "회원가입이 완료되었습니다."
+}
+```
+
+### POST `/api/v1/auth/login`
+
+Request
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password1234"
+}
+```
+
+Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "access-token-value",
+    "refreshToken": "refresh-token-value",
+    "tokenType": "Bearer",
+    "expiresIn": 3600,
+    "user": {
+      "userId": 1,
+      "email": "user@example.com",
+      "nickname": "냠냠이",
+      "onboardingCompleted": false
+    }
+  },
+  "message": "로그인에 성공했습니다."
+}
+```
+
+### POST `/api/v1/auth/refresh`
+
+Request
+
+```json
+{
+  "refreshToken": "refresh-token-value"
+}
+```
+
+Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "new-access-token-value",
+    "refreshToken": "new-refresh-token-value",
+    "tokenType": "Bearer",
+    "expiresIn": 3600
+  },
+  "message": "토큰이 재발급되었습니다."
+}
+```
+
+### POST `/api/v1/auth/logout`
+
+Request Header
+
+```http
+Authorization: Bearer access-token-value
+```
+
+Request
+
+```json
+{
+  "refreshToken": "refresh-token-value"
+}
+```
+
+Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "loggedOutAt": "2026-05-26T10:30:00"
+  },
+  "message": "로그아웃되었습니다."
+}
+```
+
+## 참고 사항
+
+- refresh token은 MySQL에 저장하지 않는다.
+- refresh token 원문은 저장하지 않고 hash 값만 Redis에 저장한다.
+- Redis key 형식은 `refresh:{tokenHash}`를 사용한다.
+- refresh token 저장 시 만료 시간과 동일한 TTL을 설정한다.
+- 토큰 재발급 성공 시 refresh token rotation을 적용한다.
+- 프론트는 로그인 응답의 `tokenType`, `expiresIn`, `accessToken`, `refreshToken`, `user`를 사용한다.
+- `/api/v1/auth/logout`은 access token 인증이 필요한 보호 API로 두고, body의 `refreshToken`으로 현재 refresh token 하나를 폐기한다.
+- 공통 응답은 기존 `ApiResponse` 형식을 따른다.
+- 실패 응답은 기존 `ErrorResponse` 형식을 따른다.
+````
+
 목적:
 
 - 인증이 필요한 API를 만들기 전에 사용할 회원가입, 로그인, 토큰 재발급, 로그아웃 API를 완성한다.
@@ -264,19 +495,40 @@ feature/#4-auth-api
 - `BackEnd/src/main/java/com/nyamnyam/coach/auth/dto/request/TokenRefreshRequest.java`
 - `BackEnd/src/main/java/com/nyamnyam/coach/auth/dto/request/LogoutRequest.java`
 - `BackEnd/src/main/java/com/nyamnyam/coach/auth/dto/response/SignupResponse.java`
+- `BackEnd/src/main/java/com/nyamnyam/coach/auth/dto/response/AuthUserResponse.java`
 - `BackEnd/src/main/java/com/nyamnyam/coach/auth/dto/response/LoginResponse.java`
 - `BackEnd/src/main/java/com/nyamnyam/coach/auth/dto/response/TokenRefreshResponse.java`
+- `BackEnd/src/main/java/com/nyamnyam/coach/auth/dto/response/LogoutResponse.java`
+- `BackEnd/README.md`
 - `BackEnd/src/test/java/com/nyamnyam/coach/auth/controller/AuthControllerTest.java`
 - `BackEnd/src/test/java/com/nyamnyam/coach/auth/service/AuthServiceTest.java`
+
+Swagger 문서화:
+
+- `AuthController`에 `@Tag(name = "Auth", description = "회원가입, 로그인, 토큰 재발급, 로그아웃 API")`를 작성한다.
+- `AuthController`의 base path는 `/v1/auth`로 작성해 최종 URL이 노션 명세의 `/api/v1/auth/...`와 일치하게 한다.
+- 각 API 메서드에 `@Operation(summary = "...", description = "...")`를 작성한다.
+- 각 API 메서드에 성공/실패 응답을 `@ApiResponses`로 작성한다.
+- 요청 DTO와 응답 DTO 필드에 `@Schema(description = "...", example = "...")`를 작성한다.
+- 로그아웃 API에는 access token 인증 필요 여부를 `@SecurityRequirement` 또는 프로젝트의 기존 Swagger 보안 설정 방식에 맞춰 표시한다.
+- Swagger에서 확인할 수 있어야 하는 API:
+  - `POST /api/v1/auth/signup`
+  - `POST /api/v1/auth/login`
+  - `POST /api/v1/auth/refresh`
+  - `POST /api/v1/auth/logout`
+- Swagger 접속 경로:
+  - `/api/swagger-ui.html`
+  - `/api/swagger-ui/**`
+  - `/api/v3/api-docs/**`
 
 API:
 
 | Method | Path | 설명 | 인증 |
 |---|---|---|---|
-| POST | `/api/auth/signup` | 회원가입 | 불필요 |
-| POST | `/api/auth/login` | 로그인 | 불필요 |
-| POST | `/api/auth/refresh` | access token 재발급 | refresh token 필요 |
-| POST | `/api/auth/logout` | 로그아웃 | access token 필요 |
+| POST | `/api/v1/auth/signup` | 회원가입 | 불필요 |
+| POST | `/api/v1/auth/login` | 로그인 | 불필요 |
+| POST | `/api/v1/auth/refresh` | access token 재발급 | refresh token 필요 |
+| POST | `/api/v1/auth/logout` | 로그아웃 | access token 필요 |
 
 요청 DTO:
 
@@ -298,17 +550,21 @@ API:
   - `userId`
   - `email`
   - `nickname`
+  - `onboardingCompleted`
+  - `createdAt`
 - `LoginResponse`
-  - `grantType`
   - `accessToken`
   - `refreshToken`
-  - `userId`
-  - `email`
-  - `nickname`
+  - `tokenType`
+  - `expiresIn`
+  - `user`
 - `TokenRefreshResponse`
-  - `grantType`
   - `accessToken`
   - `refreshToken`
+  - `tokenType`
+  - `expiresIn`
+- `LogoutResponse`
+  - `loggedOutAt`
 
 필수 검증:
 
@@ -330,6 +586,9 @@ API:
 - 재발급 성공 시 기존 refresh token은 삭제하고 새 refresh token을 저장한다.
 - 로그아웃 성공 시 refresh token key는 삭제된다.
 - 컨트롤러 응답은 `ApiResponse`로 감싼다.
+- Swagger에 회원가입, 로그인, 토큰 재발급, 로그아웃 API의 요청/응답 예시가 표시된다.
+- Swagger에 주요 실패 응답 코드가 표시된다.
+- `BackEnd/README.md`에 Swagger 접속 경로와 auth API 실행 순서가 정리된다.
 
 검증 명령:
 
@@ -370,9 +629,9 @@ feature/#5-auth-security-test
 
 공개 API:
 
-- `POST /api/auth/signup`
-- `POST /api/auth/login`
-- `POST /api/auth/refresh`
+- `POST /api/v1/auth/signup`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
 - `GET /api/swagger-ui.html`
 - `GET /api/swagger-ui/**`
 - `GET /api/v3/api-docs/**`
@@ -380,7 +639,7 @@ feature/#5-auth-security-test
 
 보호 API:
 
-- `POST /api/auth/logout`
+- `POST /api/v1/auth/logout`
 - 앞으로 추가될 모든 사용자, 식단, 분석, 캐릭터 API
 
 통합 테스트 흐름:
@@ -410,7 +669,7 @@ mvn test "-Dtest=AuthFlowIntegrationTest,SecurityConfigTest"
 
 ## 권장 진행 순서
 
-1. `feature/#3-auth-schema`
+1. `feature/#3-auth-storage`
 2. `feature/#4-auth-api`
 3. `feature/#5-auth-security-test`
 
@@ -440,7 +699,7 @@ mvn test "-Dtest=AuthFlowIntegrationTest,SecurityConfigTest"
 
 | Method | Path | 설명 | 인증 |
 |---|---|---|---|
-| POST | `/api/auth/signup` | 회원가입 | 불필요 |
+| POST | `/api/v1/auth/signup` | 회원가입 | 불필요 |
 
 ## 완료 기준
 

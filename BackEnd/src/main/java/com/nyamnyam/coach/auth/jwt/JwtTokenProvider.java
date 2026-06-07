@@ -3,6 +3,8 @@ package com.nyamnyam.coach.auth.jwt;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import com.nyamnyam.coach.global.exception.BusinessException;
+import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -84,7 +87,7 @@ public class JwtTokenProvider {
         Claims claims = parseClaims(accessToken);
 
         if (claims.get(AUTHORITIES_KEY) == null) {
-            throw new RuntimeException("권한 정보가 없는 토큰입니다.");
+            throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
         }
 
         Collection<? extends GrantedAuthority> authorities =
@@ -116,6 +119,41 @@ public class JwtTokenProvider {
         return false;
     }
 
+    public void validateRefreshTokenForRefresh(String token) {
+        try {
+            getJwtParser().parseSignedClaims(token);
+        } catch (ExpiredJwtException e) {
+            log.warn("Expired refresh token: {}", e.getMessage());
+            throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
+        } catch (io.jsonwebtoken.security.SignatureException | MalformedJwtException e) {
+            log.warn("Invalid refresh token signature: {}", e.getMessage());
+            throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
+        } catch (UnsupportedJwtException e) {
+            log.warn("Unsupported refresh token: {}", e.getMessage());
+            throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
+        } catch (IllegalArgumentException e) {
+            log.warn("Refresh token claims string is empty: {}", e.getMessage());
+            throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
+        }
+    }
+
+    public void validateRefreshTokenSignatureAllowExpired(String token) {
+        try {
+            getJwtParser().parseSignedClaims(token);
+        } catch (ExpiredJwtException e) {
+            log.warn("Expired refresh token during logout: {}", e.getMessage());
+        } catch (io.jsonwebtoken.security.SignatureException | MalformedJwtException e) {
+            log.warn("Invalid refresh token signature: {}", e.getMessage());
+            throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
+        } catch (UnsupportedJwtException e) {
+            log.warn("Unsupported refresh token: {}", e.getMessage());
+            throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
+        } catch (IllegalArgumentException e) {
+            log.warn("Refresh token claims string is empty: {}", e.getMessage());
+            throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
+        }
+    }
+
     // ─────────────────────────────────────────
     // 내부 유틸
     // ─────────────────────────────────────────
@@ -135,5 +173,13 @@ public class JwtTokenProvider {
         return Jwts.parser()
                 .verifyWith(key)
                 .build();
+    }
+
+    public long getAccessTokenExpiresInSeconds() {
+        return accessTokenExp / 1000;
+    }
+
+    public Duration getRefreshTokenExpirationDuration() {
+        return Duration.ofMillis(refreshTokenExp);
     }
 }

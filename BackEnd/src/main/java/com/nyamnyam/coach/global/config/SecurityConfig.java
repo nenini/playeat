@@ -37,7 +37,10 @@ public class SecurityConfig {
     // 인증 없이 허용할 경로
     // ─────────────────────────────────────────
     private static final String[] PUBLIC_URLS = {
-            "/auth/**",                // 로그인, 회원가입, 토큰 재발급
+            "/v1/auth/signup",
+            "/v1/auth/login",
+            "/v1/auth/refresh",
+            "/v1/auth/logout",
             "/swagger-ui/**",          // Swagger UI
             "/swagger-ui.html",
             "/v3/api-docs/**",
