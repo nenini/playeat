@@ -18,4 +18,11 @@ public interface UserRepository {
     boolean existsByEmail(@Param("email") String email);
 
     boolean existsByNickname(@Param("nickname") String nickname);
+
+    int updateProfile(
+            @Param("userId") Long userId,
+            @Param("nickname") String nickname
+    );
+
+    int deactivate(@Param("userId") Long userId);
 }
