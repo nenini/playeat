@@ -5,7 +5,6 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     nickname VARCHAR(50) NOT NULL,
-    profile_image_url VARCHAR(500),
     selected_coach_id BIGINT,
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
