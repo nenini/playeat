@@ -2,10 +2,8 @@ package com.nyamnyam.coach.user.controller;
 
 import com.nyamnyam.coach.global.response.ApiResponse;
 import com.nyamnyam.coach.user.dto.request.DeactivateUserRequest;
-import com.nyamnyam.coach.user.dto.request.UpdateHealthProfileRequest;
 import com.nyamnyam.coach.user.dto.request.UpdateUserRequest;
 import com.nyamnyam.coach.user.dto.response.DeactivateUserResponse;
-import com.nyamnyam.coach.user.dto.response.HealthProfileResponse;
 import com.nyamnyam.coach.user.dto.response.UpdateUserResponse;
 import com.nyamnyam.coach.user.dto.response.UserMeResponse;
 import com.nyamnyam.coach.user.service.UserService;
@@ -52,23 +50,6 @@ public class UserController implements UserApiDocs {
     ) {
         DeactivateUserResponse response = userService.deactivateMe(authenticatedUserId(authentication), request);
         return ResponseEntity.ok(ApiResponse.success(response, "회원 탈퇴가 완료되었습니다."));
-    }
-
-    @Override
-    @GetMapping("/me/health-profile")
-    public ResponseEntity<ApiResponse<HealthProfileResponse>> getMyHealthProfile(Authentication authentication) {
-        HealthProfileResponse response = userService.getMyHealthProfile(authenticatedUserId(authentication));
-        return ResponseEntity.ok(ApiResponse.success(response, "건강 프로필 조회에 성공했습니다."));
-    }
-
-    @Override
-    @PatchMapping("/me/health-profile")
-    public ResponseEntity<ApiResponse<HealthProfileResponse>> updateMyHealthProfile(
-            Authentication authentication,
-            @Valid @RequestBody UpdateHealthProfileRequest request
-    ) {
-        HealthProfileResponse response = userService.updateMyHealthProfile(authenticatedUserId(authentication), request);
-        return ResponseEntity.ok(ApiResponse.success(response, "건강 프로필이 수정되었습니다."));
     }
 
     private Long authenticatedUserId(Authentication authentication) {
