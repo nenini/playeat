@@ -1,0 +1,20 @@
+{
+  "name": "nyamnyam-coach-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "typescript": "~5.7.2",
+    "vite": "^5.4.19",
+    "vue-tsc": "^2.2.0"
+  }
+}
