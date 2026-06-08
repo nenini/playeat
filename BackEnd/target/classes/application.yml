@@ -3,30 +3,6 @@ spring:
     active: local
 
   # ────────────────────────────────
-  # DataSource (HikariCP)
-  # ────────────────────────────────
-  datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/nyamnyam?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:nyamnyam}
-    password: ${DB_PASSWORD:nyamnyam1234}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-
-  # ────────────────────────────────
-  # Redis
-  # ────────────────────────────────
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-
-  # ────────────────────────────────
   # Jackson
   # ────────────────────────────────
   jackson:
@@ -39,7 +15,7 @@ spring:
 # ────────────────────────────────
 mybatis:
   configuration:
-    map-underscore-to-camel-case: true   # snake_case → camelCase 자동 매핑
+    map-underscore-to-camel-case: true
     use-generated-keys: true
     default-fetch-size: 100
     default-statement-timeout: 30
@@ -51,9 +27,9 @@ mybatis:
 # JWT
 # ────────────────────────────────
 jwt:
-  secret: cmmrPhjdvcP5k4zIobW0qpJZhQBPQOgcr5jzzAdoX9o=
-  access-token-expiration: ${JWT_ACCESS_EXP:1800000}    # 30분 (ms)
-  refresh-token-expiration: ${JWT_REFRESH_EXP:604800000} # 7일 (ms)
+  secret: ${JWT_SECRET}
+  access-token-expiration: ${JWT_ACCESS_EXP:1800000}
+  refresh-token-expiration: ${JWT_REFRESH_EXP:604800000}
 
 # ────────────────────────────────
 # Swagger / SpringDoc
