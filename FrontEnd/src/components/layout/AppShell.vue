@@ -14,7 +14,6 @@
       </nav>
       <div class="right-tools">
         <AppPill tone="accent" size="sm"><AppIcon name="fire" :size="11" color="var(--accent)" />{{ streak }}일 연속</AppPill>
-        <AppPill tone="neutral" size="sm">기록 {{ logsCount }}/4</AppPill>
         <button class="profile" :class="{ active: activePage === 'mypage' }" type="button" title="마이페이지" @click="$emit('navigate', 'mypage')">👩</button>
       </div>
     </header>

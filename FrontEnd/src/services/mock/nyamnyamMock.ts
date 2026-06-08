@@ -137,6 +137,93 @@ export const badges = [
   { id: 'perfect', name: '퍼펙트 데이', desc: '4끼 + 전 목표 달성', emoji: '⭐', earned: false }
 ]
 
+export type OnboardingInputType = 'date' | 'number' | 'time' | 'single' | 'multi' | 'text'
+
+export interface OnboardingQuestion {
+  id: string
+  label: string
+  type: OnboardingInputType
+  unit?: string
+  options?: string[]
+  placeholder?: string
+}
+
+export interface OnboardingStep {
+  id: string
+  title: string
+  eyebrow: string
+  description: string
+  questions: OnboardingQuestion[]
+}
+
+export const onboardingSteps: OnboardingStep[] = [
+  {
+    id: 'basic',
+    eyebrow: 'STEP 1 · 기본 정보',
+    title: '기본 정보를 알려주세요',
+    description: '냠냠코치가 하루 권장 섭취량과 목표를 계산할 때 사용해요.',
+    questions: [
+      { id: 'birthday', label: '생년월일을 입력해주세요', type: 'date' },
+      { id: 'gender', label: '성별을 선택해주세요', type: 'single', options: ['여성', '남성', '선택 안 함'] },
+      { id: 'height', label: '키를 입력해주세요', type: 'number', unit: 'cm', placeholder: '162' },
+      { id: 'currentWeight', label: '현재 몸무게를 입력해주세요', type: 'number', unit: 'kg', placeholder: '54' },
+      { id: 'targetWeight', label: '목표 체중을 입력해주세요', type: 'number', unit: 'kg', placeholder: '50' }
+    ]
+  },
+  {
+    id: 'activity',
+    eyebrow: 'STEP 2 · 활동 정보',
+    title: '평소 움직임을 선택해주세요',
+    description: '활동량에 맞춰 칼로리와 단백질 목표를 더 현실적으로 잡아요.',
+    questions: [
+      { id: 'activityLevel', label: '평소 활동량은 어느 정도인가요?', type: 'single', options: ['거의 앉아 있어요', '가벼운 활동이 있어요', '많이 걷거나 움직여요', '육체 활동이 많아요'] },
+      { id: 'exerciseFrequency', label: '운동은 얼마나 자주 하나요?', type: 'single', options: ['거의 안 해요', '주 1~2회', '주 3~4회', '주 5회 이상'] }
+    ]
+  },
+  {
+    id: 'goal',
+    eyebrow: 'STEP 3 · 목표 설정',
+    title: '가장 중요한 목표를 정해요',
+    description: '냠냠이가 어떤 방향으로 응원할지 정하는 단계예요.',
+    questions: [
+      { id: 'mainGoal', label: '가장 큰 목표는 무엇인가요?', type: 'single', options: ['감량', '유지', '증량'] },
+      { id: 'improveTarget', label: '무엇을 개선하고 싶나요?', type: 'single', options: ['건강', '에너지', '식습관 개선'] },
+      { id: 'healthFocus', label: '건강 관리가 필요한 항목이 있나요?', type: 'multi', options: ['혈당', '혈압', '콜레스테롤', '없음'], placeholder: '직접 입력 후 추가' }
+    ]
+  },
+  {
+    id: 'concerns',
+    eyebrow: 'STEP 4 · 식습관 고민',
+    title: '바꾸고 싶은 습관을 골라주세요',
+    description: '실패 원인을 먼저 알면 더 오래 이어갈 수 있어요.',
+    questions: [
+      { id: 'changeNeeds', label: '식습관에서 가장 바꾸고 싶은 부분은 무엇인가요?', type: 'multi', options: ['야식 줄이기', '단 음료 줄이기', '단백질 늘리기', '채소 챙기기', '규칙적으로 먹기'] },
+      { id: 'difficultReasons', label: '꾸준히 이어가기 어려운 이유는 무엇인가요?', type: 'multi', options: ['시간 부족', '메뉴 고민', '외식이 많음', '기록이 귀찮음', '동기 부족'] }
+    ]
+  },
+  {
+    id: 'preference',
+    eyebrow: 'STEP 5 · 식단 선호와 제한',
+    title: '먹는 방식과 제한 음식을 알려주세요',
+    description: '추천 식단에서 피해야 할 것을 미리 제외해요.',
+    questions: [
+      { id: 'dietStyle', label: '선호하는 식단 스타일이 있나요?', type: 'single', options: ['한식 위주', '간편식 위주', '고단백', '저탄수', '채식 위주', '상관 없음'] },
+      { id: 'restrictedFoods', label: '피해야 하거나 제한하는 음식이 있나요?', type: 'multi', options: ['돼지고기', '소고기', '유제품', '밀가루', '카페인', '없음'] },
+      { id: 'allergies', label: '알러지가 있나요?', type: 'multi', options: ['달걀', '우유', '땅콩', '갑각류', '복숭아', '없음'], placeholder: '직접 입력' }
+    ]
+  },
+  {
+    id: 'record',
+    eyebrow: 'STEP 6 · 기록 계획',
+    title: '기록 방식을 정하면 끝이에요',
+    description: '부담 없는 빈도로 시작하고, 필요하면 언제든 바꿀 수 있어요.',
+    questions: [
+      { id: 'recordFrequency', label: '식사는 얼마나 자주 기록할 계획인가요?', type: 'single', options: ['매일', '주 5일', '주 3일', '가끔'] },
+      { id: 'calorieTrackingExperience', label: '칼로리 추적을 해본 적 있나요?', type: 'single', options: ['처음이에요', '가끔 해봤어요', '꾸준히 해봤어요'] }
+    ]
+  }
+]
+
 export const seedLogs: MealLog[] = [
   { id: 'l1', foodId: 'oatmeal', mealKind: 'breakfast', qty: 80 },
   { id: 'l2', foodId: 'banana', mealKind: 'breakfast', qty: 1 },
