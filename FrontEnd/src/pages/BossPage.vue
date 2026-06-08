@@ -2,7 +2,10 @@
   <section v-if="phase === 'lobby'">
     <div class="page-title-row">
       <div><div class="pill-row"><AppPill tone="bad" size="sm">BOSS LOBBY</AppPill><AppPill size="sm">D-{{ boss.dDay }}</AppPill><AppPill size="sm">잘먹잘싸 길드</AppPill></div><div class="title-xl">{{ boss.name }} <span>입장방</span></div><p>난이도를 선택하고 길드원과 함께 전투를 시작하세요</p></div>
-      <div class="start-box"><AppButton size="lg" @click="phase = 'battle'">⚔️ 전투 시작!</AppButton></div>
+      <div class="start-box">
+        <AppButton size="lg" :disabled="!isLeader" @click="startBattle">⚔️ 전투 시작!</AppButton>
+        <div v-if="!isLeader" class="leader-help">길드장만 전투를 시작할 수 있어요</div>
+      </div>
     </div>
     <div class="boss-lobby">
       <div class="boss-art"><BossMonster :size="220" :hp="60" /><strong>{{ boss.name }}</strong><p>{{ boss.description }}</p></div>
@@ -12,8 +15,8 @@
   </section>
   <section v-else>
     <div class="page-title-row">
-      <div><div class="pill-row"><button class="back" @click="phase = 'lobby'">← 로비</button><AppPill tone="bad" size="sm">GUILD BOSS · {{ difficulty.toUpperCase() }}</AppPill><AppPill size="sm">D-{{ boss.dDay }}</AppPill><AppPill size="sm">잘먹잘싸 길드</AppPill></div><div class="title-xl">{{ boss.name }}</div><p>출현 2026·05·15 · 격파 마감까지 D-{{ boss.dDay }} · 길드원 6명 참전 중</p></div>
-      <div class="battle-actions"><AppButton variant="secondary">격파 조건</AppButton><AppButton @click="$emit('navigate', 'meals')"><AppIcon name="plus" color="#fff" />식단 기록 · 데미지!</AppButton></div>
+      <div><div class="pill-row"><AppPill tone="bad" size="sm">GUILD BOSS · {{ difficulty.toUpperCase() }}</AppPill><AppPill size="sm">D-{{ boss.dDay }}</AppPill><AppPill size="sm">잘먹잘싸 길드</AppPill></div><div class="title-xl">{{ boss.name }}</div><p>출현 2026·05·15 · 격파 마감까지 D-{{ boss.dDay }} · 길드원 6명 참전 중</p></div>
+      <div class="battle-actions"><AppButton @click="$emit('navigate', 'meals')"><AppIcon name="plus" color="#fff" />식단 기록 · 데미지!</AppButton></div>
     </div>
     <div class="battle-grid">
       <main class="battle-left">
@@ -40,7 +43,7 @@ import BossMonster from '../components/nyamnyam/BossMonster.vue'
 import MemberQuest from './parts/MemberQuest.vue'
 import { boss, bossDiffs, totalsFor, type MealLog, type PageId } from '../services/mock/nyamnyamMock'
 
-const props = defineProps<{ logs: MealLog[] }>()
+const props = defineProps<{ logs: MealLog[], isLeader?: boolean }>()
 defineEmits<{ navigate: [page: PageId] }>()
 const phase = ref<'lobby' | 'battle'>('lobby')
 const difficulty = ref('normal')
@@ -57,6 +60,10 @@ const members = computed(() => [
   { id: 'yein', name: '예인', role: '기록 담당', lv: 18, quest: '4끼 모두 기록', progress: props.logs.length, total: 4, unit: '끼' },
   { id: 'taehyung', name: '태형', role: '무관', lv: 5, quest: '오늘 식단 기록', progress: 0, total: 1, unit: '끼', idle: true }
 ])
+function startBattle() {
+  if (!props.isLeader) return
+  phase.value = 'battle'
+}
 </script>
 
 <style scoped>
@@ -69,6 +76,7 @@ const members = computed(() => [
 .diff-summary { background: var(--surface-alt); } .diff-summary :deep(> div) { display: flex; gap: 16px; } .diff-summary div div { flex: 1; text-align: center; } .diff-summary small { font-family: var(--mono); color: var(--ink-3); font-size: 10px; } .diff-summary strong { display: block; font-family: var(--mono); font-size: 22px; margin-top: 4px; }
 .back { display: inline-flex; padding: 2px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: 11px; color: var(--ink-2); cursor: pointer; }
 .battle-actions { display: flex; gap: 8px; }
+.leader-help { margin-top: 6px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); text-align: right; }
 .battle-grid { display: grid; grid-template-columns: 1fr 440px; gap: 20px; } .battle-left, .members { display: flex; flex-direction: column; gap: 14px; }
 .arena { position: relative; height: 380px; border-radius: 18px; overflow: hidden; background: linear-gradient(135deg,#fff5e0 0%,#fbe5d3 50%,#f6c098 100%); border: 1.5px solid var(--border); box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center; } .grid-bg { position: absolute; inset: 0; opacity: .16; background-image: linear-gradient(var(--ink) 1px, transparent 1px), linear-gradient(90deg,var(--ink) 1px, transparent 1px); background-size: 40px 40px; }
 .hp-row { display: flex; align-items: center; gap: 14px; } .hp-row span { font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-weight: 700; letter-spacing: 1px; } .hp-row :deep(.bar-wrap) { flex: 1; } .hp-row b { font-family: var(--mono); font-size: 18px; color: var(--accent); min-width: 90px; text-align: right; }
