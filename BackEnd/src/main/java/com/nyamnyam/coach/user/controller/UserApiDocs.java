@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 @Tag(name = "User", description = "회원 계정 API")
-@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "BearerAuth")
 public interface UserApiDocs {
 
     @Operation(summary = "내 회원 정보 조회", description = "현재 로그인한 회원의 기본 정보를 조회합니다.")
