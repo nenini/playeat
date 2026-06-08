@@ -56,7 +56,7 @@ public interface AuthApiDocs {
     })
     ResponseEntity<ApiResponse<TokenRefreshResponse>> refresh(TokenRefreshRequest request);
 
-    @SecurityRequirement(name = "bearerAuth")
+    @SecurityRequirement(name = "BearerAuth")
     @Operation(summary = "로그아웃", description = "refresh token을 삭제합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그아웃 성공",
