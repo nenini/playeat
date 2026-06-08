@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.SetOperations;
@@ -11,13 +12,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
-import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.Collection;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,7 +43,7 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("리프레시 토큰 해시를 userId와 TTL로 Redis에 저장한다")
+    @DisplayName("refresh token hash를 userId와 TTL로 Redis에 저장한다")
     void saveRefreshToken() {
         Duration ttl = Duration.ofDays(7);
 
@@ -56,7 +55,7 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("리프레시 토큰 해시로 userId를 조회한다")
+    @DisplayName("refresh token hash로 userId를 조회한다")
     void findUserIdByTokenHash() {
         when(valueOperations.get("refresh:token-hash-1")).thenReturn("1");
 
@@ -65,7 +64,7 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("Redis에 토큰 해시가 없으면 빈 Optional을 반환한다")
+    @DisplayName("Redis에 token hash가 없으면 빈 Optional을 반환한다")
     void findUserIdByMissingTokenHash() {
         when(valueOperations.get("refresh:missing-token")).thenReturn(null);
 
@@ -74,7 +73,7 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("리프레시 토큰 하나를 삭제하고 사용자 토큰 목록에서도 제거한다")
+    @DisplayName("refresh token 하나를 삭제하고 사용자 token 목록에서도 제거한다")
     void revokeByTokenHash() {
         when(valueOperations.get("refresh:token-hash-1")).thenReturn("1");
         when(redisTemplate.delete("refresh:token-hash-1")).thenReturn(true);
@@ -87,19 +86,24 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("사용자에게 발급된 모든 리프레시 토큰을 삭제한다")
+    @DisplayName("사용자에게 발급된 모든 refresh token을 삭제한다")
     void revokeAllByUserId() {
         when(setOperations.members("user-refresh-tokens:1"))
-                .thenReturn(new LinkedHashSet<>(List.of("token-a", "token-b")));
-        when(redisTemplate.delete(any(List.class))).thenReturn(3L);
+                .thenReturn(Set.of("token-a", "token-b"));
+        when(redisTemplate.delete(any(Collection.class))).thenReturn(3L);
 
         int deletedCount = refreshTokenRepository.revokeAllByUserId(1L);
 
         assertThat(deletedCount).isEqualTo(3);
-        verify(redisTemplate).delete(eq(List.of(
-                "refresh:token-a",
-                "refresh:token-b",
-                "user-refresh-tokens:1"
-        )));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<String>> keysCaptor = ArgumentCaptor.forClass(Collection.class);
+        verify(redisTemplate).delete(keysCaptor.capture());
+        assertThat(keysCaptor.getValue())
+                .containsExactlyInAnyOrder(
+                        "refresh:token-a",
+                        "refresh:token-b",
+                        "user-refresh-tokens:1"
+                );
     }
 }
