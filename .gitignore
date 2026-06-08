@@ -11,6 +11,9 @@ desktop.ini
 # IntelliJ IDEA
 # =========================
 .idea/
+.idea.*/
+**/.idea/
+**/.idea.*/
 *.iml
 *.iws
 *.ipr
@@ -23,6 +26,7 @@ out/
 # Java / Spring Boot / Maven
 # =========================
 target/
+**/target/
 *.class
 *.jar
 *.war
@@ -42,6 +46,7 @@ BackEnd/src/main/resources/application-dev.yaml
 # 실제 secret, DB 계정, API key 등이 들어갈 수 있는 파일
 BackEnd/.env
 BackEnd/.env.local
+BackEnd/.env.*
 
 # =========================
 # Logs
@@ -73,6 +78,7 @@ FrontEnd/.vite/
 FrontEnd/.env
 FrontEnd/.env.local
 FrontEnd/.env.*.local
+FrontEnd/.env.*
 
 # 단, 예시 파일은 올릴 수 있게 허용
 !.env.example
