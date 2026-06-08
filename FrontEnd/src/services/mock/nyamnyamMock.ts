@@ -233,7 +233,7 @@ export const seedLogs: MealLog[] = [
 ]
 
 const findFood = (id: string) => foodDb.find((f) => f.id === id)
-const perBase = (food: Food) => Number(String(food.per).match(/^(\d+)/)?.[1] ?? 1)
+const perBase = (food: Food) => Number(String(food.per).match(/(\d+)/)?.[1] ?? 1)
 
 export function totalsFor(logs: MealLog[]) {
   return logs.reduce((acc, entry) => {
