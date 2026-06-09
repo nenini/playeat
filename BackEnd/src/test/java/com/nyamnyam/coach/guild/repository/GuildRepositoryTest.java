@@ -4,6 +4,7 @@ import com.nyamnyam.coach.guild.entity.Guild;
 import com.nyamnyam.coach.guild.entity.GuildMember;
 import com.nyamnyam.coach.guild.repository.row.GuildDetailRow;
 import com.nyamnyam.coach.guild.repository.row.GuildMemberRow;
+import com.nyamnyam.coach.guild.repository.row.GuildNoticeRow;
 import com.nyamnyam.coach.guild.repository.row.GuildStatusRow;
 import com.nyamnyam.coach.guild.repository.row.GuildSummaryRow;
 import com.nyamnyam.coach.user.entity.User;
@@ -133,6 +134,95 @@ class GuildRepositoryTest {
         assertThat(members.get(0).getCharacterLevel()).isEqualTo(7);
     }
 
+    @Test
+    @DisplayName("길드 정보를 수정하고 길드명 중복을 자기 자신은 제외해 확인한다")
+    void updateGuild() {
+        User owner = saveUser("owner@example.com", "예린");
+        Guild guild = saveGuild(owner.getUserId(), "잘먹잘싸", "NYAM-A7K3");
+
+        int updated = guildRepository.updateGuild(guild.getGuildId(), "단백질 원정대", "함께 보스 잡기", 20);
+        Optional<Guild> foundGuild = guildRepository.findById(guild.getGuildId());
+
+        assertThat(updated).isEqualTo(1);
+        assertThat(foundGuild).isPresent();
+        assertThat(foundGuild.get().getName()).isEqualTo("단백질 원정대");
+        assertThat(foundGuild.get().getDescription()).isEqualTo("함께 보스 잡기");
+        assertThat(foundGuild.get().getMaxMembers()).isEqualTo(20);
+        assertThat(guildRepository.existsByNameExceptGuildId("단백질 원정대", guild.getGuildId())).isFalse();
+    }
+
+    @Test
+    @DisplayName("길드를 소프트 삭제하면 status가 INACTIVE가 되고 active 멤버를 모두 탈퇴 처리한다")
+    void softDeleteGuildAndMarkAllMembersLeft() {
+        User owner = saveUser("owner@example.com", "예린");
+        User member = saveUser("member@example.com", "민수");
+        Guild guild = saveGuild(owner.getUserId(), "잘먹잘싸", "NYAM-A7K3");
+        guildRepository.saveMember(ownerMember(guild.getGuildId(), owner.getUserId()));
+        guildRepository.saveMember(member(guild.getGuildId(), member.getUserId()));
+
+        guildRepository.softDeleteGuild(guild.getGuildId());
+        guildRepository.markAllMembersLeft(guild.getGuildId());
+
+        assertThat(guildRepository.findById(guild.getGuildId()).get().getStatus()).isEqualTo("INACTIVE");
+        assertThat(guildRepository.countActiveMembers(guild.getGuildId())).isZero();
+    }
+
+    @Test
+    @DisplayName("멤버 탈퇴와 추방은 left_at만 기록한다")
+    void leaveAndKickGuildMember() {
+        User owner = saveUser("owner@example.com", "예린");
+        User member = saveUser("member@example.com", "민수");
+        User target = saveUser("target@example.com", "지민");
+        Guild guild = saveGuild(owner.getUserId(), "잘먹잘싸", "NYAM-A7K3");
+        guildRepository.saveMember(ownerMember(guild.getGuildId(), owner.getUserId()));
+        guildRepository.saveMember(member(guild.getGuildId(), member.getUserId()));
+        GuildMember targetMember = member(guild.getGuildId(), target.getUserId());
+        guildRepository.saveMember(targetMember);
+
+        guildRepository.leaveGuild(guild.getGuildId(), member.getUserId());
+        guildRepository.kickGuildMember(guild.getGuildId(), targetMember.getGuildMemberId());
+
+        assertThat(guildRepository.findActiveMemberByGuildIdAndUserId(guild.getGuildId(), member.getUserId()))
+                .isEmpty();
+        assertThat(guildRepository.findMemberByGuildIdAndUserId(guild.getGuildId(), member.getUserId()))
+                .get()
+                .extracting(GuildMemberRow::getLeftAt)
+                .isNotNull();
+        assertThat(guildRepository.findMemberByMemberId(guild.getGuildId(), targetMember.getGuildMemberId()))
+                .get()
+                .extracting(GuildMemberRow::getLeftAt)
+                .isNotNull();
+    }
+
+    @Test
+    @DisplayName("길드 공지를 여러 개 등록, 조회, 수정, 삭제한다")
+    void guildNotice() {
+        User owner = saveUser("owner@example.com", "예린");
+        Guild guild = saveGuild(owner.getUserId(), "잘먹잘싸", "NYAM-A7K3");
+        guildRepository.saveMember(ownerMember(guild.getGuildId(), owner.getUserId()));
+
+        GuildNoticeRow firstNotice = guildNotice(guild.getGuildId(), owner.getUserId(), "첫 번째 공지", "첫 번째 내용");
+        GuildNoticeRow secondNotice = guildNotice(guild.getGuildId(), owner.getUserId(), "두 번째 공지", "두 번째 내용");
+        guildRepository.saveGuildNotice(firstNotice);
+        guildRepository.saveGuildNotice(secondNotice);
+
+        List<GuildNoticeRow> notices = guildRepository.findGuildNotices(guild.getGuildId());
+        assertThat(notices).hasSize(2);
+        assertThat(notices.get(0).getNoticeId()).isEqualTo(secondNotice.getNoticeId());
+        assertThat(notices.get(0).getWriterNickname()).isEqualTo("예린");
+
+        guildRepository.updateGuildNotice(guild.getGuildId(), firstNotice.getNoticeId(), "수정 공지", "수정 내용");
+        Optional<GuildNoticeRow> updatedNotice = guildRepository.findGuildNoticeById(guild.getGuildId(), firstNotice.getNoticeId());
+        assertThat(updatedNotice).isPresent();
+        assertThat(updatedNotice.get().getTitle()).isEqualTo("수정 공지");
+        assertThat(updatedNotice.get().getContent()).isEqualTo("수정 내용");
+
+        guildRepository.deleteGuildNotice(guild.getGuildId(), firstNotice.getNoticeId());
+
+        assertThat(guildRepository.findGuildNoticeById(guild.getGuildId(), firstNotice.getNoticeId())).isEmpty();
+        assertThat(guildRepository.findGuildNotices(guild.getGuildId())).hasSize(1);
+    }
+
     private User saveUser(String email, String nickname) {
         User user = User.builder()
                 .email(email)
@@ -164,12 +254,29 @@ class GuildRepositoryTest {
                 .build();
     }
 
+    private GuildMember member(Long guildId, Long userId) {
+        return GuildMember.builder()
+                .guildId(guildId)
+                .userId(userId)
+                .role("MEMBER")
+                .build();
+    }
+
     private GuildMember ownerMember(Long guildId, Long userId) {
         return GuildMember.builder()
                 .guildId(guildId)
                 .userId(userId)
                 .role("OWNER")
                 .build();
+    }
+
+    private GuildNoticeRow guildNotice(Long guildId, Long writerUserId, String title, String content) {
+        GuildNoticeRow row = new GuildNoticeRow();
+        row.setGuildId(guildId);
+        row.setWriterUserId(writerUserId);
+        row.setTitle(title);
+        row.setContent(content);
+        return row;
     }
 
     private void insertPendingJoinRequest(Long guildId, Long userId) {
