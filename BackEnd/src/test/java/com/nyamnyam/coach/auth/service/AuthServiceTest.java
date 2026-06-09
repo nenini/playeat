@@ -86,7 +86,7 @@ class AuthServiceTest {
                 .createdAt(createdAt)
                 .build();
 
-        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
         when(userRepository.existsByNickname(request.nickname())).thenReturn(false);
         doAnswer(invocation -> {
             User user = invocation.getArgument(0);
@@ -112,7 +112,7 @@ class AuthServiceTest {
     @DisplayName("중복 이메일이면 EMAIL_ALREADY_EXISTS 예외를 던진다")
     void signupWithDuplicateEmail() {
         SignupRequest request = new SignupRequest("user@example.com", "password123!", "냥냥");
-        when(userRepository.existsByEmail(request.email())).thenReturn(true);
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(activeUser("encoded")));
 
         assertThatThrownBy(() -> authService.signup(request))
                 .isInstanceOf(BusinessException.class)
@@ -124,13 +124,54 @@ class AuthServiceTest {
     @DisplayName("중복 닉네임이면 NICKNAME_ALREADY_EXISTS 예외를 던진다")
     void signupWithDuplicateNickname() {
         SignupRequest request = new SignupRequest("user@example.com", "password123!", "냥냥");
-        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
         when(userRepository.existsByNickname(request.nickname())).thenReturn(true);
 
         assertThatThrownBy(() -> authService.signup(request))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(AuthErrorCode.NICKNAME_ALREADY_EXISTS);
+    }
+
+    @Test
+    @DisplayName("탈퇴한 이메일이면 기존 계정을 재활성화한다")
+    void signupReactivatesInactiveUser() {
+        SignupRequest request = new SignupRequest("user@example.com", "new-password123!", "냥냥");
+        LocalDateTime createdAt = LocalDateTime.of(2026, 5, 26, 10, 0);
+        User inactiveUser = inactiveUser("old-password");
+        inactiveUser.setSelectedCoachId(10L);
+        inactiveUser.setOnboardingCompleted(true);
+        inactiveUser.setCreatedAt(createdAt);
+        User reactivatedUser = User.builder()
+                .userId(1L)
+                .email(request.email())
+                .passwordHash("encoded")
+                .nickname(request.nickname())
+                .status("ACTIVE")
+                .onboardingCompleted(false)
+                .createdAt(createdAt)
+                .build();
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(inactiveUser));
+        when(userRepository.existsByNicknameExcludingUserId(request.nickname(), inactiveUser.getUserId()))
+                .thenReturn(false);
+        when(userRepository.findById(inactiveUser.getUserId())).thenReturn(Optional.of(reactivatedUser));
+
+        SignupResponse response = authService.signup(request);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).reactivate(userCaptor.capture());
+
+        User userToReactivate = userCaptor.getValue();
+        assertThat(userToReactivate.getUserId()).isEqualTo(1L);
+        assertThat(userToReactivate.getPasswordHash()).isNotEqualTo("old-password");
+        assertThat(passwordEncoder.matches(request.password(), userToReactivate.getPasswordHash())).isTrue();
+        assertThat(userToReactivate.getStatus()).isEqualTo("ACTIVE");
+        assertThat(userToReactivate.getOnboardingCompleted()).isFalse();
+        assertThat(userToReactivate.getSelectedCoachId()).isNull();
+        assertThat(userToReactivate.getDeactivatedAt()).isNull();
+        assertThat(response.userId()).isEqualTo(1L);
+        assertThat(response.createdAt()).isEqualTo(createdAt);
     }
 
     @Test
