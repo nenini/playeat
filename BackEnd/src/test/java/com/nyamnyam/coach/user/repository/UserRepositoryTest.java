@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -101,5 +102,54 @@ class UserRepositoryTest {
         assertThat(updatedCount).isEqualTo(1);
         assertThat(deactivatedUser.getStatus()).isEqualTo("INACTIVE");
         assertThat(deactivatedUser.getDeactivatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("탈퇴 사용자를 같은 이메일로 재활성화한다")
+    void reactivateInactiveUser() {
+        User inactiveUser = User.builder()
+                .email("reactivate@example.com")
+                .passwordHash("old-password")
+                .nickname("old-nickname")
+                .status("INACTIVE")
+                .onboardingCompleted(true)
+                .deactivatedAt(LocalDateTime.of(2026, 5, 26, 10, 0))
+                .build();
+
+        userRepository.save(inactiveUser);
+
+        inactiveUser.setPasswordHash("new-password");
+        inactiveUser.setNickname("new-nickname");
+        inactiveUser.setSelectedCoachId(null);
+        inactiveUser.setStatus("ACTIVE");
+        inactiveUser.setOnboardingCompleted(false);
+        inactiveUser.setDeactivatedAt(null);
+
+        userRepository.reactivate(inactiveUser);
+
+        User reactivatedUser = userRepository.findByEmail("reactivate@example.com").orElseThrow();
+
+        assertThat(reactivatedUser.getUserId()).isEqualTo(inactiveUser.getUserId());
+        assertThat(reactivatedUser.getPasswordHash()).isEqualTo("new-password");
+        assertThat(reactivatedUser.getNickname()).isEqualTo("new-nickname");
+        assertThat(reactivatedUser.getStatus()).isEqualTo("ACTIVE");
+        assertThat(reactivatedUser.getOnboardingCompleted()).isFalse();
+        assertThat(reactivatedUser.getDeactivatedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("닉네임 중복 검사에서 같은 사용자는 제외할 수 있다")
+    void existsByNicknameExcludingUserId() {
+        User user = User.builder()
+                .email("nickname-owner@example.com")
+                .passwordHash("encoded-password")
+                .nickname("owned-nickname")
+                .status("INACTIVE")
+                .build();
+
+        userRepository.save(user);
+
+        assertThat(userRepository.existsByNicknameExcludingUserId("owned-nickname", user.getUserId())).isFalse();
+        assertThat(userRepository.existsByNicknameExcludingUserId("owned-nickname", user.getUserId() + 1)).isTrue();
     }
 }

@@ -15,9 +15,16 @@ public interface UserRepository {
 
     Optional<User> findByEmail(@Param("email") String email);
 
+    void reactivate(User user);
+
     boolean existsByEmail(@Param("email") String email);
 
     boolean existsByNickname(@Param("nickname") String nickname);
+
+    boolean existsByNicknameExcludingUserId(
+            @Param("nickname") String nickname,
+            @Param("userId") Long userId
+    );
 
     int updateProfile(
             @Param("userId") Long userId,

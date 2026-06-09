@@ -48,9 +48,18 @@ public class AuthService {
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        User existingUser = userRepository.findByEmail(request.email()).orElse(null);
+        if (existingUser != null && ACTIVE_STATUS.equals(existingUser.getStatus())) {
             throw new BusinessException(AuthErrorCode.EMAIL_ALREADY_EXISTS);
         }
+
+        if (existingUser != null) {
+            if (userRepository.existsByNicknameExcludingUserId(request.nickname(), existingUser.getUserId())) {
+                throw new BusinessException(AuthErrorCode.NICKNAME_ALREADY_EXISTS);
+            }
+            return reactivateUser(existingUser, request);
+        }
+
         if (userRepository.existsByNickname(request.nickname())) {
             throw new BusinessException(AuthErrorCode.NICKNAME_ALREADY_EXISTS);
         }
@@ -72,6 +81,26 @@ public class AuthService {
                 savedUser.getNickname(),
                 savedUser.getOnboardingCompleted(),
                 savedUser.getCreatedAt()
+        );
+    }
+
+    private SignupResponse reactivateUser(User user, SignupRequest request) {
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setNickname(request.nickname());
+        user.setSelectedCoachId(null);
+        user.setStatus(ACTIVE_STATUS);
+        user.setOnboardingCompleted(false);
+        user.setDeactivatedAt(null);
+
+        userRepository.reactivate(user);
+        User reactivatedUser = userRepository.findById(user.getUserId()).orElse(user);
+
+        return new SignupResponse(
+                reactivatedUser.getUserId(),
+                reactivatedUser.getEmail(),
+                reactivatedUser.getNickname(),
+                reactivatedUser.getOnboardingCompleted(),
+                reactivatedUser.getCreatedAt()
         );
     }
 
