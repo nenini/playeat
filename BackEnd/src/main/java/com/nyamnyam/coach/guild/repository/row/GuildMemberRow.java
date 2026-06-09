@@ -21,6 +21,8 @@ public class GuildMemberRow {
     private String characterStage;
     private String characterMood;
     private String characterAppearanceType;
+    private Integer streakDays;
     private String role;
     private LocalDateTime joinedAt;
+    private LocalDateTime leftAt;
 }

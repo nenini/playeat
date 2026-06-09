@@ -4,6 +4,7 @@ import com.nyamnyam.coach.guild.entity.Guild;
 import com.nyamnyam.coach.guild.entity.GuildMember;
 import com.nyamnyam.coach.guild.repository.row.GuildDetailRow;
 import com.nyamnyam.coach.guild.repository.row.GuildMemberRow;
+import com.nyamnyam.coach.guild.repository.row.GuildNoticeRow;
 import com.nyamnyam.coach.guild.repository.row.GuildStatusRow;
 import com.nyamnyam.coach.guild.repository.row.GuildSummaryRow;
 import com.nyamnyam.coach.guild.repository.row.MyGuildRow;
@@ -18,6 +19,11 @@ public interface GuildRepository {
 
     boolean existsByName(@Param("name") String name);
 
+    boolean existsByNameExceptGuildId(
+            @Param("name") String name,
+            @Param("guildId") Long guildId
+    );
+
     boolean existsByInviteCode(@Param("inviteCode") String inviteCode);
 
     void save(Guild guild);
@@ -25,6 +31,8 @@ public interface GuildRepository {
     void saveMember(GuildMember guildMember);
 
     Optional<Guild> findById(@Param("guildId") Long guildId);
+
+    Optional<Long> findGuildOwnerUserId(@Param("guildId") Long guildId);
 
     List<GuildSummaryRow> findActiveGuildSummaries(
             @Param("userId") Long userId,
@@ -47,6 +55,32 @@ public interface GuildRepository {
 
     List<GuildMemberRow> findActiveMembers(@Param("guildId") Long guildId);
 
+    Optional<GuildMemberRow> findActiveMemberByGuildIdAndUserId(
+            @Param("guildId") Long guildId,
+            @Param("userId") Long userId
+    );
+
+    Optional<GuildMemberRow> findMemberByGuildIdAndUserId(
+            @Param("guildId") Long guildId,
+            @Param("userId") Long userId
+    );
+
+    Optional<GuildMemberRow> findActiveMemberByMemberId(
+            @Param("guildId") Long guildId,
+            @Param("memberId") Long memberId
+    );
+
+    Optional<GuildMemberRow> findMemberByMemberId(
+            @Param("guildId") Long guildId,
+            @Param("memberId") Long memberId
+    );
+
+    Optional<GuildMemberRow> findMemberDetail(
+            @Param("guildId") Long guildId,
+            @Param("memberId") Long memberId,
+            @Param("currentUserId") Long currentUserId
+    );
+
     Optional<String> findActiveMemberRole(
             @Param("guildId") Long guildId,
             @Param("userId") Long userId
@@ -62,4 +96,46 @@ public interface GuildRepository {
     boolean existsPendingJoinRequestByUserId(@Param("userId") Long userId);
 
     int countActiveMembers(@Param("guildId") Long guildId);
+
+    int updateGuild(
+            @Param("guildId") Long guildId,
+            @Param("name") String name,
+            @Param("description") String description,
+            @Param("maxMembers") int maxMembers
+    );
+
+    int softDeleteGuild(@Param("guildId") Long guildId);
+
+    int markAllMembersLeft(@Param("guildId") Long guildId);
+
+    int leaveGuild(
+            @Param("guildId") Long guildId,
+            @Param("userId") Long userId
+    );
+
+    int kickGuildMember(
+            @Param("guildId") Long guildId,
+            @Param("memberId") Long memberId
+    );
+
+    List<GuildNoticeRow> findGuildNotices(@Param("guildId") Long guildId);
+
+    Optional<GuildNoticeRow> findGuildNoticeById(
+            @Param("guildId") Long guildId,
+            @Param("noticeId") Long noticeId
+    );
+
+    void saveGuildNotice(GuildNoticeRow guildNotice);
+
+    int updateGuildNotice(
+            @Param("guildId") Long guildId,
+            @Param("noticeId") Long noticeId,
+            @Param("title") String title,
+            @Param("content") String content
+    );
+
+    int deleteGuildNotice(
+            @Param("guildId") Long guildId,
+            @Param("noticeId") Long noticeId
+    );
 }

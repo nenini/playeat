@@ -2,10 +2,23 @@ package com.nyamnyam.coach.guild.controller;
 
 import com.nyamnyam.coach.global.response.ApiResponse;
 import com.nyamnyam.coach.guild.dto.request.GuildCreateRequest;
+import com.nyamnyam.coach.guild.dto.request.GuildNoticeCreateRequest;
+import com.nyamnyam.coach.guild.dto.request.GuildNoticeUpdateRequest;
+import com.nyamnyam.coach.guild.dto.request.GuildUpdateRequest;
 import com.nyamnyam.coach.guild.dto.response.GuildCreateResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildDeleteResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildDetailResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildKickResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildLeaveResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildListResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildMemberDetailResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildMemberListResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeCreateResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeDeleteResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeListResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeUpdateResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildUpdateResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildListResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildStatusResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -134,5 +147,73 @@ public interface GuildApiDocs {
     ResponseEntity<ApiResponse<GuildMemberListResponse>> getGuildMembers(
             @Parameter(hidden = true) Authentication authentication,
             Long guildId
+    );
+
+    @Operation(summary = "길드 정보 수정", description = "길드장만 길드 이름, 설명, 최대 인원을 수정할 수 있습니다.")
+    ResponseEntity<ApiResponse<GuildUpdateResponse>> updateGuild(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            GuildUpdateRequest request
+    );
+
+    @Operation(summary = "길드 삭제", description = "길드장만 길드를 INACTIVE 상태로 소프트 삭제할 수 있습니다.")
+    ResponseEntity<ApiResponse<GuildDeleteResponse>> deleteGuild(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId
+    );
+
+    @Operation(summary = "길드 탈퇴", description = "일반 길드원이 본인 멤버십을 left_at으로 종료합니다. 길드장은 탈퇴할 수 없습니다.")
+    ResponseEntity<ApiResponse<GuildLeaveResponse>> leaveGuild(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId
+    );
+
+    @Operation(summary = "길드원 상세 조회", description = "길드 멤버만 길드원 상세 정보를 조회할 수 있습니다.")
+    ResponseEntity<ApiResponse<GuildMemberDetailResponse>> getGuildMemberDetail(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            Long memberId
+    );
+
+    @Operation(summary = "길드원 추방", description = "길드장만 일반 멤버를 추방할 수 있습니다.")
+    ResponseEntity<ApiResponse<GuildKickResponse>> kickGuildMember(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            Long memberId
+    );
+
+    @Operation(summary = "길드 공지사항 목록 조회", description = "길드 멤버가 길드 공지사항 목록을 조회합니다.")
+    ResponseEntity<ApiResponse<GuildNoticeListResponse>> getGuildNotices(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId
+    );
+
+    @Operation(summary = "길드 공지사항 상세 조회", description = "길드 멤버가 특정 길드 공지사항을 조회합니다.")
+    ResponseEntity<ApiResponse<GuildNoticeResponse>> getGuildNotice(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            Long noticeId
+    );
+
+    @Operation(summary = "길드 공지사항 등록", description = "길드장만 공지사항을 등록할 수 있습니다.")
+    ResponseEntity<ApiResponse<GuildNoticeCreateResponse>> createGuildNotice(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            GuildNoticeCreateRequest request
+    );
+
+    @Operation(summary = "길드 공지사항 수정", description = "길드장만 공지사항을 수정할 수 있습니다.")
+    ResponseEntity<ApiResponse<GuildNoticeUpdateResponse>> updateGuildNotice(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            Long noticeId,
+            GuildNoticeUpdateRequest request
+    );
+
+    @Operation(summary = "길드 공지사항 삭제", description = "길드장만 공지사항을 삭제할 수 있습니다.")
+    ResponseEntity<ApiResponse<GuildNoticeDeleteResponse>> deleteGuildNotice(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            Long noticeId
     );
 }

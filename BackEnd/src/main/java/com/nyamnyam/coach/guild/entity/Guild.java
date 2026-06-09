@@ -20,7 +20,6 @@ public class Guild {
     private String description;
     private String inviteCode;
     private Long ownerUserId;
-    private String notice;
     private Integer maxMembers;
     private Integer guildPoint;
     private String visibility;

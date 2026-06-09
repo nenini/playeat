@@ -11,7 +11,6 @@
         <result property="description" column="description"/>
         <result property="inviteCode" column="invite_code"/>
         <result property="ownerUserId" column="owner_user_id"/>
-        <result property="notice" column="notice"/>
         <result property="maxMembers" column="max_members"/>
         <result property="guildPoint" column="guild_point"/>
         <result property="visibility" column="visibility"/>
@@ -83,14 +82,34 @@
         <result property="characterStage" column="character_stage"/>
         <result property="characterMood" column="character_mood"/>
         <result property="characterAppearanceType" column="character_appearance_type"/>
+        <result property="streakDays" column="streak_days"/>
         <result property="role" column="role"/>
         <result property="joinedAt" column="joined_at"/>
+        <result property="leftAt" column="left_at"/>
+    </resultMap>
+
+    <resultMap id="GuildNoticeRowMap" type="com.nyamnyam.coach.guild.repository.row.GuildNoticeRow">
+        <id property="noticeId" column="notice_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="writerUserId" column="writer_user_id"/>
+        <result property="writerNickname" column="writer_nickname"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
     <select id="existsByName" resultType="boolean">
         SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
         FROM guilds
         WHERE name = #{name}
+    </select>
+
+    <select id="existsByNameExceptGuildId" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM guilds
+        WHERE name = #{name}
+          AND guild_id != #{guildId}
     </select>
 
     <select id="existsByInviteCode" resultType="boolean">
@@ -150,13 +169,18 @@
             description,
             invite_code,
             owner_user_id,
-            notice,
             max_members,
             guild_point,
             visibility,
             status,
             created_at,
             updated_at
+        FROM guilds
+        WHERE guild_id = #{guildId}
+    </select>
+
+    <select id="findGuildOwnerUserId" resultType="long">
+        SELECT owner_user_id
         FROM guilds
         WHERE guild_id = #{guildId}
     </select>
@@ -333,8 +357,10 @@
             c.stage AS character_stage,
             c.mood AS character_mood,
             c.appearance_type AS character_appearance_type,
+            c.streak_days,
             gm.role,
-            gm.joined_at
+            gm.joined_at,
+            gm.left_at
         FROM guild_members gm
         JOIN users u
             ON u.user_id = gm.user_id
@@ -346,6 +372,87 @@
             CASE WHEN gm.role = 'OWNER' THEN 0 ELSE 1 END,
             gm.joined_at ASC,
             gm.guild_member_id ASC
+    </select>
+
+    <select id="findActiveMemberByGuildIdAndUserId" resultMap="GuildMemberRowMap">
+        SELECT
+            gm.guild_member_id AS member_id,
+            gm.user_id,
+            gm.role,
+            gm.joined_at,
+            gm.left_at
+        FROM guild_members gm
+        WHERE gm.guild_id = #{guildId}
+          AND gm.user_id = #{userId}
+          AND gm.left_at IS NULL
+        LIMIT 1
+    </select>
+
+    <select id="findMemberByGuildIdAndUserId" resultMap="GuildMemberRowMap">
+        SELECT
+            gm.guild_member_id AS member_id,
+            gm.user_id,
+            gm.role,
+            gm.joined_at,
+            gm.left_at
+        FROM guild_members gm
+        WHERE gm.guild_id = #{guildId}
+          AND gm.user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <select id="findActiveMemberByMemberId" resultMap="GuildMemberRowMap">
+        SELECT
+            gm.guild_member_id AS member_id,
+            gm.user_id,
+            gm.role,
+            gm.joined_at,
+            gm.left_at
+        FROM guild_members gm
+        WHERE gm.guild_id = #{guildId}
+          AND gm.guild_member_id = #{memberId}
+          AND gm.left_at IS NULL
+        LIMIT 1
+    </select>
+
+    <select id="findMemberByMemberId" resultMap="GuildMemberRowMap">
+        SELECT
+            gm.guild_member_id AS member_id,
+            gm.user_id,
+            gm.role,
+            gm.joined_at,
+            gm.left_at
+        FROM guild_members gm
+        WHERE gm.guild_id = #{guildId}
+          AND gm.guild_member_id = #{memberId}
+        LIMIT 1
+    </select>
+
+    <select id="findMemberDetail" resultMap="GuildMemberRowMap">
+        SELECT
+            gm.guild_member_id AS member_id,
+            u.user_id,
+            u.nickname,
+            u.profile_image_url,
+            c.character_id,
+            c.name AS character_name,
+            c.level AS character_level,
+            c.stage AS character_stage,
+            c.mood AS character_mood,
+            c.appearance_type AS character_appearance_type,
+            c.streak_days,
+            gm.role,
+            gm.joined_at,
+            gm.left_at
+        FROM guild_members gm
+        JOIN users u
+            ON u.user_id = gm.user_id
+            AND u.status = 'ACTIVE'
+        LEFT JOIN characters c ON c.user_id = u.user_id
+        WHERE gm.guild_id = #{guildId}
+          AND gm.guild_member_id = #{memberId}
+          AND gm.left_at IS NULL
+        LIMIT 1
     </select>
 
     <select id="findActiveMemberRole" resultType="string">
@@ -391,4 +498,117 @@
         WHERE guild_id = #{guildId}
           AND left_at IS NULL
     </select>
+
+    <update id="updateGuild">
+        UPDATE guilds
+        SET
+            name = #{name},
+            description = #{description},
+            max_members = #{maxMembers},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND status = 'ACTIVE'
+    </update>
+
+    <update id="softDeleteGuild">
+        UPDATE guilds
+        SET
+            status = 'INACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND status = 'ACTIVE'
+    </update>
+
+    <update id="markAllMembersLeft">
+        UPDATE guild_members
+        SET left_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND left_at IS NULL
+    </update>
+
+    <update id="leaveGuild">
+        UPDATE guild_members
+        SET left_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND user_id = #{userId}
+          AND left_at IS NULL
+    </update>
+
+    <update id="kickGuildMember">
+        UPDATE guild_members
+        SET left_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND guild_member_id = #{memberId}
+          AND left_at IS NULL
+    </update>
+
+    <select id="findGuildNotices" resultMap="GuildNoticeRowMap">
+        SELECT
+            gn.notice_id,
+            gn.guild_id,
+            gn.writer_user_id,
+            writer.nickname AS writer_nickname,
+            gn.title,
+            gn.content,
+            gn.created_at,
+            gn.updated_at
+        FROM guild_notices gn
+        JOIN users writer
+            ON writer.user_id = gn.writer_user_id
+        WHERE gn.guild_id = #{guildId}
+        ORDER BY gn.created_at DESC, gn.notice_id DESC
+    </select>
+
+    <select id="findGuildNoticeById" resultMap="GuildNoticeRowMap">
+        SELECT
+            gn.notice_id,
+            gn.guild_id,
+            gn.writer_user_id,
+            writer.nickname AS writer_nickname,
+            gn.title,
+            gn.content,
+            gn.created_at,
+            gn.updated_at
+        FROM guild_notices gn
+        JOIN users writer
+            ON writer.user_id = gn.writer_user_id
+        WHERE gn.guild_id = #{guildId}
+          AND gn.notice_id = #{noticeId}
+        LIMIT 1
+    </select>
+
+    <insert id="saveGuildNotice"
+            parameterType="com.nyamnyam.coach.guild.repository.row.GuildNoticeRow"
+            useGeneratedKeys="true"
+            keyProperty="noticeId"
+            keyColumn="notice_id">
+        INSERT INTO guild_notices (
+            guild_id,
+            writer_user_id,
+            title,
+            content
+        )
+        VALUES (
+            #{guildId},
+            #{writerUserId},
+            #{title},
+            #{content}
+        )
+    </insert>
+
+    <update id="updateGuildNotice">
+        UPDATE guild_notices
+        SET
+            title = #{title},
+            content = #{content},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND notice_id = #{noticeId}
+    </update>
+
+    <update id="deleteGuildNotice">
+        DELETE FROM guild_notices
+        WHERE guild_id = #{guildId}
+          AND notice_id = #{noticeId}
+    </update>
 </mapper>
