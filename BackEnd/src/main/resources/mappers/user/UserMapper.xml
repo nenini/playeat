@@ -10,6 +10,7 @@
         <result property="email" column="email"/>
         <result property="passwordHash" column="password_hash"/>
         <result property="nickname" column="nickname"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
         <result property="selectedCoachId" column="selected_coach_id"/>
         <result property="status" column="status"/>
         <result property="onboardingCompleted" column="onboarding_completed"/>
@@ -27,6 +28,7 @@
             email,
             password_hash,
             nickname,
+            profile_image_url,
             selected_coach_id,
             status,
             onboarding_completed
@@ -35,6 +37,7 @@
             #{email},
             #{passwordHash},
             #{nickname},
+            #{profileImageUrl},
             #{selectedCoachId},
             COALESCE(#{status}, 'ACTIVE'),
             COALESCE(#{onboardingCompleted}, FALSE)
@@ -47,6 +50,7 @@
             email,
             password_hash,
             nickname,
+            profile_image_url,
             selected_coach_id,
             status,
             onboarding_completed,
@@ -63,6 +67,7 @@
             email,
             password_hash,
             nickname,
+            profile_image_url,
             selected_coach_id,
             status,
             onboarding_completed,
