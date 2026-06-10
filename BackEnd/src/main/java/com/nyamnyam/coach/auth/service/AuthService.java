@@ -52,16 +52,8 @@ public class AuthService {
         if (existingUser != null && ACTIVE_STATUS.equals(existingUser.getStatus())) {
             throw new BusinessException(AuthErrorCode.EMAIL_ALREADY_EXISTS);
         }
-
         if (existingUser != null) {
-            if (userRepository.existsByNicknameExcludingUserId(request.nickname(), existingUser.getUserId())) {
-                throw new BusinessException(AuthErrorCode.NICKNAME_ALREADY_EXISTS);
-            }
             return reactivateUser(existingUser, request);
-        }
-
-        if (userRepository.existsByNickname(request.nickname())) {
-            throw new BusinessException(AuthErrorCode.NICKNAME_ALREADY_EXISTS);
         }
 
         User user = User.builder()

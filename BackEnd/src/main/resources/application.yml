@@ -9,6 +9,16 @@ spring:
     time-zone: Asia/Seoul
     date-format: yyyy-MM-dd HH:mm:ss
     default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+app:
+  upload:
+    root-dir: ${UPLOAD_ROOT_DIR:uploads}
+    profile-image-dir: ${PROFILE_IMAGE_UPLOAD_DIR:${UPLOAD_ROOT_DIR:uploads}/profile-images}
+    profile-image-path-prefix: /uploads/profile-images
 
 # ────────────────────────────────
 # MyBatis

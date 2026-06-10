@@ -60,7 +60,6 @@ CREATE TABLE users (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deactivated_at DATETIME,
     CONSTRAINT uk_users_email UNIQUE (email),
-    CONSTRAINT uk_users_nickname UNIQUE (nickname),
     CONSTRAINT fk_users_selected_coach
         FOREIGN KEY (selected_coach_id)
         REFERENCES coaches(coach_id)
