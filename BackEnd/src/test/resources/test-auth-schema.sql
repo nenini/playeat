@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS boss_common_conditions;
+DROP TABLE IF EXISTS bosses;
+DROP TABLE IF EXISTS boss_seasons;
 DROP TABLE IF EXISTS guild_join_requests;
 DROP TABLE IF EXISTS guild_notices;
 DROP TABLE IF EXISTS guild_members;
@@ -42,6 +45,49 @@ CREATE TABLE health_profiles (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_health_profiles_user UNIQUE (user_id)
+);
+
+CREATE TABLE boss_seasons (
+    season_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    season_code VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(1000),
+    target_nutrient VARCHAR(50),
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_boss_seasons_code UNIQUE (season_code)
+);
+
+CREATE TABLE bosses (
+    boss_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    season_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    difficulty VARCHAR(20) NOT NULL,
+    max_hp INT NOT NULL,
+    image_url VARCHAR(500),
+    reward_exp INT NOT NULL DEFAULT 0,
+    reward_coin INT NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    starts_at DATETIME,
+    ends_at DATETIME,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_bosses_season_difficulty UNIQUE (season_id, difficulty)
+);
+
+CREATE TABLE boss_common_conditions (
+    condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    season_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description VARCHAR(500),
+    target_type VARCHAR(50) NOT NULL,
+    target_value INT NOT NULL,
+    unit VARCHAR(50),
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE characters (
