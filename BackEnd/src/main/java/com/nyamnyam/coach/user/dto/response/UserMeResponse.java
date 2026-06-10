@@ -15,6 +15,12 @@ public record UserMeResponse(
         @Schema(description = "Nickname", example = "nyamnyam")
         String nickname,
 
+        @Schema(description = "Stored profile image path", example = "/uploads/profile-images/profile.png")
+        String profileImageUrl,
+
+        @Schema(description = "Selected coach id", example = "1")
+        Long selectedCoachId,
+
         @Schema(description = "User status", example = "ACTIVE")
         String status,
 

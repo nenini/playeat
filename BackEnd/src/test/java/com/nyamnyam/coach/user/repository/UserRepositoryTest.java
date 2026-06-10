@@ -1,7 +1,6 @@
 package com.nyamnyam.coach.user.repository;
 
 import com.nyamnyam.coach.user.entity.User;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,14 +25,8 @@ class UserRepositoryTest {
     }
 
     @Test
-    @DisplayName("사용자를 저장하고 이메일과 ID로 조회한다")
     void saveAndFindUser() {
-        User user = User.builder()
-                .email("user@example.com")
-                .passwordHash("encoded-password")
-                .nickname("nyam")
-                .status("ACTIVE")
-                .build();
+        User user = user("user@example.com", "nyam");
 
         userRepository.save(user);
 
@@ -49,32 +42,22 @@ class UserRepositoryTest {
     }
 
     @Test
-    @DisplayName("이메일과 닉네임 중복 여부를 조회한다")
-    void existsByEmailAndNickname() {
-        User user = User.builder()
-                .email("duplicate@example.com")
-                .passwordHash("encoded-password")
-                .nickname("duplicate")
-                .status("ACTIVE")
-                .build();
+    void duplicateNicknameIsAllowed() {
+        User first = user("first@example.com", "duplicate");
+        User second = user("second@example.com", "duplicate");
 
-        userRepository.save(user);
+        userRepository.save(first);
+        userRepository.save(second);
 
-        assertThat(userRepository.existsByEmail("duplicate@example.com")).isTrue();
+        assertThat(first.getUserId()).isNotNull();
+        assertThat(second.getUserId()).isNotNull();
+        assertThat(userRepository.existsByEmail("first@example.com")).isTrue();
         assertThat(userRepository.existsByEmail("missing@example.com")).isFalse();
-        assertThat(userRepository.existsByNickname("duplicate")).isTrue();
-        assertThat(userRepository.existsByNickname("missing")).isFalse();
     }
 
     @Test
-    @DisplayName("닉네임을 수정하고 updatedAt을 갱신한다")
     void updateProfile() {
-        User user = User.builder()
-                .email("update@example.com")
-                .passwordHash("encoded-password")
-                .nickname("before")
-                .status("ACTIVE")
-                .build();
+        User user = user("update@example.com", "before");
         userRepository.save(user);
 
         int updatedCount = userRepository.updateProfile(user.getUserId(), "after");
@@ -86,14 +69,67 @@ class UserRepositoryTest {
     }
 
     @Test
-    @DisplayName("회원을 비활성화하고 탈퇴 시각을 기록한다")
-    void deactivate() {
-        User user = User.builder()
-                .email("deactivate@example.com")
-                .passwordHash("encoded-password")
-                .nickname("deactivate")
-                .status("ACTIVE")
+    void updateAndDeleteProfileImage() {
+        User user = user("profile@example.com", "profile");
+        userRepository.save(user);
+
+        int updateCount = userRepository.updateProfileImage(user.getUserId(), "/uploads/profile-images/profile.png");
+        User imageUpdatedUser = userRepository.findById(user.getUserId()).orElseThrow();
+
+        assertThat(updateCount).isEqualTo(1);
+        assertThat(imageUpdatedUser.getProfileImageUrl()).isEqualTo("/uploads/profile-images/profile.png");
+
+        int deleteCount = userRepository.deleteProfileImage(user.getUserId());
+        User imageDeletedUser = userRepository.findById(user.getUserId()).orElseThrow();
+
+        assertThat(deleteCount).isEqualTo(1);
+        assertThat(imageDeletedUser.getProfileImageUrl()).isNull();
+    }
+
+    @Test
+    void completeOnboarding() {
+        User user = user("onboarding@example.com", "onboarding");
+        userRepository.save(user);
+
+        int updatedCount = userRepository.completeOnboarding(user.getUserId(), 1L);
+        User completedUser = userRepository.findById(user.getUserId()).orElseThrow();
+
+        assertThat(updatedCount).isEqualTo(1);
+        assertThat(completedUser.getOnboardingCompleted()).isTrue();
+        assertThat(completedUser.getSelectedCoachId()).isEqualTo(1L);
+    }
+
+    @Test
+    void reactivateInactiveUser() {
+        User inactiveUser = User.builder()
+                .email("reactivate@example.com")
+                .passwordHash("old-password")
+                .nickname("old-nickname")
+                .status("INACTIVE")
+                .onboardingCompleted(true)
+                .deactivatedAt(LocalDateTime.of(2026, 5, 26, 10, 0))
                 .build();
+        userRepository.save(inactiveUser);
+
+        inactiveUser.setPasswordHash("new-password");
+        inactiveUser.setNickname("new-nickname");
+        inactiveUser.setSelectedCoachId(null);
+        inactiveUser.setOnboardingCompleted(false);
+        inactiveUser.setDeactivatedAt(null);
+        userRepository.reactivate(inactiveUser);
+
+        User reactivatedUser = userRepository.findByEmail("reactivate@example.com").orElseThrow();
+        assertThat(reactivatedUser.getUserId()).isEqualTo(inactiveUser.getUserId());
+        assertThat(reactivatedUser.getPasswordHash()).isEqualTo("new-password");
+        assertThat(reactivatedUser.getNickname()).isEqualTo("new-nickname");
+        assertThat(reactivatedUser.getStatus()).isEqualTo("ACTIVE");
+        assertThat(reactivatedUser.getOnboardingCompleted()).isFalse();
+        assertThat(reactivatedUser.getDeactivatedAt()).isNull();
+    }
+
+    @Test
+    void deactivate() {
+        User user = user("deactivate@example.com", "deactivate");
         userRepository.save(user);
 
         int updatedCount = userRepository.deactivate(user.getUserId());
@@ -104,52 +140,12 @@ class UserRepositoryTest {
         assertThat(deactivatedUser.getDeactivatedAt()).isNotNull();
     }
 
-    @Test
-    @DisplayName("탈퇴 사용자를 같은 이메일로 재활성화한다")
-    void reactivateInactiveUser() {
-        User inactiveUser = User.builder()
-                .email("reactivate@example.com")
-                .passwordHash("old-password")
-                .nickname("old-nickname")
-                .status("INACTIVE")
-                .onboardingCompleted(true)
-                .deactivatedAt(LocalDateTime.of(2026, 5, 26, 10, 0))
-                .build();
-
-        userRepository.save(inactiveUser);
-
-        inactiveUser.setPasswordHash("new-password");
-        inactiveUser.setNickname("new-nickname");
-        inactiveUser.setSelectedCoachId(null);
-        inactiveUser.setStatus("ACTIVE");
-        inactiveUser.setOnboardingCompleted(false);
-        inactiveUser.setDeactivatedAt(null);
-
-        userRepository.reactivate(inactiveUser);
-
-        User reactivatedUser = userRepository.findByEmail("reactivate@example.com").orElseThrow();
-
-        assertThat(reactivatedUser.getUserId()).isEqualTo(inactiveUser.getUserId());
-        assertThat(reactivatedUser.getPasswordHash()).isEqualTo("new-password");
-        assertThat(reactivatedUser.getNickname()).isEqualTo("new-nickname");
-        assertThat(reactivatedUser.getStatus()).isEqualTo("ACTIVE");
-        assertThat(reactivatedUser.getOnboardingCompleted()).isFalse();
-        assertThat(reactivatedUser.getDeactivatedAt()).isNull();
-    }
-
-    @Test
-    @DisplayName("닉네임 중복 검사에서 같은 사용자는 제외할 수 있다")
-    void existsByNicknameExcludingUserId() {
-        User user = User.builder()
-                .email("nickname-owner@example.com")
+    private User user(String email, String nickname) {
+        return User.builder()
+                .email(email)
                 .passwordHash("encoded-password")
-                .nickname("owned-nickname")
-                .status("INACTIVE")
+                .nickname(nickname)
+                .status("ACTIVE")
                 .build();
-
-        userRepository.save(user);
-
-        assertThat(userRepository.existsByNicknameExcludingUserId("owned-nickname", user.getUserId())).isFalse();
-        assertThat(userRepository.existsByNicknameExcludingUserId("owned-nickname", user.getUserId() + 1)).isTrue();
     }
 }

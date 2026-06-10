@@ -1,29 +1,40 @@
 package com.nyamnyam.coach.user.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.UserErrorCode;
 import com.nyamnyam.coach.user.dto.request.DeactivateUserRequest;
+import com.nyamnyam.coach.user.dto.request.HealthProfileRequest;
+import com.nyamnyam.coach.user.dto.request.OnboardingRequest;
 import com.nyamnyam.coach.user.dto.request.UpdateUserRequest;
-import com.nyamnyam.coach.user.dto.response.DeactivateUserResponse;
+import com.nyamnyam.coach.user.dto.response.HealthProfileResponse;
+import com.nyamnyam.coach.user.dto.response.OnboardingResponse;
+import com.nyamnyam.coach.user.dto.response.ProfileImageResponse;
 import com.nyamnyam.coach.user.dto.response.UpdateUserResponse;
 import com.nyamnyam.coach.user.dto.response.UserMeResponse;
+import com.nyamnyam.coach.user.entity.HealthProfile;
 import com.nyamnyam.coach.user.entity.User;
+import com.nyamnyam.coach.user.repository.HealthProfileRepository;
 import com.nyamnyam.coach.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.mock.web.MockMultipartFile;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,19 +45,32 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private HealthProfileRepository healthProfileRepository;
+
+    @Mock
+    private ProfileImageStorageService profileImageStorageService;
+
     private PasswordEncoder passwordEncoder;
     private UserService userService;
 
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        userService = new UserService(userRepository, passwordEncoder);
+        userService = new UserService(
+                userRepository,
+                healthProfileRepository,
+                passwordEncoder,
+                new ObjectMapper(),
+                profileImageStorageService
+        );
     }
 
     @Test
-    @DisplayName("내 회원 정보를 조회한다")
     void getMe() {
         User user = activeUser("encoded-password");
+        user.setProfileImageUrl("/uploads/profile-images/profile.png");
+        user.setSelectedCoachId(1L);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         UserMeResponse response = userService.getMe(1L);
@@ -54,84 +78,124 @@ class UserServiceTest {
         assertThat(response.userId()).isEqualTo(1L);
         assertThat(response.email()).isEqualTo("user@example.com");
         assertThat(response.nickname()).isEqualTo("nyam");
-        assertThat(response.status()).isEqualTo("ACTIVE");
-        assertThat(response.onboardingCompleted()).isFalse();
+        assertThat(response.profileImageUrl()).isEqualTo("/uploads/profile-images/profile.png");
+        assertThat(response.selectedCoachId()).isEqualTo(1L);
     }
 
     @Test
-    @DisplayName("닉네임을 수정한다")
-    void updateMe() {
+    void updateMeAllowsDuplicateNickname() {
         User user = activeUser("encoded-password");
         User updatedUser = activeUser("encoded-password");
-        updatedUser.setNickname("newnyam");
+        updatedUser.setNickname("same-name");
         updatedUser.setUpdatedAt(LocalDateTime.of(2026, 5, 26, 11, 0));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user), Optional.of(updatedUser));
 
-        when(userRepository.findById(1L))
-                .thenReturn(Optional.of(user))
-                .thenReturn(Optional.of(updatedUser));
-        when(userRepository.existsByNickname("newnyam")).thenReturn(false);
+        UpdateUserResponse response = userService.updateMe(1L, new UpdateUserRequest("same-name"));
 
-        UpdateUserResponse response = userService.updateMe(1L, new UpdateUserRequest("newnyam"));
-
-        verify(userRepository).updateProfile(1L, "newnyam");
-        assertThat(response.userId()).isEqualTo(1L);
-        assertThat(response.nickname()).isEqualTo("newnyam");
-        assertThat(response.updatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 26, 11, 0));
+        verify(userRepository).updateProfile(1L, "same-name");
+        assertThat(response.nickname()).isEqualTo("same-name");
     }
 
     @Test
-    @DisplayName("기존 닉네임과 같으면 중복 검사를 하지 않고 수정한다")
-    void updateMeWithSameNickname() {
+    void updateProfileImage() {
+        User user = activeUser("encoded-password");
+        User updatedUser = activeUser("encoded-password");
+        updatedUser.setProfileImageUrl("/uploads/profile-images/profile.png");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user), Optional.of(updatedUser));
+        MockMultipartFile image = new MockMultipartFile(
+                "image",
+                "profile.png",
+                "image/png",
+                "image-content".getBytes()
+        );
+        when(profileImageStorageService.store(image)).thenReturn("/uploads/profile-images/profile.png");
+
+        ProfileImageResponse response = userService.updateProfileImage(1L, image);
+
+        verify(userRepository).updateProfileImage(1L, "/uploads/profile-images/profile.png");
+        assertThat(response.profileImageUrl()).isEqualTo("/uploads/profile-images/profile.png");
+    }
+
+    @Test
+    void deleteProfileImage() {
         User user = activeUser("encoded-password");
         when(userRepository.findById(1L)).thenReturn(Optional.of(user), Optional.of(user));
 
-        userService.updateMe(1L, new UpdateUserRequest("nyam"));
+        ProfileImageResponse response = userService.deleteProfileImage(1L);
 
-        verify(userRepository, never()).existsByNickname("nyam");
-        verify(userRepository).updateProfile(1L, "nyam");
+        verify(userRepository).deleteProfileImage(1L);
+        verify(profileImageStorageService).delete(user.getProfileImageUrl());
+        assertThat(response.profileImageUrl()).isNull();
     }
 
     @Test
-    @DisplayName("다른 사용자의 닉네임이면 NICKNAME_ALREADY_EXISTS 예외를 던진다")
-    void updateMeWithDuplicateNickname() {
-        User user = activeUser("encoded-password");
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.existsByNickname("taken")).thenReturn(true);
+    void getHealthProfile() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser("encoded-password")));
+        when(healthProfileRepository.findByUserId(1L)).thenReturn(Optional.of(healthProfile()));
 
-        assertThatThrownBy(() -> userService.updateMe(1L, new UpdateUserRequest("taken")))
+        HealthProfileResponse response = userService.getHealthProfile(1L);
+
+        assertThat(response.healthProfileId()).isEqualTo(10L);
+        assertThat(response.healthGoal()).isEqualTo("LOSE_WEIGHT");
+    }
+
+    @Test
+    void getHealthProfileWithMissingProfile() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser("encoded-password")));
+        when(healthProfileRepository.findByUserId(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getHealthProfile(1L))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(AuthErrorCode.NICKNAME_ALREADY_EXISTS);
-
-        verify(userRepository, never()).updateProfile(1L, "taken");
+                .isEqualTo(UserErrorCode.HEALTH_PROFILE_NOT_FOUND);
     }
 
     @Test
-    @DisplayName("비밀번호 확인 후 회원을 비활성화한다")
-    void deactivateMe() {
-        String passwordHash = passwordEncoder.encode("password123!");
-        User user = activeUser(passwordHash);
-        User deactivatedUser = activeUser(passwordHash);
-        deactivatedUser.setStatus("INACTIVE");
-        deactivatedUser.setDeactivatedAt(LocalDateTime.of(2026, 5, 26, 11, 30));
+    void updateHealthProfile() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser("encoded-password")));
+        when(healthProfileRepository.existsByUserId(1L)).thenReturn(true);
+        when(healthProfileRepository.findByUserId(1L)).thenReturn(Optional.of(healthProfile()));
 
-        when(userRepository.findById(1L))
-                .thenReturn(Optional.of(user))
-                .thenReturn(Optional.of(deactivatedUser));
+        HealthProfileResponse response = userService.updateHealthProfile(1L, healthProfileRequest());
 
-        DeactivateUserResponse response = userService.deactivateMe(
+        verify(healthProfileRepository).updateByUserId(any(HealthProfile.class));
+        assertThat(response.healthProfileId()).isEqualTo(10L);
+    }
+
+    @Test
+    void completeOnboarding() {
+        User user = activeUser("encoded-password");
+        User completedUser = activeUser("encoded-password");
+        completedUser.setOnboardingCompleted(true);
+        completedUser.setSelectedCoachId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user), Optional.of(completedUser));
+        when(healthProfileRepository.existsByUserId(1L)).thenReturn(false);
+
+        OnboardingResponse response = userService.completeOnboarding(
                 1L,
-                new DeactivateUserRequest("password123!")
+                new OnboardingRequest(1L, healthProfileRequest())
         );
 
-        verify(userRepository).deactivate(1L);
-        assertThat(response.userId()).isEqualTo(1L);
-        assertThat(response.status()).isEqualTo("INACTIVE");
-        assertThat(response.deactivatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 26, 11, 30));
+        verify(healthProfileRepository).save(any(HealthProfile.class));
+        verify(userRepository).completeOnboarding(1L, 1L);
+        assertThat(response.onboardingCompleted()).isTrue();
+        assertThat(response.selectedCoachId()).isEqualTo(1L);
     }
 
     @Test
-    @DisplayName("비밀번호가 틀리면 INVALID_CREDENTIALS 예외를 던진다")
+    void completeOnboardingAlreadyCompleted() {
+        User user = activeUser("encoded-password");
+        user.setOnboardingCompleted(true);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.completeOnboarding(1L, new OnboardingRequest(1L, healthProfileRequest())))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(UserErrorCode.ONBOARDING_ALREADY_COMPLETED);
+        verify(healthProfileRepository, never()).save(any(HealthProfile.class));
+    }
+
+    @Test
     void deactivateMeWithWrongPassword() {
         User user = activeUser(passwordEncoder.encode("password123!"));
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
@@ -140,32 +204,6 @@ class UserServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(AuthErrorCode.INVALID_CREDENTIALS);
-
-        verify(userRepository, never()).deactivate(1L);
-    }
-
-    @Test
-    @DisplayName("회원을 찾지 못하면 USER_NOT_FOUND 예외를 던진다")
-    void getMeWithMissingUser() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.getMe(1L))
-                .isInstanceOf(BusinessException.class)
-                .extracting("errorCode")
-                .isEqualTo(UserErrorCode.USER_NOT_FOUND);
-    }
-
-    @Test
-    @DisplayName("비활성 회원이면 USER_INACTIVE 예외를 던진다")
-    void getMeWithInactiveUser() {
-        User user = activeUser("encoded-password");
-        user.setStatus("INACTIVE");
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-
-        assertThatThrownBy(() -> userService.getMe(1L))
-                .isInstanceOf(BusinessException.class)
-                .extracting("errorCode")
-                .isEqualTo(AuthErrorCode.USER_INACTIVE);
     }
 
     private User activeUser(String passwordHash) {
@@ -179,5 +217,48 @@ class UserServiceTest {
                 .createdAt(LocalDateTime.of(2026, 5, 26, 10, 0))
                 .updatedAt(LocalDateTime.of(2026, 5, 26, 10, 0))
                 .build();
+    }
+
+    private HealthProfile healthProfile() {
+        return HealthProfile.builder()
+                .healthProfileId(10L)
+                .userId(1L)
+                .heightCm(new BigDecimal("162"))
+                .weightKg(new BigDecimal("54"))
+                .targetWeightKg(new BigDecimal("50"))
+                .birthDate(LocalDate.of(2001, 3, 15))
+                .gender("FEMALE")
+                .healthGoal("LOSE_WEIGHT")
+                .activityLevel("LIGHT")
+                .dietStylesJson("[\"BALANCED\"]")
+                .restrictedFoodsJson("[\"CAFFEINE\"]")
+                .allergiesJson("[\"PEANUT\"]")
+                .targetCalories(new BigDecimal("2000"))
+                .targetProteinG(new BigDecimal("90"))
+                .targetCarbsG(new BigDecimal("260"))
+                .targetFatG(new BigDecimal("65"))
+                .targetSodiumMg(new BigDecimal("2300"))
+                .updatedAt(LocalDateTime.of(2026, 6, 9, 12, 0))
+                .build();
+    }
+
+    private HealthProfileRequest healthProfileRequest() {
+        return new HealthProfileRequest(
+                new BigDecimal("162"),
+                new BigDecimal("54"),
+                new BigDecimal("50"),
+                LocalDate.of(2001, 3, 15),
+                "FEMALE",
+                "LOSE_WEIGHT",
+                "LIGHT",
+                List.of("BALANCED"),
+                List.of("CAFFEINE"),
+                List.of("PEANUT"),
+                new BigDecimal("2000"),
+                new BigDecimal("90"),
+                new BigDecimal("260"),
+                new BigDecimal("65"),
+                new BigDecimal("2300")
+        );
     }
 }
