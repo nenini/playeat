@@ -170,3 +170,116 @@ All endpoints require a Bearer access token.
   "deleted": true
 }
 ```
+
+# Guild PR3 Join Request API Examples
+
+## POST /api/v1/guilds/join-requests
+
+```json
+{
+  "inviteCode": "NYAM-A7K3"
+}
+```
+
+```json
+{
+  "requestId": 12,
+  "guildId": 1,
+  "guildName": "잘먹잘싸",
+  "inviteCode": "NYAM-A7K3",
+  "status": "PENDING",
+  "createdAt": "2026-06-10T10:30:00"
+}
+```
+
+## POST /api/v1/guilds/{guildId}/join-requests
+
+```json
+{}
+```
+
+## GET /api/v1/guilds/join-requests/me
+
+```json
+{
+  "requests": [
+    {
+      "requestId": 12,
+      "guildId": 1,
+      "guildName": "잘먹잘싸",
+      "inviteCode": "NYAM-A7K3",
+      "guildDescription": "건강하게 먹고 보스 잡는 길드",
+      "status": "PENDING",
+      "createdAt": "2026-06-10T10:30:00",
+      "handledAt": null,
+      "handledByNickname": null
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "hasNext": false
+}
+```
+
+## GET /api/v1/guilds/{guildId}/join-requests
+
+```json
+{
+  "requests": [
+    {
+      "requestId": 12,
+      "guildId": 1,
+      "userId": 5,
+      "nickname": "민수",
+      "profileImageUrl": "https://example.com/profile.png",
+      "characterId": 3,
+      "characterName": "냠냠이",
+      "characterLevel": 4,
+      "status": "PENDING",
+      "createdAt": "2026-06-10T10:30:00"
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "hasNext": false
+}
+```
+
+## POST /api/v1/guilds/{guildId}/join-requests/{requestId}/approve
+
+```json
+{
+  "requestId": 12,
+  "guildId": 1,
+  "userId": 5,
+  "nickname": "민수",
+  "status": "APPROVED",
+  "handledBy": 1,
+  "handledAt": "2026-06-10T10:30:00",
+  "memberId": 8
+}
+```
+
+## POST /api/v1/guilds/{guildId}/join-requests/{requestId}/reject
+
+```json
+{
+  "requestId": 12,
+  "guildId": 1,
+  "userId": 5,
+  "status": "REJECTED",
+  "handledBy": 1,
+  "handledAt": "2026-06-10T10:30:00"
+}
+```
+
+## DELETE /api/v1/guilds/{guildId}/join-requests/{requestId}
+
+```json
+{
+  "requestId": 12,
+  "guildId": 1,
+  "status": "CANCELED",
+  "canceledAt": "2026-06-10T10:30:00"
+}
+```

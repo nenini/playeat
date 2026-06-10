@@ -5,6 +5,9 @@ import com.nyamnyam.coach.guild.dto.request.GuildCreateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildNoticeCreateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildNoticeUpdateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildUpdateRequest;
+import com.nyamnyam.coach.guild.dto.request.JoinRequestCreateByCodeRequest;
+import com.nyamnyam.coach.guild.dto.request.JoinRequestCreateRequest;
+import com.nyamnyam.coach.guild.dto.response.GuildJoinRequestListResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildCreateResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildDeleteResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildDetailResponse;
@@ -19,6 +22,11 @@ import com.nyamnyam.coach.guild.dto.response.GuildNoticeListResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildNoticeResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildNoticeUpdateResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildUpdateResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestApproveResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestCancelResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestCreateResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestRejectResponse;
+import com.nyamnyam.coach.guild.dto.response.MyJoinRequestListResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildListResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildStatusResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -125,6 +133,20 @@ public interface GuildApiDocs {
             @Parameter(hidden = true) Authentication authentication
     );
 
+    @Operation(summary = "초대 코드로 길드 참여 요청 생성", description = "초대 코드로 PENDING 상태의 길드 참여 요청을 생성합니다.")
+    ResponseEntity<ApiResponse<JoinRequestCreateResponse>> createJoinRequestByInviteCode(
+            @Parameter(hidden = true) Authentication authentication,
+            JoinRequestCreateByCodeRequest request
+    );
+
+    @Operation(summary = "내 길드 참여 요청 목록 조회", description = "현재 로그인한 사용자가 보낸 길드 참여 요청 목록을 조회합니다.")
+    ResponseEntity<ApiResponse<MyJoinRequestListResponse>> getMyJoinRequests(
+            @Parameter(hidden = true) Authentication authentication,
+            String status,
+            Integer page,
+            Integer size
+    );
+
     @Operation(summary = "길드 상세 조회", description = "길드 멤버만 길드 상세 정보를 조회할 수 있습니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "길드 상세 조회 성공",
@@ -215,5 +237,42 @@ public interface GuildApiDocs {
             @Parameter(hidden = true) Authentication authentication,
             Long guildId,
             Long noticeId
+    );
+
+    @Operation(summary = "길드 ID로 길드 참여 요청 생성", description = "길드 목록에서 선택한 길드에 PENDING 상태의 참여 요청을 생성합니다.")
+    ResponseEntity<ApiResponse<JoinRequestCreateResponse>> createJoinRequest(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            JoinRequestCreateRequest request
+    );
+
+    @Operation(summary = "길드 참여 요청 목록 조회", description = "길드장만 자기 길드에 들어온 참여 요청 목록을 조회합니다.")
+    ResponseEntity<ApiResponse<GuildJoinRequestListResponse>> getGuildJoinRequests(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            String status,
+            Integer page,
+            Integer size
+    );
+
+    @Operation(summary = "길드 참여 요청 승인", description = "길드장이 PENDING 참여 요청을 승인하고 요청자를 MEMBER로 등록합니다.")
+    ResponseEntity<ApiResponse<JoinRequestApproveResponse>> approveJoinRequest(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            Long requestId
+    );
+
+    @Operation(summary = "길드 참여 요청 거절", description = "길드장이 PENDING 참여 요청을 거절합니다.")
+    ResponseEntity<ApiResponse<JoinRequestRejectResponse>> rejectJoinRequest(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            Long requestId
+    );
+
+    @Operation(summary = "길드 참여 요청 취소", description = "요청자 본인이 PENDING 참여 요청을 취소합니다.")
+    ResponseEntity<ApiResponse<JoinRequestCancelResponse>> cancelJoinRequest(
+            @Parameter(hidden = true) Authentication authentication,
+            Long guildId,
+            Long requestId
     );
 }

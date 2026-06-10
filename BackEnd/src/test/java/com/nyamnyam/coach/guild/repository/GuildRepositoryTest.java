@@ -1,12 +1,14 @@
 package com.nyamnyam.coach.guild.repository;
 
 import com.nyamnyam.coach.guild.entity.Guild;
+import com.nyamnyam.coach.guild.entity.GuildJoinRequest;
 import com.nyamnyam.coach.guild.entity.GuildMember;
 import com.nyamnyam.coach.guild.repository.row.GuildDetailRow;
 import com.nyamnyam.coach.guild.repository.row.GuildMemberRow;
 import com.nyamnyam.coach.guild.repository.row.GuildNoticeRow;
 import com.nyamnyam.coach.guild.repository.row.GuildStatusRow;
 import com.nyamnyam.coach.guild.repository.row.GuildSummaryRow;
+import com.nyamnyam.coach.guild.repository.row.JoinRequestRow;
 import com.nyamnyam.coach.user.entity.User;
 import com.nyamnyam.coach.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -223,6 +225,42 @@ class GuildRepositoryTest {
         assertThat(guildRepository.findGuildNotices(guild.getGuildId())).hasSize(1);
     }
 
+    @Test
+    @DisplayName("길드 참여 요청을 생성하고 승인 상태로 변경한다")
+    void joinRequest() {
+        User owner = saveUser("owner@example.com", "예린");
+        User requester = saveUser("requester@example.com", "민수");
+        Guild guild = saveGuild(owner.getUserId(), "잘먹잘싸", "NYAM-A7K3");
+        guildRepository.saveMember(ownerMember(guild.getGuildId(), owner.getUserId()));
+        insertCharacter(requester.getUserId());
+
+        GuildJoinRequest joinRequest = GuildJoinRequest.builder()
+                .guildId(guild.getGuildId())
+                .userId(requester.getUserId())
+                .status("PENDING")
+                .build();
+        guildRepository.insertJoinRequest(joinRequest);
+
+        assertThat(joinRequest.getRequestId()).isNotNull();
+        assertThat(guildRepository.existsPendingJoinRequestByUserId(requester.getUserId())).isTrue();
+        assertThat(guildRepository.findMyJoinRequests(requester.getUserId(), "PENDING", 10, 0)).hasSize(1);
+
+        List<JoinRequestRow> guildRequests = guildRepository.findGuildJoinRequests(guild.getGuildId(), "PENDING", 10, 0);
+        assertThat(guildRequests).hasSize(1);
+        assertThat(guildRequests.get(0).getNickname()).isEqualTo("민수");
+        assertThat(guildRequests.get(0).getCharacterLevel()).isEqualTo(7);
+
+        guildRepository.approveJoinRequest(guild.getGuildId(), joinRequest.getRequestId(), owner.getUserId());
+
+        JoinRequestRow approved = guildRepository.findJoinRequestByGuildIdAndRequestId(
+                guild.getGuildId(),
+                joinRequest.getRequestId()
+        ).get();
+        assertThat(approved.getStatus()).isEqualTo("APPROVED");
+        assertThat(approved.getHandledBy()).isEqualTo(owner.getUserId());
+        assertThat(approved.getHandledAt()).isNotNull();
+    }
+
     private User saveUser(String email, String nickname) {
         User user = User.builder()
                 .email(email)
@@ -285,14 +323,12 @@ class GuildRepositoryTest {
                 INSERT INTO guild_join_requests (
                     guild_id,
                     user_id,
-                    message,
                     status
                 )
-                VALUES (?, ?, ?, 'PENDING')
+                VALUES (?, ?, 'PENDING')
                 """,
                 guildId,
-                userId,
-                "참여하고 싶어요"
+                userId
         );
     }
 

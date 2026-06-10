@@ -397,7 +397,6 @@ CREATE TABLE guild_join_requests (
     request_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     guild_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
-    message VARCHAR(500),
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     handled_by BIGINT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -415,7 +414,8 @@ CREATE TABLE guild_join_requests (
         REFERENCES users(user_id)
         ON DELETE SET NULL,
     INDEX idx_join_requests_guild_status (guild_id, status),
-    INDEX idx_join_requests_user_status (user_id, status)
+    INDEX idx_join_requests_user_status (user_id, status),
+    INDEX idx_join_requests_guild_user_status (guild_id, user_id, status)
 ) ENGINE=InnoDB;
 
 CREATE TABLE guild_chats (

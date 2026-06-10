@@ -99,6 +99,25 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
+    <resultMap id="JoinRequestRowMap" type="com.nyamnyam.coach.guild.repository.row.JoinRequestRow">
+        <id property="requestId" column="request_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="guildName" column="guild_name"/>
+        <result property="inviteCode" column="invite_code"/>
+        <result property="guildDescription" column="guild_description"/>
+        <result property="userId" column="user_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="characterId" column="character_id"/>
+        <result property="characterName" column="character_name"/>
+        <result property="characterLevel" column="character_level"/>
+        <result property="status" column="status"/>
+        <result property="handledBy" column="handled_by"/>
+        <result property="handledByNickname" column="handled_by_nickname"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="handledAt" column="handled_at"/>
+    </resultMap>
+
     <select id="existsByName" resultType="boolean">
         SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
         FROM guilds
@@ -177,6 +196,25 @@
             updated_at
         FROM guilds
         WHERE guild_id = #{guildId}
+    </select>
+
+    <select id="findActiveGuildByInviteCode" resultMap="GuildResultMap">
+        SELECT
+            guild_id,
+            name,
+            description,
+            invite_code,
+            owner_user_id,
+            max_members,
+            guild_point,
+            visibility,
+            status,
+            created_at,
+            updated_at
+        FROM guilds
+        WHERE invite_code = #{inviteCode}
+          AND status = 'ACTIVE'
+        LIMIT 1
     </select>
 
     <select id="findGuildOwnerUserId" resultType="long">
@@ -401,6 +439,16 @@
         LIMIT 1
     </select>
 
+    <update id="reactivateGuildMember">
+        UPDATE guild_members
+        SET
+            role = 'MEMBER',
+            joined_at = CURRENT_TIMESTAMP,
+            left_at = NULL
+        WHERE guild_id = #{guildId}
+          AND user_id = #{userId}
+    </update>
+
     <select id="findActiveMemberByMemberId" resultMap="GuildMemberRowMap">
         SELECT
             gm.guild_member_id AS member_id,
@@ -610,5 +658,144 @@
         DELETE FROM guild_notices
         WHERE guild_id = #{guildId}
           AND notice_id = #{noticeId}
+    </update>
+
+    <insert id="insertJoinRequest"
+            parameterType="com.nyamnyam.coach.guild.entity.GuildJoinRequest"
+            useGeneratedKeys="true"
+            keyProperty="requestId"
+            keyColumn="request_id">
+        INSERT INTO guild_join_requests (
+            guild_id,
+            user_id,
+            status
+        )
+        VALUES (
+            #{guildId},
+            #{userId},
+            COALESCE(#{status}, 'PENDING')
+        )
+    </insert>
+
+    <select id="findMyJoinRequests" resultMap="JoinRequestRowMap">
+        SELECT
+            gjr.request_id,
+            gjr.guild_id,
+            g.name AS guild_name,
+            g.invite_code,
+            g.description AS guild_description,
+            gjr.user_id,
+            gjr.status,
+            gjr.created_at,
+            gjr.handled_at,
+            handler.nickname AS handled_by_nickname
+        FROM guild_join_requests gjr
+        JOIN guilds g ON g.guild_id = gjr.guild_id
+        LEFT JOIN users handler ON handler.user_id = gjr.handled_by
+        WHERE gjr.user_id = #{userId}
+        <if test="status != null and status != ''">
+            AND gjr.status = #{status}
+        </if>
+        ORDER BY gjr.created_at DESC, gjr.request_id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findGuildJoinRequests" resultMap="JoinRequestRowMap">
+        SELECT
+            gjr.request_id,
+            gjr.guild_id,
+            gjr.user_id,
+            u.nickname,
+            u.profile_image_url,
+            c.character_id,
+            c.name AS character_name,
+            c.level AS character_level,
+            gjr.status,
+            gjr.created_at
+        FROM guild_join_requests gjr
+        JOIN users u
+            ON u.user_id = gjr.user_id
+            AND u.status = 'ACTIVE'
+        LEFT JOIN characters c ON c.user_id = u.user_id
+        WHERE gjr.guild_id = #{guildId}
+        <if test="status != null and status != ''">
+            AND gjr.status = #{status}
+        </if>
+        ORDER BY gjr.created_at DESC, gjr.request_id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findJoinRequestByGuildIdAndRequestId" resultMap="JoinRequestRowMap">
+        SELECT
+            gjr.request_id,
+            gjr.guild_id,
+            g.name AS guild_name,
+            g.invite_code,
+            g.description AS guild_description,
+            gjr.user_id,
+            u.nickname,
+            u.profile_image_url,
+            c.character_id,
+            c.name AS character_name,
+            c.level AS character_level,
+            gjr.status,
+            gjr.handled_by,
+            handler.nickname AS handled_by_nickname,
+            gjr.created_at,
+            gjr.handled_at
+        FROM guild_join_requests gjr
+        JOIN guilds g ON g.guild_id = gjr.guild_id
+        JOIN users u ON u.user_id = gjr.user_id
+        LEFT JOIN users handler ON handler.user_id = gjr.handled_by
+        LEFT JOIN characters c ON c.user_id = u.user_id
+        WHERE gjr.guild_id = #{guildId}
+          AND gjr.request_id = #{requestId}
+        LIMIT 1
+    </select>
+
+    <update id="approveJoinRequest">
+        UPDATE guild_join_requests
+        SET
+            status = 'APPROVED',
+            handled_by = #{handledBy},
+            handled_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND request_id = #{requestId}
+          AND status = 'PENDING'
+    </update>
+
+    <update id="rejectJoinRequest">
+        UPDATE guild_join_requests
+        SET
+            status = 'REJECTED',
+            handled_by = #{handledBy},
+            handled_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND request_id = #{requestId}
+          AND status = 'PENDING'
+    </update>
+
+    <update id="cancelJoinRequest">
+        UPDATE guild_join_requests
+        SET
+            status = 'CANCELED',
+            handled_by = #{handledBy},
+            handled_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND request_id = #{requestId}
+          AND status = 'PENDING'
+    </update>
+
+    <update id="cancelOtherPendingRequests">
+        UPDATE guild_join_requests
+        SET
+            status = 'CANCELED',
+            handled_by = #{handledBy},
+            handled_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND request_id != #{excludeRequestId}
+          AND status = 'PENDING'
     </update>
 </mapper>

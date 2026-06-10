@@ -8,6 +8,10 @@ import com.nyamnyam.coach.guild.dto.request.GuildCreateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildNoticeCreateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildNoticeUpdateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildUpdateRequest;
+import com.nyamnyam.coach.guild.dto.request.JoinRequestCreateByCodeRequest;
+import com.nyamnyam.coach.guild.dto.request.JoinRequestCreateRequest;
+import com.nyamnyam.coach.guild.dto.response.GuildJoinRequestListResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildJoinRequestResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildCreateResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildDeleteResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildDetailResponse;
@@ -24,19 +28,28 @@ import com.nyamnyam.coach.guild.dto.response.GuildNoticeResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildNoticeUpdateResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildSummaryResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildUpdateResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestApproveResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestCancelResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestCreateResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestRejectResponse;
+import com.nyamnyam.coach.guild.dto.response.MyJoinRequestListResponse;
+import com.nyamnyam.coach.guild.dto.response.MyJoinRequestResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildListResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildStatusResponse;
 import com.nyamnyam.coach.guild.entity.Guild;
+import com.nyamnyam.coach.guild.entity.GuildJoinRequest;
 import com.nyamnyam.coach.guild.entity.GuildMember;
 import com.nyamnyam.coach.guild.entity.GuildRole;
 import com.nyamnyam.coach.guild.entity.GuildStatus;
 import com.nyamnyam.coach.guild.entity.GuildVisibility;
+import com.nyamnyam.coach.guild.entity.JoinRequestStatus;
 import com.nyamnyam.coach.guild.entity.MyGuildJoinStatus;
 import com.nyamnyam.coach.guild.repository.GuildRepository;
 import com.nyamnyam.coach.guild.repository.row.GuildDetailRow;
 import com.nyamnyam.coach.guild.repository.row.GuildMemberRow;
 import com.nyamnyam.coach.guild.repository.row.GuildNoticeRow;
+import com.nyamnyam.coach.guild.repository.row.JoinRequestRow;
 import com.nyamnyam.coach.guild.repository.row.GuildSummaryRow;
 import com.nyamnyam.coach.guild.repository.row.MyGuildRow;
 import com.nyamnyam.coach.user.entity.User;
@@ -382,6 +395,210 @@ public class GuildService {
         return new GuildNoticeDeleteResponse(guildId, noticeId, true);
     }
 
+    @Transactional
+    public JoinRequestCreateResponse createJoinRequestByInviteCode(
+            Long userId,
+            JoinRequestCreateByCodeRequest request
+    ) {
+        findActiveUser(userId);
+        Guild guild = guildRepository.findActiveGuildByInviteCode(request.inviteCode().trim())
+                .orElseThrow(() -> new BusinessException(GuildErrorCode.INVALID_INVITE_CODE));
+
+        return createJoinRequest(userId, guild);
+    }
+
+    @Transactional
+    public JoinRequestCreateResponse createJoinRequest(
+            Long guildId,
+            Long userId,
+            JoinRequestCreateRequest request
+    ) {
+        findActiveUser(userId);
+        Guild guild = guildValidator.validateGuildActive(guildId);
+
+        return createJoinRequest(userId, guild);
+    }
+
+    @Transactional(readOnly = true)
+    public MyJoinRequestListResponse getMyJoinRequests(
+            Long userId,
+            String status,
+            Integer page,
+            Integer size
+    ) {
+        findActiveUser(userId);
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        int limit = normalizedSize + 1;
+        int offset = normalizedPage * normalizedSize;
+        String normalizedStatus = normalizeJoinRequestStatusOrNull(status);
+
+        List<JoinRequestRow> rows = guildRepository.findMyJoinRequests(
+                userId,
+                normalizedStatus,
+                limit,
+                offset
+        );
+        boolean hasNext = rows.size() > normalizedSize;
+        List<MyJoinRequestResponse> requests = rows.stream()
+                .limit(normalizedSize)
+                .map(this::toMyJoinRequestResponse)
+                .toList();
+
+        return new MyJoinRequestListResponse(requests, normalizedPage, normalizedSize, hasNext);
+    }
+
+    @Transactional(readOnly = true)
+    public GuildJoinRequestListResponse getGuildJoinRequests(
+            Long guildId,
+            Long userId,
+            String status,
+            Integer page,
+            Integer size
+    ) {
+        findActiveUser(userId);
+        guildValidator.validateGuildOwner(guildId, userId);
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        int limit = normalizedSize + 1;
+        int offset = normalizedPage * normalizedSize;
+        String normalizedStatus = normalizeJoinRequestStatusOrDefault(status, JoinRequestStatus.PENDING.name());
+
+        List<JoinRequestRow> rows = guildRepository.findGuildJoinRequests(
+                guildId,
+                normalizedStatus,
+                limit,
+                offset
+        );
+        boolean hasNext = rows.size() > normalizedSize;
+        List<GuildJoinRequestResponse> requests = rows.stream()
+                .limit(normalizedSize)
+                .map(this::toGuildJoinRequestResponse)
+                .toList();
+
+        return new GuildJoinRequestListResponse(requests, normalizedPage, normalizedSize, hasNext);
+    }
+
+    @Transactional
+    public JoinRequestApproveResponse approveJoinRequest(Long guildId, Long requestId, Long userId) {
+        findActiveUser(userId);
+        guildValidator.validateGuildOwner(guildId, userId);
+        JoinRequestRow request = findPendingJoinRequest(guildId, requestId);
+        guildValidator.validateNotJoinedAnyGuild(request.getUserId());
+        guildValidator.validateGuildCapacity(guildId);
+
+        GuildMemberRow existingMember = guildRepository.findMemberByGuildIdAndUserId(guildId, request.getUserId())
+                .orElse(null);
+        Long memberId;
+        if (existingMember == null) {
+            GuildMember guildMember = GuildMember.builder()
+                    .guildId(guildId)
+                    .userId(request.getUserId())
+                    .role(GuildRole.MEMBER.name())
+                    .build();
+            guildRepository.saveMember(guildMember);
+            memberId = guildMember.getGuildMemberId();
+        } else {
+            guildRepository.reactivateGuildMember(guildId, request.getUserId());
+            memberId = existingMember.getMemberId();
+        }
+
+        if (guildRepository.approveJoinRequest(guildId, requestId, userId) == 0) {
+            throw new BusinessException(GuildErrorCode.JOIN_REQUEST_ALREADY_HANDLED);
+        }
+        guildRepository.cancelOtherPendingRequests(request.getUserId(), requestId, userId);
+        JoinRequestRow handledRequest = findJoinRequest(guildId, requestId);
+
+        return new JoinRequestApproveResponse(
+                handledRequest.getRequestId(),
+                handledRequest.getGuildId(),
+                handledRequest.getUserId(),
+                handledRequest.getNickname(),
+                handledRequest.getStatus(),
+                handledRequest.getHandledBy(),
+                handledRequest.getHandledAt(),
+                memberId
+        );
+    }
+
+    @Transactional
+    public JoinRequestRejectResponse rejectJoinRequest(Long guildId, Long requestId, Long userId) {
+        findActiveUser(userId);
+        guildValidator.validateGuildOwner(guildId, userId);
+        JoinRequestRow request = findPendingJoinRequest(guildId, requestId);
+
+        if (guildRepository.rejectJoinRequest(guildId, requestId, userId) == 0) {
+            throw new BusinessException(GuildErrorCode.JOIN_REQUEST_ALREADY_HANDLED);
+        }
+        JoinRequestRow handledRequest = findJoinRequest(guildId, requestId);
+
+        return new JoinRequestRejectResponse(
+                handledRequest.getRequestId(),
+                handledRequest.getGuildId(),
+                request.getUserId(),
+                handledRequest.getStatus(),
+                handledRequest.getHandledBy(),
+                handledRequest.getHandledAt()
+        );
+    }
+
+    @Transactional
+    public JoinRequestCancelResponse cancelJoinRequest(Long guildId, Long requestId, Long userId) {
+        findActiveUser(userId);
+        JoinRequestRow request = findPendingJoinRequest(guildId, requestId);
+        if (!request.getUserId().equals(userId)) {
+            throw new BusinessException(GuildErrorCode.JOIN_REQUEST_ACCESS_DENIED);
+        }
+
+        if (guildRepository.cancelJoinRequest(guildId, requestId, userId) == 0) {
+            throw new BusinessException(GuildErrorCode.JOIN_REQUEST_ALREADY_HANDLED);
+        }
+        JoinRequestRow canceledRequest = findJoinRequest(guildId, requestId);
+
+        return new JoinRequestCancelResponse(
+                canceledRequest.getRequestId(),
+                canceledRequest.getGuildId(),
+                canceledRequest.getStatus(),
+                canceledRequest.getHandledAt()
+        );
+    }
+
+    private JoinRequestCreateResponse createJoinRequest(Long userId, Guild guild) {
+        guildValidator.validateNotJoinedAnyGuild(userId);
+        guildValidator.validateNoPendingJoinRequest(userId);
+        guildValidator.validateGuildCapacity(guild.getGuildId());
+
+        GuildJoinRequest joinRequest = GuildJoinRequest.builder()
+                .guildId(guild.getGuildId())
+                .userId(userId)
+                .status(JoinRequestStatus.PENDING.name())
+                .build();
+        guildRepository.insertJoinRequest(joinRequest);
+        JoinRequestRow savedRequest = findJoinRequest(guild.getGuildId(), joinRequest.getRequestId());
+
+        return new JoinRequestCreateResponse(
+                savedRequest.getRequestId(),
+                savedRequest.getGuildId(),
+                savedRequest.getGuildName(),
+                savedRequest.getInviteCode(),
+                savedRequest.getStatus(),
+                savedRequest.getCreatedAt()
+        );
+    }
+
+    private JoinRequestRow findJoinRequest(Long guildId, Long requestId) {
+        return guildRepository.findJoinRequestByGuildIdAndRequestId(guildId, requestId)
+                .orElseThrow(() -> new BusinessException(GuildErrorCode.JOIN_REQUEST_NOT_FOUND));
+    }
+
+    private JoinRequestRow findPendingJoinRequest(Long guildId, Long requestId) {
+        JoinRequestRow request = findJoinRequest(guildId, requestId);
+        if (!JoinRequestStatus.PENDING.name().equals(request.getStatus())) {
+            throw new BusinessException(GuildErrorCode.JOIN_REQUEST_NOT_PENDING);
+        }
+        return request;
+    }
+
     private User findActiveUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
@@ -456,6 +673,24 @@ public class GuildService {
 
     private String normalizeNoticeText(String text) {
         return StringUtils.hasText(text) ? text.trim() : null;
+    }
+
+    private String normalizeJoinRequestStatusOrNull(String status) {
+        if (!StringUtils.hasText(status)) {
+            return null;
+        }
+        return normalizeJoinRequestStatusOrDefault(status, null);
+    }
+
+    private String normalizeJoinRequestStatusOrDefault(String status, String defaultStatus) {
+        if (!StringUtils.hasText(status)) {
+            return defaultStatus;
+        }
+        try {
+            return JoinRequestStatus.valueOf(status.trim().toUpperCase()).name();
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(GuildErrorCode.JOIN_REQUEST_NOT_FOUND);
+        }
     }
 
     private void validateNotice(String title, String content) {
@@ -608,6 +843,35 @@ public class GuildService {
                 row.getContent(),
                 row.getCreatedAt(),
                 row.getUpdatedAt()
+        );
+    }
+
+    private MyJoinRequestResponse toMyJoinRequestResponse(JoinRequestRow row) {
+        return new MyJoinRequestResponse(
+                row.getRequestId(),
+                row.getGuildId(),
+                row.getGuildName(),
+                row.getInviteCode(),
+                row.getGuildDescription(),
+                row.getStatus(),
+                row.getCreatedAt(),
+                row.getHandledAt(),
+                row.getHandledByNickname()
+        );
+    }
+
+    private GuildJoinRequestResponse toGuildJoinRequestResponse(JoinRequestRow row) {
+        return new GuildJoinRequestResponse(
+                row.getRequestId(),
+                row.getGuildId(),
+                row.getUserId(),
+                row.getNickname(),
+                row.getProfileImageUrl(),
+                row.getCharacterId(),
+                row.getCharacterName(),
+                row.getCharacterLevel(),
+                row.getStatus(),
+                row.getCreatedAt()
         );
     }
 }

@@ -18,7 +18,6 @@ public class GuildJoinRequest {
     private Long requestId;
     private Long guildId;
     private Long userId;
-    private String message;
     private String status;
     private Long handledBy;
     private LocalDateTime createdAt;
