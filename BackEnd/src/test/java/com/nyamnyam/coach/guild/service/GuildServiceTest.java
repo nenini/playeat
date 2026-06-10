@@ -6,6 +6,9 @@ import com.nyamnyam.coach.guild.dto.request.GuildCreateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildNoticeCreateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildNoticeUpdateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildUpdateRequest;
+import com.nyamnyam.coach.guild.dto.request.JoinRequestCreateByCodeRequest;
+import com.nyamnyam.coach.guild.dto.request.JoinRequestCreateRequest;
+import com.nyamnyam.coach.guild.dto.response.GuildJoinRequestListResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildCreateResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildDeleteResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildDetailResponse;
@@ -19,8 +22,14 @@ import com.nyamnyam.coach.guild.dto.response.GuildNoticeListResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildNoticeResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildNoticeUpdateResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildUpdateResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestApproveResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestCancelResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestCreateResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestRejectResponse;
+import com.nyamnyam.coach.guild.dto.response.MyJoinRequestListResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildStatusResponse;
 import com.nyamnyam.coach.guild.entity.Guild;
+import com.nyamnyam.coach.guild.entity.GuildJoinRequest;
 import com.nyamnyam.coach.guild.entity.GuildMember;
 import com.nyamnyam.coach.guild.entity.MyGuildJoinStatus;
 import com.nyamnyam.coach.guild.repository.GuildRepository;
@@ -29,6 +38,7 @@ import com.nyamnyam.coach.guild.repository.row.GuildMemberRow;
 import com.nyamnyam.coach.guild.repository.row.GuildNoticeRow;
 import com.nyamnyam.coach.guild.repository.row.GuildStatusRow;
 import com.nyamnyam.coach.guild.repository.row.GuildSummaryRow;
+import com.nyamnyam.coach.guild.repository.row.JoinRequestRow;
 import com.nyamnyam.coach.user.entity.User;
 import com.nyamnyam.coach.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -593,6 +603,250 @@ class GuildServiceTest {
         verify(guildRepository).deleteGuildNotice(10L, 50L);
     }
 
+    @Test
+    @DisplayName("초대 코드로 길드 참여 요청을 생성한다")
+    void createJoinRequestByInviteCode() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser(2L)));
+        when(guildRepository.findActiveGuildByInviteCode("NYAM-A7K3")).thenReturn(Optional.of(savedGuild()));
+        when(guildRepository.existsActiveMembershipByUserId(2L)).thenReturn(false);
+        when(guildRepository.existsPendingJoinRequestByUserId(2L)).thenReturn(false);
+        when(guildRepository.findById(10L)).thenReturn(Optional.of(savedGuild()));
+        when(guildRepository.countActiveMembers(10L)).thenReturn(3);
+        doAnswer(invocation -> {
+            GuildJoinRequest joinRequest = invocation.getArgument(0);
+            joinRequest.setRequestId(12L);
+            return null;
+        }).when(guildRepository).insertJoinRequest(any(GuildJoinRequest.class));
+        when(guildRepository.findJoinRequestByGuildIdAndRequestId(10L, 12L))
+                .thenReturn(Optional.of(joinRequestRow(12L, 10L, 2L, "PENDING")));
+
+        JoinRequestCreateResponse response = guildService.createJoinRequestByInviteCode(
+                2L,
+                new JoinRequestCreateByCodeRequest("NYAM-A7K3", " 함께 참여하고 싶어요! ")
+        );
+
+        ArgumentCaptor<GuildJoinRequest> captor = ArgumentCaptor.forClass(GuildJoinRequest.class);
+        verify(guildRepository).insertJoinRequest(captor.capture());
+        assertThat(captor.getValue().getMessage()).isEqualTo("함께 참여하고 싶어요!");
+        assertThat(response.requestId()).isEqualTo(12L);
+        assertThat(response.status()).isEqualTo("PENDING");
+    }
+
+    @Test
+    @DisplayName("길드 ID로 길드 참여 요청을 생성한다")
+    void createJoinRequestByGuildId() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser(2L)));
+        when(guildRepository.findById(10L)).thenReturn(Optional.of(savedGuild()), Optional.of(savedGuild()));
+        when(guildRepository.existsActiveMembershipByUserId(2L)).thenReturn(false);
+        when(guildRepository.existsPendingJoinRequestByUserId(2L)).thenReturn(false);
+        when(guildRepository.countActiveMembers(10L)).thenReturn(3);
+        doAnswer(invocation -> {
+            GuildJoinRequest joinRequest = invocation.getArgument(0);
+            joinRequest.setRequestId(12L);
+            return null;
+        }).when(guildRepository).insertJoinRequest(any(GuildJoinRequest.class));
+        when(guildRepository.findJoinRequestByGuildIdAndRequestId(10L, 12L))
+                .thenReturn(Optional.of(joinRequestRow(12L, 10L, 2L, "PENDING")));
+
+        JoinRequestCreateResponse response = guildService.createJoinRequest(
+                10L,
+                2L,
+                new JoinRequestCreateRequest("함께 참여하고 싶어요!")
+        );
+
+        assertThat(response.guildId()).isEqualTo(10L);
+        assertThat(response.message()).isEqualTo("함께 참여하고 싶어요!");
+    }
+
+    @Test
+    @DisplayName("이미 가입한 사용자는 참여 요청을 생성할 수 없다")
+    void createJoinRequestAlreadyJoined() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser(2L)));
+        when(guildRepository.findActiveGuildByInviteCode("NYAM-A7K3")).thenReturn(Optional.of(savedGuild()));
+        when(guildRepository.existsActiveMembershipByUserId(2L)).thenReturn(true);
+
+        assertThatThrownBy(() -> guildService.createJoinRequestByInviteCode(
+                2L,
+                new JoinRequestCreateByCodeRequest("NYAM-A7K3", null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(GuildErrorCode.USER_ALREADY_JOINED_GUILD);
+    }
+
+    @Test
+    @DisplayName("PENDING 요청이 있으면 중복 참여 요청을 생성할 수 없다")
+    void createJoinRequestAlreadyPending() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser(2L)));
+        when(guildRepository.findActiveGuildByInviteCode("NYAM-A7K3")).thenReturn(Optional.of(savedGuild()));
+        when(guildRepository.existsActiveMembershipByUserId(2L)).thenReturn(false);
+        when(guildRepository.existsPendingJoinRequestByUserId(2L)).thenReturn(true);
+
+        assertThatThrownBy(() -> guildService.createJoinRequestByInviteCode(
+                2L,
+                new JoinRequestCreateByCodeRequest("NYAM-A7K3", null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(GuildErrorCode.USER_HAS_PENDING_GUILD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("잘못된 초대 코드는 예외를 던진다")
+    void createJoinRequestInvalidInviteCode() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser(2L)));
+        when(guildRepository.findActiveGuildByInviteCode("BAD-CODE")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> guildService.createJoinRequestByInviteCode(
+                2L,
+                new JoinRequestCreateByCodeRequest("BAD-CODE", null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(GuildErrorCode.INVALID_INVITE_CODE);
+    }
+
+    @Test
+    @DisplayName("내 참여 요청 목록을 조회한다")
+    void getMyJoinRequests() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser(2L)));
+        when(guildRepository.findMyJoinRequests(2L, "PENDING", 11, 0))
+                .thenReturn(List.of(joinRequestRow(12L, 10L, 2L, "PENDING")));
+
+        MyJoinRequestListResponse response = guildService.getMyJoinRequests(2L, "pending", 0, 10);
+
+        assertThat(response.requests()).hasSize(1);
+        assertThat(response.requests().get(0).requestId()).isEqualTo(12L);
+        assertThat(response.requests().get(0).guildName()).isEqualTo("잘먹잘싸");
+    }
+
+    @Test
+    @DisplayName("길드장은 자기 길드의 참여 요청 목록을 조회할 수 있다")
+    void getGuildJoinRequestsByOwner() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser()));
+        when(guildRepository.findById(10L)).thenReturn(Optional.of(savedGuild()));
+        when(guildRepository.findActiveMemberRole(10L, 1L)).thenReturn(Optional.of("OWNER"));
+        when(guildRepository.findGuildJoinRequests(10L, "PENDING", 11, 0))
+                .thenReturn(List.of(joinRequestRow(12L, 10L, 2L, "PENDING")));
+
+        GuildJoinRequestListResponse response = guildService.getGuildJoinRequests(10L, 1L, null, 0, 10);
+
+        assertThat(response.requests()).hasSize(1);
+        assertThat(response.requests().get(0).nickname()).isEqualTo("민수");
+    }
+
+    @Test
+    @DisplayName("일반 멤버는 참여 요청 목록을 조회할 수 없다")
+    void getGuildJoinRequestsByMemberDenied() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser(2L)));
+        when(guildRepository.findById(10L)).thenReturn(Optional.of(savedGuild()));
+        when(guildRepository.findActiveMemberRole(10L, 2L)).thenReturn(Optional.of("MEMBER"));
+
+        assertThatThrownBy(() -> guildService.getGuildJoinRequests(10L, 2L, null, 0, 10))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(GuildErrorCode.GUILD_OWNER_ONLY);
+    }
+
+    @Test
+    @DisplayName("길드장은 참여 요청을 승인하고 MEMBER로 등록한다")
+    void approveJoinRequest() {
+        JoinRequestRow pending = joinRequestRow(12L, 10L, 2L, "PENDING");
+        JoinRequestRow approved = joinRequestRow(12L, 10L, 2L, "APPROVED");
+        approved.setHandledBy(1L);
+        approved.setHandledAt(LocalDateTime.of(2026, 6, 10, 10, 30));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser()));
+        when(guildRepository.findById(10L)).thenReturn(Optional.of(savedGuild()), Optional.of(savedGuild()));
+        when(guildRepository.findActiveMemberRole(10L, 1L)).thenReturn(Optional.of("OWNER"));
+        when(guildRepository.findJoinRequestByGuildIdAndRequestId(10L, 12L))
+                .thenReturn(Optional.of(pending), Optional.of(approved));
+        when(guildRepository.existsActiveMembershipByUserId(2L)).thenReturn(false);
+        when(guildRepository.countActiveMembers(10L)).thenReturn(3);
+        when(guildRepository.findMemberByGuildIdAndUserId(10L, 2L)).thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            GuildMember member = invocation.getArgument(0);
+            member.setGuildMemberId(8L);
+            return null;
+        }).when(guildRepository).saveMember(any(GuildMember.class));
+        when(guildRepository.approveJoinRequest(10L, 12L, 1L)).thenReturn(1);
+
+        JoinRequestApproveResponse response = guildService.approveJoinRequest(10L, 12L, 1L);
+
+        verify(guildRepository).approveJoinRequest(10L, 12L, 1L);
+        verify(guildRepository).cancelOtherPendingRequests(2L, 12L, 1L);
+        assertThat(response.status()).isEqualTo("APPROVED");
+        assertThat(response.memberId()).isEqualTo(8L);
+    }
+
+    @Test
+    @DisplayName("길드장은 참여 요청을 거절할 수 있다")
+    void rejectJoinRequest() {
+        JoinRequestRow pending = joinRequestRow(12L, 10L, 2L, "PENDING");
+        JoinRequestRow rejected = joinRequestRow(12L, 10L, 2L, "REJECTED");
+        rejected.setHandledBy(1L);
+        rejected.setHandledAt(LocalDateTime.of(2026, 6, 10, 10, 30));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser()));
+        when(guildRepository.findById(10L)).thenReturn(Optional.of(savedGuild()));
+        when(guildRepository.findActiveMemberRole(10L, 1L)).thenReturn(Optional.of("OWNER"));
+        when(guildRepository.findJoinRequestByGuildIdAndRequestId(10L, 12L))
+                .thenReturn(Optional.of(pending), Optional.of(rejected));
+        when(guildRepository.rejectJoinRequest(10L, 12L, 1L)).thenReturn(1);
+
+        JoinRequestRejectResponse response = guildService.rejectJoinRequest(10L, 12L, 1L);
+
+        verify(guildRepository).rejectJoinRequest(10L, 12L, 1L);
+        assertThat(response.status()).isEqualTo("REJECTED");
+    }
+
+    @Test
+    @DisplayName("요청자는 본인 참여 요청을 취소할 수 있다")
+    void cancelJoinRequest() {
+        JoinRequestRow pending = joinRequestRow(12L, 10L, 2L, "PENDING");
+        JoinRequestRow canceled = joinRequestRow(12L, 10L, 2L, "CANCELED");
+        canceled.setHandledAt(LocalDateTime.of(2026, 6, 10, 10, 30));
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser(2L)));
+        when(guildRepository.findJoinRequestByGuildIdAndRequestId(10L, 12L))
+                .thenReturn(Optional.of(pending), Optional.of(canceled));
+        when(guildRepository.cancelJoinRequest(10L, 12L, 2L)).thenReturn(1);
+
+        JoinRequestCancelResponse response = guildService.cancelJoinRequest(10L, 12L, 2L);
+
+        verify(guildRepository).cancelJoinRequest(10L, 12L, 2L);
+        assertThat(response.status()).isEqualTo("CANCELED");
+        assertThat(response.canceledAt()).isEqualTo(LocalDateTime.of(2026, 6, 10, 10, 30));
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 참여 요청은 취소할 수 없다")
+    void cancelJoinRequestAccessDenied() {
+        when(userRepository.findById(3L)).thenReturn(Optional.of(activeUser(3L)));
+        when(guildRepository.findJoinRequestByGuildIdAndRequestId(10L, 12L))
+                .thenReturn(Optional.of(joinRequestRow(12L, 10L, 2L, "PENDING")));
+
+        assertThatThrownBy(() -> guildService.cancelJoinRequest(10L, 12L, 3L))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(GuildErrorCode.JOIN_REQUEST_ACCESS_DENIED);
+    }
+
+    @Test
+    @DisplayName("PENDING이 아닌 참여 요청은 승인할 수 없다")
+    void approveJoinRequestNotPending() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(activeUser()));
+        when(guildRepository.findById(10L)).thenReturn(Optional.of(savedGuild()));
+        when(guildRepository.findActiveMemberRole(10L, 1L)).thenReturn(Optional.of("OWNER"));
+        when(guildRepository.findJoinRequestByGuildIdAndRequestId(10L, 12L))
+                .thenReturn(Optional.of(joinRequestRow(12L, 10L, 2L, "APPROVED")));
+
+        assertThatThrownBy(() -> guildService.approveJoinRequest(10L, 12L, 1L))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(GuildErrorCode.JOIN_REQUEST_NOT_PENDING);
+    }
+
     private User activeUser() {
         return activeUser(1L);
     }
@@ -690,6 +944,25 @@ class GuildServiceTest {
         row.setContent(content);
         row.setCreatedAt(LocalDateTime.of(2026, 6, 10, 10, 0));
         row.setUpdatedAt(LocalDateTime.of(2026, 6, 10, 10, 30));
+        return row;
+    }
+
+    private JoinRequestRow joinRequestRow(Long requestId, Long guildId, Long userId, String status) {
+        JoinRequestRow row = new JoinRequestRow();
+        row.setRequestId(requestId);
+        row.setGuildId(guildId);
+        row.setGuildName("잘먹잘싸");
+        row.setInviteCode("NYAM-A7K3");
+        row.setGuildDescription("건강하게 먹는 길드");
+        row.setUserId(userId);
+        row.setNickname("민수");
+        row.setProfileImageUrl("https://example.com/profile.png");
+        row.setCharacterId(300L);
+        row.setCharacterName("냠냠이");
+        row.setCharacterLevel(4);
+        row.setStatus(status);
+        row.setMessage("함께 참여하고 싶어요!");
+        row.setCreatedAt(LocalDateTime.of(2026, 6, 10, 10, 0));
         return row;
     }
 

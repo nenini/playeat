@@ -82,3 +82,7 @@ CREATE TABLE guild_join_requests (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     handled_at DATETIME
 );
+
+CREATE INDEX idx_join_requests_guild_status ON guild_join_requests (guild_id, status);
+CREATE INDEX idx_join_requests_user_status ON guild_join_requests (user_id, status);
+CREATE INDEX idx_join_requests_guild_user_status ON guild_join_requests (guild_id, user_id, status);
