@@ -1,0 +1,613 @@
+package com.nyamnyam.coach.guild.service;
+
+import com.nyamnyam.coach.global.exception.BusinessException;
+import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
+import com.nyamnyam.coach.global.exception.errorcode.GuildErrorCode;
+import com.nyamnyam.coach.global.exception.errorcode.UserErrorCode;
+import com.nyamnyam.coach.guild.dto.request.GuildCreateRequest;
+import com.nyamnyam.coach.guild.dto.request.GuildNoticeCreateRequest;
+import com.nyamnyam.coach.guild.dto.request.GuildNoticeUpdateRequest;
+import com.nyamnyam.coach.guild.dto.request.GuildUpdateRequest;
+import com.nyamnyam.coach.guild.dto.response.GuildCreateResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildDeleteResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildDetailResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildKickResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildLeaveResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildListResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildMemberDetailResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildMemberListResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildMemberResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeCreateResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeDeleteResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeListResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildNoticeUpdateResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildSummaryResponse;
+import com.nyamnyam.coach.guild.dto.response.GuildUpdateResponse;
+import com.nyamnyam.coach.guild.dto.response.MyGuildListResponse;
+import com.nyamnyam.coach.guild.dto.response.MyGuildResponse;
+import com.nyamnyam.coach.guild.dto.response.MyGuildStatusResponse;
+import com.nyamnyam.coach.guild.entity.Guild;
+import com.nyamnyam.coach.guild.entity.GuildMember;
+import com.nyamnyam.coach.guild.entity.GuildRole;
+import com.nyamnyam.coach.guild.entity.GuildStatus;
+import com.nyamnyam.coach.guild.entity.GuildVisibility;
+import com.nyamnyam.coach.guild.entity.MyGuildJoinStatus;
+import com.nyamnyam.coach.guild.repository.GuildRepository;
+import com.nyamnyam.coach.guild.repository.row.GuildDetailRow;
+import com.nyamnyam.coach.guild.repository.row.GuildMemberRow;
+import com.nyamnyam.coach.guild.repository.row.GuildNoticeRow;
+import com.nyamnyam.coach.guild.repository.row.GuildSummaryRow;
+import com.nyamnyam.coach.guild.repository.row.MyGuildRow;
+import com.nyamnyam.coach.user.entity.User;
+import com.nyamnyam.coach.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.security.SecureRandom;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class GuildService {
+
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 50;
+    private static final int DEFAULT_MAX_MEMBERS = 30;
+    private static final int MIN_MAX_MEMBERS = 1;
+    private static final int MAX_MAX_MEMBERS = 30;
+    private static final int INVITE_CODE_RETRY_LIMIT = 5;
+    private static final String INVITE_CODE_PREFIX = "NYAM-";
+    private static final char[] INVITE_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
+    private static final String ACTIVE_STATUS = "ACTIVE";
+
+    private final GuildRepository guildRepository;
+    private final UserRepository userRepository;
+    private final GuildValidator guildValidator;
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    @Transactional(readOnly = true)
+    public GuildListResponse getGuilds(Long userId, Integer page, Integer size, String keyword, String sort) {
+        findActiveUser(userId);
+
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        int limit = normalizedSize + 1;
+        int offset = normalizedPage * normalizedSize;
+        String normalizedKeyword = StringUtils.hasText(keyword) ? keyword.trim() : null;
+        String normalizedSort = normalizeSort(sort);
+        boolean alreadyJoinedAnyGuild = guildRepository.existsActiveMembershipByUserId(userId);
+
+        List<GuildSummaryRow> rows = guildRepository.findActiveGuildSummaries(
+                userId,
+                normalizedKeyword,
+                normalizedSort,
+                limit,
+                offset
+        );
+
+        boolean hasNext = rows.size() > normalizedSize;
+        List<GuildSummaryResponse> guilds = rows.stream()
+                .limit(normalizedSize)
+                .map(row -> toGuildSummaryResponse(row, alreadyJoinedAnyGuild))
+                .toList();
+
+        return new GuildListResponse(guilds, normalizedPage, normalizedSize, hasNext);
+    }
+
+    @Transactional
+    public GuildCreateResponse createGuild(Long userId, GuildCreateRequest request) {
+        findActiveUser(userId);
+        guildValidator.validateNotJoinedAnyGuild(userId);
+        guildValidator.validateNoPendingJoinRequest(userId);
+        validateGuildNameAvailable(request.name());
+
+        int maxMembers = resolveMaxMembers(request.maxMembers());
+        String inviteCode = generateInviteCode();
+
+        Guild guild = Guild.builder()
+                .name(request.name().trim())
+                .description(normalizeDescription(request.description()))
+                .inviteCode(inviteCode)
+                .ownerUserId(userId)
+                .maxMembers(maxMembers)
+                .guildPoint(0)
+                .visibility(GuildVisibility.PRIVATE.name())
+                .status(GuildStatus.ACTIVE.name())
+                .build();
+
+        guildRepository.save(guild);
+
+        GuildMember ownerMember = GuildMember.builder()
+                .guildId(guild.getGuildId())
+                .userId(userId)
+                .role(GuildRole.OWNER.name())
+                .build();
+        guildRepository.saveMember(ownerMember);
+
+        Guild savedGuild = guildValidator.validateGuildActive(guild.getGuildId());
+        int memberCount = guildRepository.countActiveMembers(savedGuild.getGuildId());
+
+        return new GuildCreateResponse(
+                savedGuild.getGuildId(),
+                savedGuild.getName(),
+                savedGuild.getDescription(),
+                savedGuild.getInviteCode(),
+                savedGuild.getOwnerUserId(),
+                GuildRole.OWNER.name(),
+                memberCount,
+                savedGuild.getMaxMembers(),
+                savedGuild.getVisibility(),
+                savedGuild.getStatus(),
+                savedGuild.getCreatedAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public MyGuildListResponse getMyGuilds(Long userId) {
+        findActiveUser(userId);
+
+        List<MyGuildResponse> guilds = guildRepository.findMyActiveGuilds(userId)
+                .stream()
+                .map(this::toMyGuildResponse)
+                .toList();
+
+        return new MyGuildListResponse(guilds);
+    }
+
+    @Transactional(readOnly = true)
+    public MyGuildStatusResponse getMyGuildStatus(Long userId) {
+        findActiveUser(userId);
+        return guildValidator.getMyGuildStatus(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public GuildDetailResponse getGuildDetail(Long guildId, Long userId) {
+        findActiveUser(userId);
+        guildValidator.validateGuildMember(guildId, userId);
+
+        GuildDetailRow row = guildRepository.findGuildDetail(guildId, userId)
+                .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_NOT_FOUND));
+
+        return toGuildDetailResponse(row);
+    }
+
+    @Transactional(readOnly = true)
+    public GuildMemberListResponse getGuildMembers(Long guildId, Long userId) {
+        findActiveUser(userId);
+        guildValidator.validateGuildMember(guildId, userId);
+
+        List<GuildMemberResponse> members = guildRepository.findActiveMembers(guildId)
+                .stream()
+                .map(row -> toGuildMemberResponse(row, userId))
+                .toList();
+
+        return new GuildMemberListResponse(members);
+    }
+
+    @Transactional
+    public GuildUpdateResponse updateGuild(Long guildId, Long userId, GuildUpdateRequest request) {
+        findActiveUser(userId);
+        guildValidator.validateGuildActive(guildId);
+        guildValidator.validateGuildOwner(guildId, userId);
+        validateGuildNameAvailableForUpdate(request.name(), guildId);
+
+        int maxMembers = resolveMaxMembers(request.maxMembers());
+        int memberCount = guildRepository.countActiveMembers(guildId);
+        if (maxMembers < memberCount) {
+            throw new BusinessException(GuildErrorCode.GUILD_MAX_MEMBERS_LESS_THAN_CURRENT_MEMBERS);
+        }
+
+        guildRepository.updateGuild(
+                guildId,
+                request.name().trim(),
+                normalizeDescription(request.description()),
+                maxMembers
+        );
+        Guild updatedGuild = guildValidator.validateGuildActive(guildId);
+
+        return new GuildUpdateResponse(
+                updatedGuild.getGuildId(),
+                updatedGuild.getName(),
+                updatedGuild.getDescription(),
+                updatedGuild.getInviteCode(),
+                memberCount,
+                updatedGuild.getMaxMembers(),
+                updatedGuild.getVisibility(),
+                updatedGuild.getStatus(),
+                updatedGuild.getUpdatedAt()
+        );
+    }
+
+    @Transactional
+    public GuildDeleteResponse deleteGuild(Long guildId, Long userId) {
+        findActiveUser(userId);
+        Guild guild = guildValidator.validateGuildExists(guildId);
+        if (!GuildStatus.ACTIVE.name().equals(guild.getStatus())) {
+            throw new BusinessException(GuildErrorCode.GUILD_ALREADY_INACTIVE);
+        }
+        guildValidator.validateGuildOwner(guildId, userId);
+
+        // TODO: Boss Battle PR에서 진행 중인 보스전이 있으면 삭제를 막는 검증을 추가한다.
+        guildRepository.softDeleteGuild(guildId);
+        guildRepository.markAllMembersLeft(guildId);
+        Guild deletedGuild = guildValidator.validateGuildExists(guildId);
+
+        return new GuildDeleteResponse(
+                deletedGuild.getGuildId(),
+                deletedGuild.getStatus(),
+                deletedGuild.getUpdatedAt()
+        );
+    }
+
+    @Transactional
+    public GuildLeaveResponse leaveGuild(Long guildId, Long userId) {
+        findActiveUser(userId);
+        guildValidator.validateGuildActive(guildId);
+        GuildMemberRow member = guildRepository.findActiveMemberByGuildIdAndUserId(guildId, userId)
+                .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
+
+        if (GuildRole.OWNER.name().equals(member.getRole())) {
+            throw new BusinessException(GuildErrorCode.GUILD_OWNER_CANNOT_LEAVE);
+        }
+
+        guildRepository.leaveGuild(guildId, userId);
+        GuildMemberRow leftMember = guildRepository.findMemberByGuildIdAndUserId(guildId, userId)
+                .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
+
+        return new GuildLeaveResponse(
+                guildId,
+                userId,
+                leftMember.getLeftAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public GuildMemberDetailResponse getGuildMemberDetail(Long guildId, Long memberId, Long userId) {
+        findActiveUser(userId);
+        guildValidator.validateGuildMember(guildId, userId);
+
+        GuildMemberRow member = guildRepository.findMemberDetail(guildId, memberId, userId)
+                .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
+
+        return toGuildMemberDetailResponse(member, userId);
+    }
+
+    @Transactional
+    public GuildKickResponse kickGuildMember(Long guildId, Long memberId, Long userId) {
+        findActiveUser(userId);
+        guildValidator.validateGuildOwner(guildId, userId);
+
+        GuildMemberRow targetMember = guildRepository.findMemberByMemberId(guildId, memberId)
+                .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
+
+        if (targetMember.getLeftAt() != null) {
+            throw new BusinessException(GuildErrorCode.GUILD_MEMBER_ALREADY_LEFT);
+        }
+        if (GuildRole.OWNER.name().equals(targetMember.getRole())) {
+            throw new BusinessException(GuildErrorCode.GUILD_CANNOT_KICK_OWNER);
+        }
+
+        guildRepository.kickGuildMember(guildId, memberId);
+        GuildMemberRow kickedMember = guildRepository.findMemberByMemberId(guildId, memberId)
+                .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
+
+        return new GuildKickResponse(
+                guildId,
+                memberId,
+                targetMember.getUserId(),
+                kickedMember.getLeftAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public GuildNoticeListResponse getGuildNotices(Long guildId, Long userId) {
+        findActiveUser(userId);
+        String role = guildValidator.validateGuildMember(guildId, userId);
+        boolean editable = GuildRole.OWNER.name().equals(role);
+
+        List<GuildNoticeResponse> notices = guildRepository.findGuildNotices(guildId)
+                .stream()
+                .map(row -> toGuildNoticeResponse(row, editable))
+                .toList();
+
+        return new GuildNoticeListResponse(notices);
+    }
+
+    @Transactional(readOnly = true)
+    public GuildNoticeResponse getGuildNotice(Long guildId, Long noticeId, Long userId) {
+        findActiveUser(userId);
+        String role = guildValidator.validateGuildMember(guildId, userId);
+
+        GuildNoticeRow notice = findGuildNotice(guildId, noticeId);
+        return toGuildNoticeResponse(notice, GuildRole.OWNER.name().equals(role));
+    }
+
+    @Transactional
+    public GuildNoticeCreateResponse createGuildNotice(
+            Long guildId,
+            Long userId,
+            GuildNoticeCreateRequest request
+    ) {
+        findActiveUser(userId);
+        guildValidator.validateGuildOwner(guildId, userId);
+
+        String title = normalizeNoticeText(request.title());
+        String content = normalizeNoticeText(request.content());
+        validateNotice(title, content);
+
+        GuildNoticeRow noticeToSave = new GuildNoticeRow();
+        noticeToSave.setGuildId(guildId);
+        noticeToSave.setWriterUserId(userId);
+        noticeToSave.setTitle(title);
+        noticeToSave.setContent(content);
+        guildRepository.saveGuildNotice(noticeToSave);
+
+        GuildNoticeRow notice = findGuildNotice(guildId, noticeToSave.getNoticeId());
+
+        return toGuildNoticeCreateResponse(notice);
+    }
+
+    @Transactional
+    public GuildNoticeUpdateResponse updateGuildNotice(
+            Long guildId,
+            Long noticeId,
+            Long userId,
+            GuildNoticeUpdateRequest request
+    ) {
+        findActiveUser(userId);
+        guildValidator.validateGuildOwner(guildId, userId);
+        findGuildNotice(guildId, noticeId);
+
+        String title = normalizeNoticeText(request.title());
+        String content = normalizeNoticeText(request.content());
+        validateNotice(title, content);
+
+        guildRepository.updateGuildNotice(guildId, noticeId, title, content);
+        GuildNoticeRow notice = findGuildNotice(guildId, noticeId);
+
+        return toGuildNoticeUpdateResponse(notice);
+    }
+
+    @Transactional
+    public GuildNoticeDeleteResponse deleteGuildNotice(Long guildId, Long noticeId, Long userId) {
+        findActiveUser(userId);
+        guildValidator.validateGuildOwner(guildId, userId);
+        findGuildNotice(guildId, noticeId);
+
+        guildRepository.deleteGuildNotice(guildId, noticeId);
+        return new GuildNoticeDeleteResponse(guildId, noticeId, true);
+    }
+
+    private User findActiveUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+        if (!ACTIVE_STATUS.equals(user.getStatus())) {
+            throw new BusinessException(AuthErrorCode.USER_INACTIVE);
+        }
+        return user;
+    }
+
+    private void validateGuildNameAvailable(String name) {
+        if (guildRepository.existsByName(name.trim())) {
+            throw new BusinessException(GuildErrorCode.GUILD_NAME_DUPLICATED);
+        }
+    }
+
+    private void validateGuildNameAvailableForUpdate(String name, Long guildId) {
+        if (guildRepository.existsByNameExceptGuildId(name.trim(), guildId)) {
+            throw new BusinessException(GuildErrorCode.GUILD_NAME_DUPLICATED);
+        }
+    }
+
+    private int resolveMaxMembers(Integer maxMembers) {
+        int resolved = maxMembers == null ? DEFAULT_MAX_MEMBERS : maxMembers;
+        if (resolved < MIN_MAX_MEMBERS || resolved > MAX_MAX_MEMBERS) {
+            throw new BusinessException(GuildErrorCode.GUILD_MAX_MEMBERS_INVALID);
+        }
+        return resolved;
+    }
+
+    private String generateInviteCode() {
+        for (int attempt = 0; attempt < INVITE_CODE_RETRY_LIMIT; attempt++) {
+            String inviteCode = INVITE_CODE_PREFIX + randomCodeSuffix();
+            if (!guildRepository.existsByInviteCode(inviteCode)) {
+                return inviteCode;
+            }
+        }
+        throw new BusinessException(GuildErrorCode.INVITE_CODE_GENERATION_FAILED);
+    }
+
+    private String randomCodeSuffix() {
+        StringBuilder builder = new StringBuilder(4);
+        for (int i = 0; i < 4; i++) {
+            builder.append(INVITE_CODE_CHARS[secureRandom.nextInt(INVITE_CODE_CHARS.length)]);
+        }
+        return builder.toString();
+    }
+
+    private int normalizePage(Integer page) {
+        if (page == null || page < 0) {
+            return DEFAULT_PAGE;
+        }
+        return page;
+    }
+
+    private int normalizeSize(Integer size) {
+        if (size == null || size <= 0) {
+            return DEFAULT_SIZE;
+        }
+        return Math.min(size, MAX_PAGE_SIZE);
+    }
+
+    private String normalizeSort(String sort) {
+        if ("createdAt".equals(sort)) {
+            return "createdAt";
+        }
+        return "guildPoint";
+    }
+
+    private String normalizeDescription(String description) {
+        return StringUtils.hasText(description) ? description.trim() : null;
+    }
+
+    private String normalizeNoticeText(String text) {
+        return StringUtils.hasText(text) ? text.trim() : null;
+    }
+
+    private void validateNotice(String title, String content) {
+        if (!StringUtils.hasText(title) || !StringUtils.hasText(content)) {
+            throw new BusinessException(GuildErrorCode.GUILD_NOTICE_INVALID);
+        }
+    }
+
+    private GuildNoticeRow findGuildNotice(Long guildId, Long noticeId) {
+        return guildRepository.findGuildNoticeById(guildId, noticeId)
+                .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_NOTICE_NOT_FOUND));
+    }
+
+    private GuildSummaryResponse toGuildSummaryResponse(
+            GuildSummaryRow row,
+            boolean alreadyJoinedAnyGuild
+    ) {
+        return new GuildSummaryResponse(
+                row.getGuildId(),
+                row.getName(),
+                row.getDescription(),
+                row.getInviteCode(),
+                row.getMemberCount(),
+                row.getMaxMembers(),
+                row.getGuildPoint(),
+                row.getOwnerNickname(),
+                resolveJoinStatus(row),
+                row.getPendingRequestId(),
+                alreadyJoinedAnyGuild
+        );
+    }
+
+    private MyGuildJoinStatus resolveJoinStatus(GuildSummaryRow row) {
+        if (row.getJoinedGuildId() != null) {
+            return MyGuildJoinStatus.JOINED;
+        }
+        if (row.getPendingRequestId() != null) {
+            return MyGuildJoinStatus.PENDING;
+        }
+        return MyGuildJoinStatus.NONE;
+    }
+
+    private MyGuildResponse toMyGuildResponse(MyGuildRow row) {
+        return new MyGuildResponse(
+                row.getGuildId(),
+                row.getName(),
+                row.getDescription(),
+                row.getInviteCode(),
+                row.getMemberCount(),
+                row.getMaxMembers(),
+                row.getGuildPoint(),
+                row.getMyRole(),
+                row.getJoinedAt()
+        );
+    }
+
+    private GuildDetailResponse toGuildDetailResponse(GuildDetailRow row) {
+        return new GuildDetailResponse(
+                row.getGuildId(),
+                row.getName(),
+                row.getDescription(),
+                row.getInviteCode(),
+                row.getOwnerUserId(),
+                row.getOwnerNickname(),
+                row.getMemberCount(),
+                row.getMaxMembers(),
+                row.getGuildPoint(),
+                row.getVisibility(),
+                row.getStatus(),
+                row.getMyRole(),
+                row.getCreatedAt(),
+                row.getUpdatedAt()
+        );
+    }
+
+    private GuildMemberResponse toGuildMemberResponse(GuildMemberRow row, Long userId) {
+        return new GuildMemberResponse(
+                row.getMemberId(),
+                row.getUserId(),
+                row.getNickname(),
+                row.getProfileImageUrl(),
+                row.getCharacterId(),
+                row.getCharacterName(),
+                row.getCharacterLevel(),
+                row.getCharacterStage(),
+                row.getCharacterMood(),
+                row.getCharacterAppearanceType(),
+                row.getRole(),
+                row.getJoinedAt(),
+                row.getUserId().equals(userId)
+        );
+    }
+
+    private GuildMemberDetailResponse toGuildMemberDetailResponse(GuildMemberRow row, Long userId) {
+        return new GuildMemberDetailResponse(
+                row.getMemberId(),
+                row.getUserId(),
+                row.getNickname(),
+                row.getProfileImageUrl(),
+                row.getCharacterId(),
+                row.getCharacterName(),
+                row.getCharacterLevel(),
+                row.getCharacterStage(),
+                row.getCharacterMood(),
+                row.getCharacterAppearanceType(),
+                row.getStreakDays(),
+                row.getRole(),
+                row.getJoinedAt(),
+                row.getUserId().equals(userId),
+                0,
+                0,
+                0
+        );
+    }
+
+    private GuildNoticeResponse toGuildNoticeResponse(GuildNoticeRow row, boolean editable) {
+        return new GuildNoticeResponse(
+                row.getNoticeId(),
+                row.getGuildId(),
+                row.getWriterUserId(),
+                row.getWriterNickname(),
+                row.getTitle(),
+                row.getContent(),
+                row.getCreatedAt(),
+                row.getUpdatedAt(),
+                editable
+        );
+    }
+
+    private GuildNoticeCreateResponse toGuildNoticeCreateResponse(GuildNoticeRow row) {
+        return new GuildNoticeCreateResponse(
+                row.getNoticeId(),
+                row.getGuildId(),
+                row.getWriterUserId(),
+                row.getWriterNickname(),
+                row.getTitle(),
+                row.getContent(),
+                row.getCreatedAt(),
+                row.getUpdatedAt()
+        );
+    }
+
+    private GuildNoticeUpdateResponse toGuildNoticeUpdateResponse(GuildNoticeRow row) {
+        return new GuildNoticeUpdateResponse(
+                row.getNoticeId(),
+                row.getGuildId(),
+                row.getWriterUserId(),
+                row.getWriterNickname(),
+                row.getTitle(),
+                row.getContent(),
+                row.getCreatedAt(),
+                row.getUpdatedAt()
+        );
+    }
+}

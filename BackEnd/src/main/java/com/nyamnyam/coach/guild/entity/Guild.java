@@ -1,4 +1,4 @@
-package com.nyamnyam.coach.user.entity;
+package com.nyamnyam.coach.guild.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,17 +13,17 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class Guild {
 
-    private Long userId;
-    private String email;
-    private String passwordHash;
-    private String nickname;
-    private String profileImageUrl;
-    private Long selectedCoachId;
+    private Long guildId;
+    private String name;
+    private String description;
+    private String inviteCode;
+    private Long ownerUserId;
+    private Integer maxMembers;
+    private Integer guildPoint;
+    private String visibility;
     private String status;
-    private Boolean onboardingCompleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private LocalDateTime deactivatedAt;
 }

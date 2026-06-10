@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS bosses;
 DROP TABLE IF EXISTS boss_seasons;
 DROP TABLE IF EXISTS guild_chats;
 DROP TABLE IF EXISTS guild_join_requests;
+DROP TABLE IF EXISTS guild_notices;
 DROP TABLE IF EXISTS guild_members;
 DROP TABLE IF EXISTS guilds;
 DROP TABLE IF EXISTS ai_reports;
@@ -338,11 +339,11 @@ CREATE TABLE guilds (
     guild_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description VARCHAR(500),
-    invite_code VARCHAR(50),
+    invite_code VARCHAR(50) NOT NULL,
     owner_user_id BIGINT NOT NULL,
-    notice TEXT,
-    max_members INT NOT NULL DEFAULT 10,
-    visibility VARCHAR(20) NOT NULL DEFAULT 'PUBLIC',
+    max_members INT NOT NULL DEFAULT 30,
+    guild_point INT NOT NULL DEFAULT 0,
+    visibility VARCHAR(20) NOT NULL DEFAULT 'PRIVATE',
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -372,6 +373,25 @@ CREATE TABLE guild_members (
         REFERENCES users(user_id)
         ON DELETE CASCADE,
     INDEX idx_guild_members_user (user_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE guild_notices (
+    notice_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    writer_user_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_guild_notices_guild
+        FOREIGN KEY (guild_id)
+        REFERENCES guilds(guild_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_guild_notices_writer
+        FOREIGN KEY (writer_user_id)
+        REFERENCES users(user_id)
+        ON DELETE RESTRICT,
+    INDEX idx_guild_notices_guild_created (guild_id, created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE guild_join_requests (
