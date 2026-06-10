@@ -19,16 +19,21 @@ public interface UserRepository {
 
     boolean existsByEmail(@Param("email") String email);
 
-    boolean existsByNickname(@Param("nickname") String nickname);
-
-    boolean existsByNicknameExcludingUserId(
-            @Param("nickname") String nickname,
-            @Param("userId") Long userId
-    );
-
     int updateProfile(
             @Param("userId") Long userId,
             @Param("nickname") String nickname
+    );
+
+    int updateProfileImage(
+            @Param("userId") Long userId,
+            @Param("profileImageUrl") String profileImageUrl
+    );
+
+    int deleteProfileImage(@Param("userId") Long userId);
+
+    int completeOnboarding(
+            @Param("userId") Long userId,
+            @Param("selectedCoachId") Long selectedCoachId
     );
 
     int deactivate(@Param("userId") Long userId);

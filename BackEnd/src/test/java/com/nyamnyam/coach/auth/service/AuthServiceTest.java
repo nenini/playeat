@@ -87,7 +87,6 @@ class AuthServiceTest {
                 .build();
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
-        when(userRepository.existsByNickname(request.nickname())).thenReturn(false);
         doAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setUserId(1L);
@@ -121,19 +120,6 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("중복 닉네임이면 NICKNAME_ALREADY_EXISTS 예외를 던진다")
-    void signupWithDuplicateNickname() {
-        SignupRequest request = new SignupRequest("user@example.com", "password123!", "냥냥");
-        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
-        when(userRepository.existsByNickname(request.nickname())).thenReturn(true);
-
-        assertThatThrownBy(() -> authService.signup(request))
-                .isInstanceOf(BusinessException.class)
-                .extracting("errorCode")
-                .isEqualTo(AuthErrorCode.NICKNAME_ALREADY_EXISTS);
-    }
-
-    @Test
     @DisplayName("탈퇴한 이메일이면 기존 계정을 재활성화한다")
     void signupReactivatesInactiveUser() {
         SignupRequest request = new SignupRequest("user@example.com", "new-password123!", "냥냥");
@@ -153,8 +139,6 @@ class AuthServiceTest {
                 .build();
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(inactiveUser));
-        when(userRepository.existsByNicknameExcludingUserId(request.nickname(), inactiveUser.getUserId()))
-                .thenReturn(false);
         when(userRepository.findById(inactiveUser.getUserId())).thenReturn(Optional.of(reactivatedUser));
 
         SignupResponse response = authService.signup(request);

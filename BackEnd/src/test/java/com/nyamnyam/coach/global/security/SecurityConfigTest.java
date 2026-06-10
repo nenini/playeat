@@ -5,6 +5,7 @@ import com.nyamnyam.coach.auth.dto.request.LogoutRequest;
 import com.nyamnyam.coach.auth.dto.request.SignupRequest;
 import com.nyamnyam.coach.auth.dto.response.LogoutResponse;
 import com.nyamnyam.coach.auth.dto.response.SignupResponse;
+import com.nyamnyam.coach.auth.controller.AuthController;
 import com.nyamnyam.coach.auth.jwt.JwtToken;
 import com.nyamnyam.coach.auth.jwt.JwtTokenProvider;
 import com.nyamnyam.coach.auth.service.AuthService;
@@ -34,7 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest
+@WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc
 @Import({
         SecurityConfig.class,
