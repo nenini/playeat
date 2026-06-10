@@ -416,7 +416,8 @@ CREATE TABLE guild_join_requests (
         REFERENCES users(user_id)
         ON DELETE SET NULL,
     INDEX idx_join_requests_guild_status (guild_id, status),
-    INDEX idx_join_requests_user_status (user_id, status)
+    INDEX idx_join_requests_user_status (user_id, status),
+    INDEX idx_join_requests_guild_user_status (guild_id, user_id, status)
 ) ENGINE=InnoDB;
 
 CREATE TABLE guild_chats (

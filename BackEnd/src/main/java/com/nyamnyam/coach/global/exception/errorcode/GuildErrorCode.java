@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 public enum GuildErrorCode implements ErrorCode {
 
     GUILD_NOT_FOUND(HttpStatus.NOT_FOUND, "길드를 찾을 수 없습니다."),
+    GUILD_INACTIVE(HttpStatus.CONFLICT, "비활성화된 길드입니다."),
     GUILD_ALREADY_INACTIVE(HttpStatus.CONFLICT, "이미 비활성화된 길드입니다."),
     GUILD_NAME_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 길드명입니다."),
     GUILD_ACCESS_DENIED(HttpStatus.FORBIDDEN, "길드 접근 권한이 없습니다."),
@@ -24,6 +25,11 @@ public enum GuildErrorCode implements ErrorCode {
     GUILD_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "길드 관리 권한이 없습니다."),
     USER_ALREADY_JOINED_GUILD(HttpStatus.CONFLICT, "이미 가입한 길드가 있습니다."),
     USER_HAS_PENDING_GUILD_REQUEST(HttpStatus.CONFLICT, "이미 처리 대기 중인 길드 참여 요청이 있습니다."),
+    INVALID_INVITE_CODE(HttpStatus.NOT_FOUND, "유효하지 않은 길드 초대 코드입니다."),
+    JOIN_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "길드 참여 요청을 찾을 수 없습니다."),
+    JOIN_REQUEST_NOT_PENDING(HttpStatus.CONFLICT, "대기 중인 길드 참여 요청이 아닙니다."),
+    JOIN_REQUEST_ACCESS_DENIED(HttpStatus.FORBIDDEN, "길드 참여 요청 접근 권한이 없습니다."),
+    JOIN_REQUEST_ALREADY_HANDLED(HttpStatus.CONFLICT, "이미 처리된 길드 참여 요청입니다."),
     INVITE_CODE_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 길드 초대 코드입니다."),
     INVITE_CODE_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "길드 초대 코드 생성에 실패했습니다."),
     GUILD_NOTICE_INVALID(HttpStatus.BAD_REQUEST, "길드 공지사항 입력값이 올바르지 않습니다.");

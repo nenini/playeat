@@ -5,6 +5,9 @@ import com.nyamnyam.coach.guild.dto.request.GuildCreateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildNoticeCreateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildNoticeUpdateRequest;
 import com.nyamnyam.coach.guild.dto.request.GuildUpdateRequest;
+import com.nyamnyam.coach.guild.dto.request.JoinRequestCreateByCodeRequest;
+import com.nyamnyam.coach.guild.dto.request.JoinRequestCreateRequest;
+import com.nyamnyam.coach.guild.dto.response.GuildJoinRequestListResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildCreateResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildDeleteResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildDetailResponse;
@@ -19,6 +22,11 @@ import com.nyamnyam.coach.guild.dto.response.GuildNoticeListResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildNoticeResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildNoticeUpdateResponse;
 import com.nyamnyam.coach.guild.dto.response.GuildUpdateResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestApproveResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestCancelResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestCreateResponse;
+import com.nyamnyam.coach.guild.dto.response.JoinRequestRejectResponse;
+import com.nyamnyam.coach.guild.dto.response.MyJoinRequestListResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildListResponse;
 import com.nyamnyam.coach.guild.dto.response.MyGuildStatusResponse;
 import com.nyamnyam.coach.guild.service.GuildService;
@@ -84,6 +92,36 @@ public class GuildController implements GuildApiDocs {
     public ResponseEntity<ApiResponse<MyGuildStatusResponse>> getMyGuildStatus(Authentication authentication) {
         MyGuildStatusResponse response = guildService.getMyGuildStatus(authenticatedUserId(authentication));
         return ResponseEntity.ok(ApiResponse.success(response, "내 길드 상태 조회에 성공했습니다."));
+    }
+
+    @Override
+    @PostMapping("/join-requests")
+    public ResponseEntity<ApiResponse<JoinRequestCreateResponse>> createJoinRequestByInviteCode(
+            Authentication authentication,
+            @Valid @RequestBody JoinRequestCreateByCodeRequest request
+    ) {
+        JoinRequestCreateResponse response = guildService.createJoinRequestByInviteCode(
+                authenticatedUserId(authentication),
+                request
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "길드 참여 요청이 생성되었습니다."));
+    }
+
+    @Override
+    @GetMapping("/join-requests/me")
+    public ResponseEntity<ApiResponse<MyJoinRequestListResponse>> getMyJoinRequests(
+            Authentication authentication,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size
+    ) {
+        MyJoinRequestListResponse response = guildService.getMyJoinRequests(
+                authenticatedUserId(authentication),
+                status,
+                page,
+                size
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "내 길드 참여 요청 목록 조회에 성공했습니다."));
     }
 
     @Override
@@ -237,6 +275,85 @@ public class GuildController implements GuildApiDocs {
                 authenticatedUserId(authentication)
         );
         return ResponseEntity.ok(ApiResponse.success(response, "길드 공지사항이 삭제되었습니다."));
+    }
+
+    @Override
+    @PostMapping("/{guildId}/join-requests")
+    public ResponseEntity<ApiResponse<JoinRequestCreateResponse>> createJoinRequest(
+            Authentication authentication,
+            @PathVariable Long guildId,
+            @Valid @RequestBody JoinRequestCreateRequest request
+    ) {
+        JoinRequestCreateResponse response = guildService.createJoinRequest(
+                guildId,
+                authenticatedUserId(authentication),
+                request
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "길드 참여 요청이 생성되었습니다."));
+    }
+
+    @Override
+    @GetMapping("/{guildId}/join-requests")
+    public ResponseEntity<ApiResponse<GuildJoinRequestListResponse>> getGuildJoinRequests(
+            Authentication authentication,
+            @PathVariable Long guildId,
+            @RequestParam(defaultValue = "PENDING") String status,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size
+    ) {
+        GuildJoinRequestListResponse response = guildService.getGuildJoinRequests(
+                guildId,
+                authenticatedUserId(authentication),
+                status,
+                page,
+                size
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "길드 참여 요청 목록 조회에 성공했습니다."));
+    }
+
+    @Override
+    @PostMapping("/{guildId}/join-requests/{requestId}/approve")
+    public ResponseEntity<ApiResponse<JoinRequestApproveResponse>> approveJoinRequest(
+            Authentication authentication,
+            @PathVariable Long guildId,
+            @PathVariable Long requestId
+    ) {
+        JoinRequestApproveResponse response = guildService.approveJoinRequest(
+                guildId,
+                requestId,
+                authenticatedUserId(authentication)
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "길드 참여 요청이 승인되었습니다."));
+    }
+
+    @Override
+    @PostMapping("/{guildId}/join-requests/{requestId}/reject")
+    public ResponseEntity<ApiResponse<JoinRequestRejectResponse>> rejectJoinRequest(
+            Authentication authentication,
+            @PathVariable Long guildId,
+            @PathVariable Long requestId
+    ) {
+        JoinRequestRejectResponse response = guildService.rejectJoinRequest(
+                guildId,
+                requestId,
+                authenticatedUserId(authentication)
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "길드 참여 요청이 거절되었습니다."));
+    }
+
+    @Override
+    @DeleteMapping("/{guildId}/join-requests/{requestId}")
+    public ResponseEntity<ApiResponse<JoinRequestCancelResponse>> cancelJoinRequest(
+            Authentication authentication,
+            @PathVariable Long guildId,
+            @PathVariable Long requestId
+    ) {
+        JoinRequestCancelResponse response = guildService.cancelJoinRequest(
+                guildId,
+                requestId,
+                authenticatedUserId(authentication)
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "길드 참여 요청이 취소되었습니다."));
     }
 
     private Long authenticatedUserId(Authentication authentication) {

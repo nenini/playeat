@@ -1,12 +1,14 @@
 package com.nyamnyam.coach.guild.repository;
 
 import com.nyamnyam.coach.guild.entity.Guild;
+import com.nyamnyam.coach.guild.entity.GuildJoinRequest;
 import com.nyamnyam.coach.guild.entity.GuildMember;
 import com.nyamnyam.coach.guild.repository.row.GuildDetailRow;
 import com.nyamnyam.coach.guild.repository.row.GuildMemberRow;
 import com.nyamnyam.coach.guild.repository.row.GuildNoticeRow;
 import com.nyamnyam.coach.guild.repository.row.GuildStatusRow;
 import com.nyamnyam.coach.guild.repository.row.GuildSummaryRow;
+import com.nyamnyam.coach.guild.repository.row.JoinRequestRow;
 import com.nyamnyam.coach.guild.repository.row.MyGuildRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -31,6 +33,8 @@ public interface GuildRepository {
     void saveMember(GuildMember guildMember);
 
     Optional<Guild> findById(@Param("guildId") Long guildId);
+
+    Optional<Guild> findActiveGuildByInviteCode(@Param("inviteCode") String inviteCode);
 
     Optional<Long> findGuildOwnerUserId(@Param("guildId") Long guildId);
 
@@ -61,6 +65,11 @@ public interface GuildRepository {
     );
 
     Optional<GuildMemberRow> findMemberByGuildIdAndUserId(
+            @Param("guildId") Long guildId,
+            @Param("userId") Long userId
+    );
+
+    int reactivateGuildMember(
             @Param("guildId") Long guildId,
             @Param("userId") Long userId
     );
@@ -137,5 +146,50 @@ public interface GuildRepository {
     int deleteGuildNotice(
             @Param("guildId") Long guildId,
             @Param("noticeId") Long noticeId
+    );
+
+    void insertJoinRequest(GuildJoinRequest joinRequest);
+
+    List<JoinRequestRow> findMyJoinRequests(
+            @Param("userId") Long userId,
+            @Param("status") String status,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
+    List<JoinRequestRow> findGuildJoinRequests(
+            @Param("guildId") Long guildId,
+            @Param("status") String status,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
+    Optional<JoinRequestRow> findJoinRequestByGuildIdAndRequestId(
+            @Param("guildId") Long guildId,
+            @Param("requestId") Long requestId
+    );
+
+    int approveJoinRequest(
+            @Param("guildId") Long guildId,
+            @Param("requestId") Long requestId,
+            @Param("handledBy") Long handledBy
+    );
+
+    int rejectJoinRequest(
+            @Param("guildId") Long guildId,
+            @Param("requestId") Long requestId,
+            @Param("handledBy") Long handledBy
+    );
+
+    int cancelJoinRequest(
+            @Param("guildId") Long guildId,
+            @Param("requestId") Long requestId,
+            @Param("handledBy") Long handledBy
+    );
+
+    int cancelOtherPendingRequests(
+            @Param("userId") Long userId,
+            @Param("excludeRequestId") Long excludeRequestId,
+            @Param("handledBy") Long handledBy
     );
 }
