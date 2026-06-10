@@ -9,10 +9,6 @@ public record JoinRequestCreateByCodeRequest(
         @Schema(description = "Guild invite code", example = "NYAM-A7K3")
         @NotBlank(message = "Invite code is required.")
         @Size(max = 50, message = "Invite code must be 50 characters or less.")
-        String inviteCode,
-
-        @Schema(description = "Join request message", example = "함께 참여하고 싶어요!")
-        @Size(max = 500, message = "Message must be 500 characters or less.")
-        String message
+        String inviteCode
 ) {
 }

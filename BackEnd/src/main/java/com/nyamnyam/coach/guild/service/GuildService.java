@@ -404,7 +404,7 @@ public class GuildService {
         Guild guild = guildRepository.findActiveGuildByInviteCode(request.inviteCode().trim())
                 .orElseThrow(() -> new BusinessException(GuildErrorCode.INVALID_INVITE_CODE));
 
-        return createJoinRequest(userId, guild, request.message());
+        return createJoinRequest(userId, guild);
     }
 
     @Transactional
@@ -416,7 +416,7 @@ public class GuildService {
         findActiveUser(userId);
         Guild guild = guildValidator.validateGuildActive(guildId);
 
-        return createJoinRequest(userId, guild, request.message());
+        return createJoinRequest(userId, guild);
     }
 
     @Transactional(readOnly = true)
@@ -563,7 +563,7 @@ public class GuildService {
         );
     }
 
-    private JoinRequestCreateResponse createJoinRequest(Long userId, Guild guild, String message) {
+    private JoinRequestCreateResponse createJoinRequest(Long userId, Guild guild) {
         guildValidator.validateNotJoinedAnyGuild(userId);
         guildValidator.validateNoPendingJoinRequest(userId);
         guildValidator.validateGuildCapacity(guild.getGuildId());
@@ -571,7 +571,6 @@ public class GuildService {
         GuildJoinRequest joinRequest = GuildJoinRequest.builder()
                 .guildId(guild.getGuildId())
                 .userId(userId)
-                .message(normalizeJoinRequestMessage(message))
                 .status(JoinRequestStatus.PENDING.name())
                 .build();
         guildRepository.insertJoinRequest(joinRequest);
@@ -583,7 +582,6 @@ public class GuildService {
                 savedRequest.getGuildName(),
                 savedRequest.getInviteCode(),
                 savedRequest.getStatus(),
-                savedRequest.getMessage(),
                 savedRequest.getCreatedAt()
         );
     }
@@ -675,10 +673,6 @@ public class GuildService {
 
     private String normalizeNoticeText(String text) {
         return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private String normalizeJoinRequestMessage(String message) {
-        return StringUtils.hasText(message) ? message.trim() : null;
     }
 
     private String normalizeJoinRequestStatusOrNull(String status) {
@@ -860,7 +854,6 @@ public class GuildService {
                 row.getInviteCode(),
                 row.getGuildDescription(),
                 row.getStatus(),
-                row.getMessage(),
                 row.getCreatedAt(),
                 row.getHandledAt(),
                 row.getHandledByNickname()
@@ -878,7 +871,6 @@ public class GuildService {
                 row.getCharacterName(),
                 row.getCharacterLevel(),
                 row.getStatus(),
-                row.getMessage(),
                 row.getCreatedAt()
         );
     }

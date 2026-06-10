@@ -12,7 +12,6 @@ public record MyJoinRequestResponse(
         String inviteCode,
         String guildDescription,
         String status,
-        String message,
         LocalDateTime createdAt,
         LocalDateTime handledAt,
         String handledByNickname

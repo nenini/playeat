@@ -282,7 +282,7 @@ public class GuildController implements GuildApiDocs {
     public ResponseEntity<ApiResponse<JoinRequestCreateResponse>> createJoinRequest(
             Authentication authentication,
             @PathVariable Long guildId,
-            @Valid @RequestBody JoinRequestCreateRequest request
+            @Valid @RequestBody(required = false) JoinRequestCreateRequest request
     ) {
         JoinRequestCreateResponse response = guildService.createJoinRequest(
                 guildId,

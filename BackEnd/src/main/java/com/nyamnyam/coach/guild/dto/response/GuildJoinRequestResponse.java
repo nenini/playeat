@@ -15,7 +15,6 @@ public record GuildJoinRequestResponse(
         String characterName,
         Integer characterLevel,
         String status,
-        String message,
         LocalDateTime createdAt
 ) {
 }

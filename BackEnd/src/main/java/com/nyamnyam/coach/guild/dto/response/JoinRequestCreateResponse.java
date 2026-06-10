@@ -11,7 +11,6 @@ public record JoinRequestCreateResponse(
         String guildName,
         String inviteCode,
         String status,
-        String message,
         LocalDateTime createdAt
 ) {
 }

@@ -622,12 +622,12 @@ class GuildServiceTest {
 
         JoinRequestCreateResponse response = guildService.createJoinRequestByInviteCode(
                 2L,
-                new JoinRequestCreateByCodeRequest("NYAM-A7K3", " 함께 참여하고 싶어요! ")
+                new JoinRequestCreateByCodeRequest("NYAM-A7K3")
         );
 
         ArgumentCaptor<GuildJoinRequest> captor = ArgumentCaptor.forClass(GuildJoinRequest.class);
         verify(guildRepository).insertJoinRequest(captor.capture());
-        assertThat(captor.getValue().getMessage()).isEqualTo("함께 참여하고 싶어요!");
+        assertThat(captor.getValue().getGuildId()).isEqualTo(10L);
         assertThat(response.requestId()).isEqualTo(12L);
         assertThat(response.status()).isEqualTo("PENDING");
     }
@@ -651,11 +651,11 @@ class GuildServiceTest {
         JoinRequestCreateResponse response = guildService.createJoinRequest(
                 10L,
                 2L,
-                new JoinRequestCreateRequest("함께 참여하고 싶어요!")
+                new JoinRequestCreateRequest()
         );
 
         assertThat(response.guildId()).isEqualTo(10L);
-        assertThat(response.message()).isEqualTo("함께 참여하고 싶어요!");
+        assertThat(response.status()).isEqualTo("PENDING");
     }
 
     @Test
@@ -667,7 +667,7 @@ class GuildServiceTest {
 
         assertThatThrownBy(() -> guildService.createJoinRequestByInviteCode(
                 2L,
-                new JoinRequestCreateByCodeRequest("NYAM-A7K3", null)
+                new JoinRequestCreateByCodeRequest("NYAM-A7K3")
         ))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
@@ -684,7 +684,7 @@ class GuildServiceTest {
 
         assertThatThrownBy(() -> guildService.createJoinRequestByInviteCode(
                 2L,
-                new JoinRequestCreateByCodeRequest("NYAM-A7K3", null)
+                new JoinRequestCreateByCodeRequest("NYAM-A7K3")
         ))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
@@ -699,7 +699,7 @@ class GuildServiceTest {
 
         assertThatThrownBy(() -> guildService.createJoinRequestByInviteCode(
                 2L,
-                new JoinRequestCreateByCodeRequest("BAD-CODE", null)
+                new JoinRequestCreateByCodeRequest("BAD-CODE")
         ))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
@@ -961,7 +961,6 @@ class GuildServiceTest {
         row.setCharacterName("냠냠이");
         row.setCharacterLevel(4);
         row.setStatus(status);
-        row.setMessage("함께 참여하고 싶어요!");
         row.setCreatedAt(LocalDateTime.of(2026, 6, 10, 10, 0));
         return row;
     }

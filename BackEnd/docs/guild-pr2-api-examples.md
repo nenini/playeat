@@ -177,8 +177,7 @@ All endpoints require a Bearer access token.
 
 ```json
 {
-  "inviteCode": "NYAM-A7K3",
-  "message": "함께 참여하고 싶어요!"
+  "inviteCode": "NYAM-A7K3"
 }
 ```
 
@@ -189,7 +188,6 @@ All endpoints require a Bearer access token.
   "guildName": "잘먹잘싸",
   "inviteCode": "NYAM-A7K3",
   "status": "PENDING",
-  "message": "함께 참여하고 싶어요!",
   "createdAt": "2026-06-10T10:30:00"
 }
 ```
@@ -197,9 +195,7 @@ All endpoints require a Bearer access token.
 ## POST /api/v1/guilds/{guildId}/join-requests
 
 ```json
-{
-  "message": "함께 참여하고 싶어요!"
-}
+{}
 ```
 
 ## GET /api/v1/guilds/join-requests/me
@@ -214,7 +210,6 @@ All endpoints require a Bearer access token.
       "inviteCode": "NYAM-A7K3",
       "guildDescription": "건강하게 먹고 보스 잡는 길드",
       "status": "PENDING",
-      "message": "함께 참여하고 싶어요!",
       "createdAt": "2026-06-10T10:30:00",
       "handledAt": null,
       "handledByNickname": null
@@ -241,7 +236,6 @@ All endpoints require a Bearer access token.
       "characterName": "냠냠이",
       "characterLevel": 4,
       "status": "PENDING",
-      "message": "함께 참여하고 싶어요!",
       "createdAt": "2026-06-10T10:30:00"
     }
   ],

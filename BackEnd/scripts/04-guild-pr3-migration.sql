@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS guild_join_requests (
     request_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     guild_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
-    message VARCHAR(500) NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     handled_by BIGINT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -22,6 +21,22 @@ CREATE TABLE IF NOT EXISTS guild_join_requests (
         REFERENCES users(user_id)
         ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+SET @has_join_request_message = (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'guild_join_requests'
+      AND COLUMN_NAME = 'message'
+);
+SET @sql = IF(
+    @has_join_request_message > 0,
+    'ALTER TABLE guild_join_requests DROP COLUMN message',
+    'SELECT ''guild_join_requests.message already removed'''
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 SET @has_idx_join_requests_guild_status = (
     SELECT COUNT(1)

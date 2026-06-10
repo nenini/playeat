@@ -23,7 +23,6 @@ public class JoinRequestRow {
     private String characterName;
     private Integer characterLevel;
     private String status;
-    private String message;
     private Long handledBy;
     private String handledByNickname;
     private LocalDateTime createdAt;

@@ -112,7 +112,6 @@
         <result property="characterName" column="character_name"/>
         <result property="characterLevel" column="character_level"/>
         <result property="status" column="status"/>
-        <result property="message" column="message"/>
         <result property="handledBy" column="handled_by"/>
         <result property="handledByNickname" column="handled_by_nickname"/>
         <result property="createdAt" column="created_at"/>
@@ -669,13 +668,11 @@
         INSERT INTO guild_join_requests (
             guild_id,
             user_id,
-            message,
             status
         )
         VALUES (
             #{guildId},
             #{userId},
-            #{message},
             COALESCE(#{status}, 'PENDING')
         )
     </insert>
@@ -689,7 +686,6 @@
             g.description AS guild_description,
             gjr.user_id,
             gjr.status,
-            gjr.message,
             gjr.created_at,
             gjr.handled_at,
             handler.nickname AS handled_by_nickname
@@ -716,7 +712,6 @@
             c.name AS character_name,
             c.level AS character_level,
             gjr.status,
-            gjr.message,
             gjr.created_at
         FROM guild_join_requests gjr
         JOIN users u
@@ -746,7 +741,6 @@
             c.name AS character_name,
             c.level AS character_level,
             gjr.status,
-            gjr.message,
             gjr.handled_by,
             handler.nickname AS handled_by_nickname,
             gjr.created_at,

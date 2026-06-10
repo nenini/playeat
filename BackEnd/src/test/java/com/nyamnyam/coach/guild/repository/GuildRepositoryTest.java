@@ -237,7 +237,6 @@ class GuildRepositoryTest {
         GuildJoinRequest joinRequest = GuildJoinRequest.builder()
                 .guildId(guild.getGuildId())
                 .userId(requester.getUserId())
-                .message("함께 참여하고 싶어요!")
                 .status("PENDING")
                 .build();
         guildRepository.insertJoinRequest(joinRequest);
@@ -324,14 +323,12 @@ class GuildRepositoryTest {
                 INSERT INTO guild_join_requests (
                     guild_id,
                     user_id,
-                    message,
                     status
                 )
-                VALUES (?, ?, ?, 'PENDING')
+                VALUES (?, ?, 'PENDING')
                 """,
                 guildId,
-                userId,
-                "참여하고 싶어요"
+                userId
         );
     }
 
