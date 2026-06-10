@@ -454,43 +454,43 @@ CREATE TABLE bosses (
     boss_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     season_id BIGINT NOT NULL,
     name VARCHAR(100) NOT NULL,
-    description VARCHAR(1000),
-    image_url VARCHAR(500),
+    description TEXT,
     difficulty VARCHAR(20) NOT NULL,
-    base_hp INT NOT NULL,
-    reward_xp INT NOT NULL DEFAULT 0,
-    reward_guild_point INT NOT NULL DEFAULT 0,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
+    max_hp INT NOT NULL,
+    image_url VARCHAR(500),
+    reward_exp INT NOT NULL DEFAULT 0,
+    reward_coin INT NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    starts_at DATETIME,
+    ends_at DATETIME,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_bosses_season
         FOREIGN KEY (season_id)
         REFERENCES boss_seasons(season_id)
         ON DELETE CASCADE,
     CONSTRAINT uk_bosses_season_difficulty UNIQUE (season_id, difficulty),
     INDEX idx_bosses_season (season_id),
-    INDEX idx_bosses_difficulty (difficulty)
+    INDEX idx_bosses_difficulty (difficulty),
+    INDEX idx_bosses_status_period (status, starts_at, ends_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE boss_common_conditions (
-    boss_condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     season_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
-    description VARCHAR(1000),
-    condition_type VARCHAR(50) NOT NULL,
-    target_nutrient VARCHAR(50),
-    comparison_operator VARCHAR(20),
-    target_value DECIMAL(12,4),
-    required_streak_days INT NOT NULL DEFAULT 1,
-    reward_damage INT NOT NULL DEFAULT 0,
-    display_order INT NOT NULL DEFAULT 0,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
+    description VARCHAR(500),
+    target_type VARCHAR(50) NOT NULL,
+    target_value INT NOT NULL,
+    unit VARCHAR(50),
+    sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_boss_common_conditions_season
         FOREIGN KEY (season_id)
         REFERENCES boss_seasons(season_id)
         ON DELETE CASCADE,
     INDEX idx_boss_common_conditions_season (season_id),
-    INDEX idx_boss_common_conditions_nutrient (target_nutrient)
+    INDEX idx_boss_common_conditions_target_type (target_type)
 ) ENGINE=InnoDB;
 
 CREATE TABLE boss_battles (
@@ -531,7 +531,7 @@ CREATE TABLE boss_battle_conditions (
         ON DELETE CASCADE,
     CONSTRAINT fk_battle_conditions_common
         FOREIGN KEY (boss_condition_id)
-        REFERENCES boss_common_conditions(boss_condition_id)
+        REFERENCES boss_common_conditions(condition_id)
         ON DELETE CASCADE,
     CONSTRAINT fk_battle_conditions_completed_by
         FOREIGN KEY (completed_by_user_id)
