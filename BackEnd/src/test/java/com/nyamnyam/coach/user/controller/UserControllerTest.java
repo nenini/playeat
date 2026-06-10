@@ -6,10 +6,12 @@ import com.nyamnyam.coach.global.exception.GlobalExceptionHandler;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.CommonErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.UserErrorCode;
+import com.nyamnyam.coach.user.dto.request.ChangePasswordRequest;
 import com.nyamnyam.coach.user.dto.request.DeactivateUserRequest;
 import com.nyamnyam.coach.user.dto.request.HealthProfileRequest;
 import com.nyamnyam.coach.user.dto.request.OnboardingRequest;
 import com.nyamnyam.coach.user.dto.request.UpdateUserRequest;
+import com.nyamnyam.coach.user.dto.response.ChangePasswordResponse;
 import com.nyamnyam.coach.user.dto.response.DeactivateUserResponse;
 import com.nyamnyam.coach.user.dto.response.HealthProfileResponse;
 import com.nyamnyam.coach.user.dto.response.OnboardingResponse;
@@ -192,6 +194,63 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value(CommonErrorCode.VALIDATION_FAILED.getCode()))
                 .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    @Test
+    void changePassword() throws Exception {
+        when(userService.changePassword(any(Long.class), any(ChangePasswordRequest.class)))
+                .thenReturn(new ChangePasswordResponse(
+                        1L,
+                        LocalDateTime.of(2026, 6, 10, 14, 30)
+                ));
+
+        mockMvc.perform(patch("/v1/users/me/password")
+                        .principal(authentication())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ChangePasswordRequest(
+                                "oldPassword123!",
+                                "newPassword123!",
+                                "newPassword123!"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.userId").value(1));
+    }
+
+    @Test
+    void changePasswordValidationFailure() throws Exception {
+        mockMvc.perform(patch("/v1/users/me/password")
+                        .principal(authentication())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "currentPassword": "",
+                                  "newPassword": "short",
+                                  "newPasswordConfirm": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(CommonErrorCode.VALIDATION_FAILED.getCode()))
+                .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    @Test
+    void changePasswordWrongCurrentPassword() throws Exception {
+        doThrow(new BusinessException(AuthErrorCode.INVALID_CREDENTIALS))
+                .when(userService).changePassword(any(Long.class), any(ChangePasswordRequest.class));
+
+        mockMvc.perform(patch("/v1/users/me/password")
+                        .principal(authentication())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ChangePasswordRequest(
+                                "wrongPassword123!",
+                                "newPassword123!",
+                                "newPassword123!"
+                        ))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(AuthErrorCode.INVALID_CREDENTIALS.getCode()));
     }
 
     @Test
