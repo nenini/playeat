@@ -12,6 +12,7 @@ import com.nyamnyam.coach.auth.dto.response.TokenRefreshResponse;
 import com.nyamnyam.coach.auth.jwt.JwtToken;
 import com.nyamnyam.coach.auth.jwt.JwtTokenProvider;
 import com.nyamnyam.coach.auth.repository.RefreshTokenRepository;
+import com.nyamnyam.coach.character.service.CharacterGrowthService;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.UserErrorCode;
@@ -45,6 +46,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final CharacterGrowthService characterGrowthService;
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
@@ -66,6 +68,7 @@ public class AuthService {
 
         userRepository.save(user);
         User savedUser = userRepository.findById(user.getUserId()).orElse(user);
+        characterGrowthService.createDefaultCharacterIfMissing(savedUser.getUserId(), savedUser.getNickname());
 
         return new SignupResponse(
                 savedUser.getUserId(),
@@ -86,6 +89,7 @@ public class AuthService {
 
         userRepository.reactivate(user);
         User reactivatedUser = userRepository.findById(user.getUserId()).orElse(user);
+        characterGrowthService.createDefaultCharacterIfMissing(reactivatedUser.getUserId(), reactivatedUser.getNickname());
 
         return new SignupResponse(
                 reactivatedUser.getUserId(),
