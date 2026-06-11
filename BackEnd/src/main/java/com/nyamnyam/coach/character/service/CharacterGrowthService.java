@@ -37,7 +37,7 @@ public class CharacterGrowthService {
                 .name(DEFAULT_CHARACTER_NAME)
                 .level(1)
                 .xp(0)
-                .stage(CharacterStage.LEVEL_1.name())
+                .stage(CharacterStage.EGG.name())
                 .mood(CharacterMood.NORMAL.name())
                 .appearanceType(CharacterAppearanceType.NORMAL.name())
                 .streakDays(0)
@@ -95,14 +95,14 @@ public class CharacterGrowthService {
 
     private String stageFor(int level) {
         if (level >= 30) {
-            return CharacterStage.LEVEL_4.name();
+            return CharacterStage.ADULT.name();
         }
         if (level >= 20) {
-            return CharacterStage.LEVEL_3.name();
+            return CharacterStage.CHILD.name();
         }
         if (level >= 10) {
-            return CharacterStage.LEVEL_2.name();
+            return CharacterStage.BABY.name();
         }
-        return CharacterStage.LEVEL_1.name();
+        return CharacterStage.EGG.name();
     }
 }

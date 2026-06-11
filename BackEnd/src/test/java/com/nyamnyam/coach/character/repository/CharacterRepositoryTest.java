@@ -88,7 +88,7 @@ class CharacterRepositoryTest {
                 .name("nyam")
                 .level(1)
                 .xp(0)
-                .stage("LEVEL_1")
+                .stage("EGG")
                 .mood("NORMAL")
                 .appearanceType("NORMAL")
                 .streakDays(0)

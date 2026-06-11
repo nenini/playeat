@@ -71,7 +71,7 @@
             #{name},
             COALESCE(#{level}, 1),
             COALESCE(#{xp}, 0),
-            COALESCE(#{stage}, 'LEVEL_1'),
+            COALESCE(#{stage}, 'EGG'),
             COALESCE(#{mood}, 'NORMAL'),
             COALESCE(#{appearanceType}, 'NORMAL'),
             COALESCE(#{streakDays}, 0),

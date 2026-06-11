@@ -111,7 +111,7 @@ class CharacterServiceTest {
                 .name("nyam")
                 .level(7)
                 .xp(950)
-                .stage("LEVEL_1")
+                .stage("EGG")
                 .mood("HAPPY")
                 .appearanceType("NORMAL")
                 .streakDays(15)

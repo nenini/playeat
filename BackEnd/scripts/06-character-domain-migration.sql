@@ -17,14 +17,14 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 ALTER TABLE characters
-    ALTER COLUMN stage SET DEFAULT 'LEVEL_1';
+    ALTER COLUMN stage SET DEFAULT 'EGG';
 
 UPDATE characters
 SET stage = CASE
-    WHEN level >= 30 THEN 'LEVEL_4'
-    WHEN level >= 20 THEN 'LEVEL_3'
-    WHEN level >= 10 THEN 'LEVEL_2'
-    ELSE 'LEVEL_1'
+    WHEN level >= 30 THEN 'ADULT'
+    WHEN level >= 20 THEN 'CHILD'
+    WHEN level >= 10 THEN 'BABY'
+    ELSE 'EGG'
 END;
 
 ALTER TABLE xp_histories

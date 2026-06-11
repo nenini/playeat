@@ -56,7 +56,7 @@ class CharacterControllerTest {
                         950,
                         1200,
                         79.2,
-                        "LEVEL_1",
+                        "EGG",
                         "HAPPY",
                         "NORMAL",
                         15,
