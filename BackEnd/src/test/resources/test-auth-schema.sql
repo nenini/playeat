@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS boss_battle_damage_logs;
+DROP TABLE IF EXISTS boss_battle_conditions;
+DROP TABLE IF EXISTS boss_battles;
 DROP TABLE IF EXISTS boss_common_conditions;
 DROP TABLE IF EXISTS bosses;
 DROP TABLE IF EXISTS boss_seasons;
@@ -154,3 +157,54 @@ CREATE TABLE guild_join_requests (
 CREATE INDEX idx_join_requests_guild_status ON guild_join_requests (guild_id, status);
 CREATE INDEX idx_join_requests_user_status ON guild_join_requests (user_id, status);
 CREATE INDEX idx_join_requests_guild_user_status ON guild_join_requests (guild_id, user_id, status);
+
+CREATE TABLE boss_battles (
+    battle_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    boss_id BIGINT NOT NULL,
+    season_id BIGINT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
+    max_hp INT NOT NULL,
+    current_hp INT NOT NULL,
+    total_damage INT NOT NULL DEFAULT 0,
+    started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ended_at DATETIME,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE boss_battle_conditions (
+    battle_condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    battle_id BIGINT NOT NULL,
+    condition_id BIGINT,
+    title VARCHAR(200) NOT NULL,
+    description VARCHAR(500),
+    target_type VARCHAR(50) NOT NULL,
+    target_value INT NOT NULL,
+    current_value INT NOT NULL DEFAULT 0,
+    unit VARCHAR(50),
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    completed_at DATETIME,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE boss_battle_damage_logs (
+    damage_log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    battle_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    damage INT NOT NULL,
+    source_type VARCHAR(50) NOT NULL,
+    source_id BIGINT,
+    description VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_boss_battles_guild_status ON boss_battles (guild_id, status);
+CREATE INDEX idx_boss_battles_guild_season ON boss_battles (guild_id, season_id);
+CREATE INDEX idx_boss_battles_boss_id ON boss_battles (boss_id);
+CREATE INDEX idx_battle_conditions_battle ON boss_battle_conditions (battle_id);
+CREATE INDEX idx_battle_conditions_completed ON boss_battle_conditions (battle_id, completed);
+CREATE INDEX idx_damage_logs_battle_created ON boss_battle_damage_logs (battle_id, created_at);
+CREATE INDEX idx_damage_logs_battle_user ON boss_battle_damage_logs (battle_id, user_id);

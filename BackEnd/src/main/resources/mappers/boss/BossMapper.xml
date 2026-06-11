@@ -46,8 +46,8 @@
         b.reward_exp,
         b.reward_coin,
         b.status,
-        COALESCE(b.starts_at, TIMESTAMP(s.start_date)) AS starts_at,
-        COALESCE(b.ends_at, TIMESTAMP(s.end_date, '23:59:59')) AS ends_at,
+        COALESCE(b.starts_at, CAST(s.start_date AS DATETIME)) AS starts_at,
+        COALESCE(b.ends_at, CAST(CONCAT(s.end_date, ' 23:59:59') AS DATETIME)) AS ends_at,
         b.created_at,
         b.updated_at
     </sql>
@@ -67,8 +67,8 @@
               ORDER BY current_season.start_date DESC, current_season.season_id DESC
               LIMIT 1
           )
-          AND NOW() BETWEEN COALESCE(b.starts_at, TIMESTAMP(s.start_date))
-                      AND COALESCE(b.ends_at, TIMESTAMP(s.end_date, '23:59:59'))
+          AND NOW() BETWEEN COALESCE(b.starts_at, CAST(s.start_date AS DATETIME))
+                      AND COALESCE(b.ends_at, CAST(CONCAT(s.end_date, ' 23:59:59') AS DATETIME))
         ORDER BY
             CASE b.difficulty
                 WHEN 'EASY' THEN 1

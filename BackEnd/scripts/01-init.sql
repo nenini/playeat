@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS reward_claims;
 DROP TABLE IF EXISTS quest_verifications;
 DROP TABLE IF EXISTS quests;
 DROP TABLE IF EXISTS boss_battle_condition_progress;
+DROP TABLE IF EXISTS boss_battle_damage_logs;
 DROP TABLE IF EXISTS boss_battle_conditions;
 DROP TABLE IF EXISTS boss_common_conditions;
 DROP TABLE IF EXISTS boss_battles;
@@ -497,13 +498,15 @@ CREATE TABLE boss_battles (
     battle_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     guild_id BIGINT NOT NULL,
     boss_id BIGINT NOT NULL,
+    season_id BIGINT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
     max_hp INT NOT NULL,
     current_hp INT NOT NULL,
-    required_condition_count INT NOT NULL DEFAULT 0,
-    completed_condition_count INT NOT NULL DEFAULT 0,
-    status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
+    total_damage INT NOT NULL DEFAULT 0,
     started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ended_at DATETIME,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_boss_battles_guild
         FOREIGN KEY (guild_id)
         REFERENCES guilds(guild_id)
@@ -512,32 +515,61 @@ CREATE TABLE boss_battles (
         FOREIGN KEY (boss_id)
         REFERENCES bosses(boss_id)
         ON DELETE RESTRICT,
+    CONSTRAINT fk_boss_battles_season
+        FOREIGN KEY (season_id)
+        REFERENCES boss_seasons(season_id)
+        ON DELETE RESTRICT,
     INDEX idx_boss_battles_guild_status (guild_id, status),
-    INDEX idx_boss_battles_boss (boss_id)
+    INDEX idx_boss_battles_guild_season (guild_id, season_id),
+    INDEX idx_boss_battles_boss_id (boss_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE boss_battle_conditions (
     battle_condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     battle_id BIGINT NOT NULL,
-    boss_condition_id BIGINT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
-    completed_by_user_id BIGINT,
+    condition_id BIGINT,
+    title VARCHAR(200) NOT NULL,
+    description VARCHAR(500),
+    target_type VARCHAR(50) NOT NULL,
+    target_value INT NOT NULL,
+    current_value INT NOT NULL DEFAULT 0,
+    unit VARCHAR(50),
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
     completed_at DATETIME,
+    sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uk_battle_conditions_battle_condition UNIQUE (battle_id, boss_condition_id),
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_battle_conditions_battle
         FOREIGN KEY (battle_id)
         REFERENCES boss_battles(battle_id)
         ON DELETE CASCADE,
     CONSTRAINT fk_battle_conditions_common
-        FOREIGN KEY (boss_condition_id)
+        FOREIGN KEY (condition_id)
         REFERENCES boss_common_conditions(condition_id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_battle_conditions_completed_by
-        FOREIGN KEY (completed_by_user_id)
-        REFERENCES users(user_id)
         ON DELETE SET NULL,
-    INDEX idx_battle_conditions_battle_status (battle_id, status)
+    INDEX idx_battle_conditions_battle (battle_id),
+    INDEX idx_battle_conditions_completed (battle_id, completed)
+) ENGINE=InnoDB;
+
+CREATE TABLE boss_battle_damage_logs (
+    damage_log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    battle_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    damage INT NOT NULL,
+    source_type VARCHAR(50) NOT NULL,
+    source_id BIGINT,
+    description VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_damage_logs_battle
+        FOREIGN KEY (battle_id)
+        REFERENCES boss_battles(battle_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_damage_logs_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+    INDEX idx_damage_logs_battle_created (battle_id, created_at),
+    INDEX idx_damage_logs_battle_user (battle_id, user_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE boss_battle_condition_progress (
