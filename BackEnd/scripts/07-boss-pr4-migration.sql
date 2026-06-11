@@ -174,10 +174,14 @@ DEALLOCATE PREPARE stmt;
 CREATE TABLE IF NOT EXISTS boss_common_conditions (
     condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     season_id BIGINT NOT NULL,
+    boss_id BIGINT NULL,
     title VARCHAR(200) NOT NULL,
     description VARCHAR(500),
     target_type VARCHAR(50) NOT NULL,
+    threshold_value DECIMAL(10,2) NULL,
+    threshold_unit VARCHAR(50) NULL,
     target_value INT NOT NULL,
+    required_days INT NULL,
     unit VARCHAR(50),
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -186,6 +190,7 @@ CREATE TABLE IF NOT EXISTS boss_common_conditions (
         REFERENCES boss_seasons(season_id)
         ON DELETE CASCADE,
     INDEX idx_boss_common_conditions_season (season_id),
+    INDEX idx_boss_common_conditions_boss_sort (boss_id, sort_order),
     INDEX idx_boss_common_conditions_target_type (target_type)
 ) ENGINE=InnoDB;
 
@@ -208,6 +213,18 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+SET @has_condition_boss_id = (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_common_conditions'
+      AND COLUMN_NAME = 'boss_id'
+);
+SET @sql = IF(@has_condition_boss_id = 0, 'ALTER TABLE boss_common_conditions ADD COLUMN boss_id BIGINT NULL AFTER season_id', 'SELECT ''boss_common_conditions.boss_id exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 SET @has_target_type = (
     SELECT COUNT(1)
     FROM information_schema.COLUMNS
@@ -223,6 +240,42 @@ SET @has_condition_type = (
       AND COLUMN_NAME = 'condition_type'
 );
 SET @sql = IF(@has_target_type = 0 AND @has_condition_type > 0, 'ALTER TABLE boss_common_conditions RENAME COLUMN condition_type TO target_type', 'SELECT ''boss_common_conditions.target_type exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_threshold_value = (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_common_conditions'
+      AND COLUMN_NAME = 'threshold_value'
+);
+SET @sql = IF(@has_threshold_value = 0, 'ALTER TABLE boss_common_conditions ADD COLUMN threshold_value DECIMAL(10,2) NULL AFTER target_type', 'SELECT ''boss_common_conditions.threshold_value exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_threshold_unit = (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_common_conditions'
+      AND COLUMN_NAME = 'threshold_unit'
+);
+SET @sql = IF(@has_threshold_unit = 0, 'ALTER TABLE boss_common_conditions ADD COLUMN threshold_unit VARCHAR(50) NULL AFTER threshold_value', 'SELECT ''boss_common_conditions.threshold_unit exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_required_days = (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_common_conditions'
+      AND COLUMN_NAME = 'required_days'
+);
+SET @sql = IF(@has_required_days = 0, 'ALTER TABLE boss_common_conditions ADD COLUMN required_days INT NULL AFTER target_value', 'SELECT ''boss_common_conditions.required_days exists''');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
@@ -254,6 +307,73 @@ SET @has_display_order = (
       AND COLUMN_NAME = 'display_order'
 );
 SET @sql = IF(@has_sort_order = 0 AND @has_display_order > 0, 'ALTER TABLE boss_common_conditions RENAME COLUMN display_order TO sort_order', 'SELECT ''boss_common_conditions.sort_order exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_idx_boss_common_conditions_boss_sort = (
+    SELECT COUNT(1)
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_common_conditions'
+      AND INDEX_NAME = 'idx_boss_common_conditions_boss_sort'
+);
+SET @sql = IF(@has_idx_boss_common_conditions_boss_sort = 0, 'ALTER TABLE boss_common_conditions ADD INDEX idx_boss_common_conditions_boss_sort (boss_id, sort_order)', 'SELECT ''idx_boss_common_conditions_boss_sort exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_fk_boss_common_conditions_boss = (
+    SELECT COUNT(1)
+    FROM information_schema.TABLE_CONSTRAINTS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_common_conditions'
+      AND CONSTRAINT_NAME = 'fk_boss_common_conditions_boss'
+);
+SET @sql = IF(@has_fk_boss_common_conditions_boss = 0, 'ALTER TABLE boss_common_conditions ADD CONSTRAINT fk_boss_common_conditions_boss FOREIGN KEY (boss_id) REFERENCES bosses(boss_id) ON DELETE CASCADE', 'SELECT ''fk_boss_common_conditions_boss exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_battle_conditions_table = (
+    SELECT COUNT(1)
+    FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_battle_conditions'
+);
+
+SET @has_battle_condition_threshold_value = (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_battle_conditions'
+      AND COLUMN_NAME = 'threshold_value'
+);
+SET @sql = IF(@has_battle_conditions_table > 0 AND @has_battle_condition_threshold_value = 0, 'ALTER TABLE boss_battle_conditions ADD COLUMN threshold_value DECIMAL(10,2) NULL AFTER boss_condition_id', 'SELECT ''boss_battle_conditions.threshold_value exists or table missing''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_battle_condition_threshold_unit = (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_battle_conditions'
+      AND COLUMN_NAME = 'threshold_unit'
+);
+SET @sql = IF(@has_battle_conditions_table > 0 AND @has_battle_condition_threshold_unit = 0, 'ALTER TABLE boss_battle_conditions ADD COLUMN threshold_unit VARCHAR(50) NULL AFTER threshold_value', 'SELECT ''boss_battle_conditions.threshold_unit exists or table missing''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_battle_condition_required_days = (
+    SELECT COUNT(1)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_battle_conditions'
+      AND COLUMN_NAME = 'required_days'
+);
+SET @sql = IF(@has_battle_conditions_table > 0 AND @has_battle_condition_required_days = 0, 'ALTER TABLE boss_battle_conditions ADD COLUMN required_days INT NULL AFTER threshold_unit', 'SELECT ''boss_battle_conditions.required_days exists or table missing''');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;

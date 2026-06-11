@@ -15,7 +15,7 @@ public interface BossRepository {
 
     Optional<BossRow> findBossById(@Param("bossId") Long bossId);
 
-    List<BossCommonConditionRow> findCommonConditionsBySeasonId(@Param("seasonId") Long seasonId);
+    List<BossCommonConditionRow> findCommonConditionsByBossId(@Param("bossId") Long bossId);
 
     Optional<Long> findCurrentSeasonId();
 

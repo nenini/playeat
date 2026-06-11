@@ -480,10 +480,14 @@ CREATE TABLE bosses (
 CREATE TABLE boss_common_conditions (
     condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     season_id BIGINT NOT NULL,
+    boss_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
     description VARCHAR(500),
     target_type VARCHAR(50) NOT NULL,
+    threshold_value DECIMAL(10,2),
+    threshold_unit VARCHAR(50),
     target_value INT NOT NULL,
+    required_days INT,
     unit VARCHAR(50),
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -491,7 +495,12 @@ CREATE TABLE boss_common_conditions (
         FOREIGN KEY (season_id)
         REFERENCES boss_seasons(season_id)
         ON DELETE CASCADE,
+    CONSTRAINT fk_boss_common_conditions_boss
+        FOREIGN KEY (boss_id)
+        REFERENCES bosses(boss_id)
+        ON DELETE CASCADE,
     INDEX idx_boss_common_conditions_season (season_id),
+    INDEX idx_boss_common_conditions_boss_sort (boss_id, sort_order),
     INDEX idx_boss_common_conditions_target_type (target_type)
 ) ENGINE=InnoDB;
 
@@ -522,6 +531,9 @@ CREATE TABLE boss_battle_conditions (
     battle_condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     battle_id BIGINT NOT NULL,
     boss_condition_id BIGINT NOT NULL,
+    threshold_value DECIMAL(10,2),
+    threshold_unit VARCHAR(50),
+    required_days INT,
     status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
     completed_by_user_id BIGINT,
     completed_at DATETIME,

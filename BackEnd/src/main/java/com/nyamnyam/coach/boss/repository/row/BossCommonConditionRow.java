@@ -1,13 +1,19 @@
 package com.nyamnyam.coach.boss.repository.row;
 
+import java.math.BigDecimal;
+
 public class BossCommonConditionRow {
 
     private Long conditionId;
     private Long seasonId;
+    private Long bossId;
     private String title;
     private String description;
     private String targetType;
+    private BigDecimal thresholdValue;
+    private String thresholdUnit;
     private Integer targetValue;
+    private Integer requiredDays;
     private String unit;
     private Integer sortOrder;
 
@@ -25,6 +31,14 @@ public class BossCommonConditionRow {
 
     public void setSeasonId(Long seasonId) {
         this.seasonId = seasonId;
+    }
+
+    public Long getBossId() {
+        return bossId;
+    }
+
+    public void setBossId(Long bossId) {
+        this.bossId = bossId;
     }
 
     public String getTitle() {
@@ -51,12 +65,36 @@ public class BossCommonConditionRow {
         this.targetType = targetType;
     }
 
+    public BigDecimal getThresholdValue() {
+        return thresholdValue;
+    }
+
+    public void setThresholdValue(BigDecimal thresholdValue) {
+        this.thresholdValue = thresholdValue;
+    }
+
+    public String getThresholdUnit() {
+        return thresholdUnit;
+    }
+
+    public void setThresholdUnit(String thresholdUnit) {
+        this.thresholdUnit = thresholdUnit;
+    }
+
     public Integer getTargetValue() {
         return targetValue;
     }
 
     public void setTargetValue(Integer targetValue) {
         this.targetValue = targetValue;
+    }
+
+    public Integer getRequiredDays() {
+        return requiredDays;
+    }
+
+    public void setRequiredDays(Integer requiredDays) {
+        this.requiredDays = requiredDays;
     }
 
     public String getUnit() {

@@ -82,10 +82,14 @@ CREATE TABLE bosses (
 CREATE TABLE boss_common_conditions (
     condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     season_id BIGINT NOT NULL,
+    boss_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
     description VARCHAR(500),
     target_type VARCHAR(50) NOT NULL,
+    threshold_value DECIMAL(10,2),
+    threshold_unit VARCHAR(50),
     target_value INT NOT NULL,
+    required_days INT,
     unit VARCHAR(50),
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

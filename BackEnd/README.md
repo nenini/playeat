@@ -18,6 +18,20 @@
 4. `POST /api/v1/auth/logout`
    - `Authorization: Bearer {accessToken}` 헤더와 body의 `refreshToken`을 함께 보내 현재 refresh token을 폐기한다.
 
+## Boss Seed 실행
+
+한글 seed 데이터가 깨지지 않도록 `utf8mb4` 문자셋으로 실행한다.
+
+```bash
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p nyamnyam < scripts/08-boss-sugar-dragon-seed.sql
+```
+
+비밀번호를 바로 붙여 실행하는 경우:
+
+```bash
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/08-boss-sugar-dragon-seed.sql
+```
+
 ## Verification
 
 ```powershell
