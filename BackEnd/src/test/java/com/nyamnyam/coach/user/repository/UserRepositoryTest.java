@@ -69,6 +69,19 @@ class UserRepositoryTest {
     }
 
     @Test
+    void updatePassword() {
+        User user = user("password@example.com", "password");
+        userRepository.save(user);
+
+        int updatedCount = userRepository.updatePassword(user.getUserId(), "new-encoded-password");
+
+        User updatedUser = userRepository.findById(user.getUserId()).orElseThrow();
+        assertThat(updatedCount).isEqualTo(1);
+        assertThat(updatedUser.getPasswordHash()).isEqualTo("new-encoded-password");
+        assertThat(updatedUser.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
     void updateAndDeleteProfileImage() {
         User user = user("profile@example.com", "profile");
         userRepository.save(user);

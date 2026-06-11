@@ -3,13 +3,17 @@ package com.nyamnyam.coach.user.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nyamnyam.coach.auth.repository.RefreshTokenRepository;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
+import com.nyamnyam.coach.global.exception.errorcode.CommonErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.UserErrorCode;
+import com.nyamnyam.coach.user.dto.request.ChangePasswordRequest;
 import com.nyamnyam.coach.user.dto.request.DeactivateUserRequest;
 import com.nyamnyam.coach.user.dto.request.HealthProfileRequest;
 import com.nyamnyam.coach.user.dto.request.OnboardingRequest;
 import com.nyamnyam.coach.user.dto.request.UpdateUserRequest;
+import com.nyamnyam.coach.user.dto.response.ChangePasswordResponse;
 import com.nyamnyam.coach.user.dto.response.DeactivateUserResponse;
 import com.nyamnyam.coach.user.dto.response.HealthProfileResponse;
 import com.nyamnyam.coach.user.dto.response.OnboardingResponse;
@@ -38,6 +42,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final HealthProfileRepository healthProfileRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
     private final ProfileImageStorageService profileImageStorageService;
@@ -58,6 +63,27 @@ public class UserService {
         return new UpdateUserResponse(
                 updatedUser.getUserId(),
                 updatedUser.getNickname(),
+                updatedUser.getUpdatedAt()
+        );
+    }
+
+    @Transactional
+    public ChangePasswordResponse changePassword(Long userId, ChangePasswordRequest request) {
+        User user = findActiveUser(userId);
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new BusinessException(AuthErrorCode.INVALID_CREDENTIALS);
+        }
+        if (!request.newPassword().equals(request.newPasswordConfirm())) {
+            throw new BusinessException(CommonErrorCode.INVALID_REQUEST);
+        }
+
+        userRepository.updatePassword(userId, passwordEncoder.encode(request.newPassword()));
+        refreshTokenRepository.revokeAllByUserId(userId);
+        User updatedUser = findActiveUser(userId);
+
+        return new ChangePasswordResponse(
+                updatedUser.getUserId(),
                 updatedUser.getUpdatedAt()
         );
     }

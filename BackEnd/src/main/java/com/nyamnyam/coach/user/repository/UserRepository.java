@@ -24,6 +24,11 @@ public interface UserRepository {
             @Param("nickname") String nickname
     );
 
+    int updatePassword(
+            @Param("userId") Long userId,
+            @Param("passwordHash") String passwordHash
+    );
+
     int updateProfileImage(
             @Param("userId") Long userId,
             @Param("profileImageUrl") String profileImageUrl
