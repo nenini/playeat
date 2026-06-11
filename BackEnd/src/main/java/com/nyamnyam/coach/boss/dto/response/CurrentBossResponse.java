@@ -11,7 +11,6 @@ public record CurrentBossResponse(
         String seasonName,
         LocalDateTime startsAt,
         LocalDateTime endsAt,
-        List<BossSummaryResponse> bosses,
-        List<BossCommonConditionResponse> commonConditions
+        List<BossSummaryResponse> bosses
 ) {
 }

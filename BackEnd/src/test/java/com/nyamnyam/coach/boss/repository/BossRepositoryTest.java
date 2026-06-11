@@ -44,17 +44,44 @@ class BossRepositoryTest {
     }
 
     @Test
-    @DisplayName("현재 시즌 공통 격파 조건을 sortOrder 순서로 조회한다")
-    void findCommonConditionsBySeasonId() {
+    @DisplayName("보스별 공통 격파 조건을 sortOrder 순서로 조회한다")
+    void findCommonConditionsByBossId() {
         Long seasonId = insertSeason();
-        insertCondition(seasonId, "두 번째 조건", 2);
-        insertCondition(seasonId, "첫 번째 조건", 1);
+        Long easyBossId = insertBoss(seasonId, "EASY", "당분 드래곤", 50, "ACTIVE");
+        Long hardBossId = insertBoss(seasonId, "HARD", "당분 드래곤", 200, "ACTIVE");
+        insertCondition(seasonId, easyBossId, "EASY 조건", "SUGAR_UNDER_LIMIT", 1);
+        insertCondition(seasonId, hardBossId, "HARD 두 번째 조건", "PROCESSED_DRINK_ZERO", 2);
+        insertCondition(seasonId, hardBossId, "HARD 첫 번째 조건", "SUGAR_UNDER_LIMIT", 1);
 
-        List<BossCommonConditionRow> conditions = bossRepository.findCommonConditionsBySeasonId(seasonId);
+        List<BossCommonConditionRow> conditions = bossRepository.findCommonConditionsByBossId(hardBossId);
 
         assertThat(conditions).hasSize(2);
         assertThat(conditions).extracting(BossCommonConditionRow::getTitle)
-                .containsExactly("첫 번째 조건", "두 번째 조건");
+                .containsExactly("HARD 첫 번째 조건", "HARD 두 번째 조건");
+        assertThat(conditions).extracting(BossCommonConditionRow::getBossId)
+                .containsOnly(hardBossId);
+    }
+
+    @Test
+    @DisplayName("같은 seasonId라도 다른 난이도의 조건이 섞이지 않는다")
+    void findCommonConditionsByBossIdDoesNotMixDifficulty() {
+        Long seasonId = insertSeason();
+        Long easyBossId = insertBoss(seasonId, "EASY", "당분 드래곤", 50, "ACTIVE");
+        Long normalBossId = insertBoss(seasonId, "NORMAL", "당분 드래곤", 100, "ACTIVE");
+        Long hardBossId = insertBoss(seasonId, "HARD", "당분 드래곤", 200, "ACTIVE");
+        insertCondition(seasonId, easyBossId, "당류 50g 이하 유지", "SUGAR_UNDER_LIMIT", 1);
+        insertCondition(seasonId, normalBossId, "당류 50g 이하 유지", "SUGAR_UNDER_LIMIT", 1);
+        insertCondition(seasonId, normalBossId, "가공음료 0회", "PROCESSED_DRINK_ZERO", 2);
+        insertCondition(seasonId, hardBossId, "당류 50g 이하 유지", "SUGAR_UNDER_LIMIT", 1);
+        insertCondition(seasonId, hardBossId, "가공음료 0회", "PROCESSED_DRINK_ZERO", 2);
+        insertCondition(seasonId, hardBossId, "채소 하루 2종 이상", "VEGETABLE_VARIETY", 3);
+
+        assertThat(bossRepository.findCommonConditionsByBossId(easyBossId)).hasSize(1);
+        assertThat(bossRepository.findCommonConditionsByBossId(normalBossId)).hasSize(2);
+        assertThat(bossRepository.findCommonConditionsByBossId(hardBossId)).hasSize(3);
+        assertThat(bossRepository.findCommonConditionsByBossId(hardBossId))
+                .extracting(BossCommonConditionRow::getTargetType)
+                .containsExactly("SUGAR_UNDER_LIMIT", "PROCESSED_DRINK_ZERO", "VEGETABLE_VARIETY");
     }
 
     @Test
@@ -123,22 +150,34 @@ class BossRepositoryTest {
         return jdbcTemplate.queryForObject("SELECT boss_id FROM bosses WHERE season_id = ? AND difficulty = ?", Long.class, seasonId, difficulty);
     }
 
-    private void insertCondition(Long seasonId, String title, int sortOrder) {
+    private void insertCondition(
+            Long seasonId,
+            Long bossId,
+            String title,
+            String targetType,
+            int sortOrder
+    ) {
         jdbcTemplate.update(
                 """
                 INSERT INTO boss_common_conditions (
                     season_id,
+                    boss_id,
                     title,
                     description,
                     target_type,
+                    threshold_value,
+                    threshold_unit,
                     target_value,
+                    required_days,
                     unit,
                     sort_order
                 )
-                VALUES (?, ?, '조건 설명', 'DIET_RECORD_MEMBER_COUNT', 4, '명', ?)
+                VALUES (?, ?, ?, '조건 설명', ?, 50, 'g', 4, 4, '일', ?)
                 """,
                 seasonId,
+                bossId,
                 title,
+                targetType,
                 sortOrder
         );
     }

@@ -1,13 +1,17 @@
 package com.nyamnyam.coach.user.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nyamnyam.coach.auth.repository.RefreshTokenRepository;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
+import com.nyamnyam.coach.global.exception.errorcode.CommonErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.UserErrorCode;
+import com.nyamnyam.coach.user.dto.request.ChangePasswordRequest;
 import com.nyamnyam.coach.user.dto.request.DeactivateUserRequest;
 import com.nyamnyam.coach.user.dto.request.HealthProfileRequest;
 import com.nyamnyam.coach.user.dto.request.OnboardingRequest;
 import com.nyamnyam.coach.user.dto.request.UpdateUserRequest;
+import com.nyamnyam.coach.user.dto.response.ChangePasswordResponse;
 import com.nyamnyam.coach.user.dto.response.HealthProfileResponse;
 import com.nyamnyam.coach.user.dto.response.OnboardingResponse;
 import com.nyamnyam.coach.user.dto.response.ProfileImageResponse;
@@ -51,6 +55,9 @@ class UserServiceTest {
     @Mock
     private ProfileImageStorageService profileImageStorageService;
 
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
     private PasswordEncoder passwordEncoder;
     private UserService userService;
 
@@ -60,6 +67,7 @@ class UserServiceTest {
         userService = new UserService(
                 userRepository,
                 healthProfileRepository,
+                refreshTokenRepository,
                 passwordEncoder,
                 new ObjectMapper(),
                 profileImageStorageService
@@ -94,6 +102,58 @@ class UserServiceTest {
 
         verify(userRepository).updateProfile(1L, "same-name");
         assertThat(response.nickname()).isEqualTo("same-name");
+    }
+
+    @Test
+    void changePassword() {
+        User user = activeUser(passwordEncoder.encode("oldPassword123!"));
+        User updatedUser = activeUser(passwordEncoder.encode("newPassword123!"));
+        updatedUser.setUpdatedAt(LocalDateTime.of(2026, 6, 10, 14, 30));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user), Optional.of(updatedUser));
+
+        ChangePasswordResponse response = userService.changePassword(
+                1L,
+                new ChangePasswordRequest("oldPassword123!", "newPassword123!", "newPassword123!")
+        );
+
+        verify(userRepository).updatePassword(any(Long.class), any(String.class));
+        verify(refreshTokenRepository).revokeAllByUserId(1L);
+        assertThat(response.userId()).isEqualTo(1L);
+        assertThat(response.changedAt()).isEqualTo(LocalDateTime.of(2026, 6, 10, 14, 30));
+    }
+
+    @Test
+    void changePasswordWithWrongCurrentPassword() {
+        User user = activeUser(passwordEncoder.encode("oldPassword123!"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.changePassword(
+                1L,
+                new ChangePasswordRequest("wrongPassword123!", "newPassword123!", "newPassword123!")
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.INVALID_CREDENTIALS);
+
+        verify(userRepository, never()).updatePassword(any(), any());
+        verify(refreshTokenRepository, never()).revokeAllByUserId(any());
+    }
+
+    @Test
+    void changePasswordWithMismatchedConfirm() {
+        User user = activeUser(passwordEncoder.encode("oldPassword123!"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.changePassword(
+                1L,
+                new ChangePasswordRequest("oldPassword123!", "newPassword123!", "differentPassword123!")
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(CommonErrorCode.INVALID_REQUEST);
+
+        verify(userRepository, never()).updatePassword(any(), any());
+        verify(refreshTokenRepository, never()).revokeAllByUserId(any());
     }
 
     @Test

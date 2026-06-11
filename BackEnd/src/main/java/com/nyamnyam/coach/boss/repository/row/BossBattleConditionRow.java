@@ -1,5 +1,7 @@
 package com.nyamnyam.coach.boss.repository.row;
 
+import java.math.BigDecimal;
+
 public class BossBattleConditionRow {
 
     private Long battleConditionId;
@@ -8,7 +10,10 @@ public class BossBattleConditionRow {
     private String title;
     private String description;
     private String targetType;
+    private BigDecimal thresholdValue;
+    private String thresholdUnit;
     private Integer targetValue;
+    private Integer requiredDays;
     private Integer currentValue;
     private String unit;
     private Boolean completed;
@@ -26,8 +31,14 @@ public class BossBattleConditionRow {
     public void setDescription(String description) { this.description = description; }
     public String getTargetType() { return targetType; }
     public void setTargetType(String targetType) { this.targetType = targetType; }
+    public BigDecimal getThresholdValue() { return thresholdValue; }
+    public void setThresholdValue(BigDecimal thresholdValue) { this.thresholdValue = thresholdValue; }
+    public String getThresholdUnit() { return thresholdUnit; }
+    public void setThresholdUnit(String thresholdUnit) { this.thresholdUnit = thresholdUnit; }
     public Integer getTargetValue() { return targetValue; }
     public void setTargetValue(Integer targetValue) { this.targetValue = targetValue; }
+    public Integer getRequiredDays() { return requiredDays; }
+    public void setRequiredDays(Integer requiredDays) { this.requiredDays = requiredDays; }
     public Integer getCurrentValue() { return currentValue; }
     public void setCurrentValue(Integer currentValue) { this.currentValue = currentValue; }
     public String getUnit() { return unit; }

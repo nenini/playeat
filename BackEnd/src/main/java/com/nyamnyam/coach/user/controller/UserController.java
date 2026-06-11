@@ -1,10 +1,12 @@
 package com.nyamnyam.coach.user.controller;
 
 import com.nyamnyam.coach.global.response.ApiResponse;
+import com.nyamnyam.coach.user.dto.request.ChangePasswordRequest;
 import com.nyamnyam.coach.user.dto.request.DeactivateUserRequest;
 import com.nyamnyam.coach.user.dto.request.HealthProfileRequest;
 import com.nyamnyam.coach.user.dto.request.OnboardingRequest;
 import com.nyamnyam.coach.user.dto.request.UpdateUserRequest;
+import com.nyamnyam.coach.user.dto.response.ChangePasswordResponse;
 import com.nyamnyam.coach.user.dto.response.DeactivateUserResponse;
 import com.nyamnyam.coach.user.dto.response.HealthProfileResponse;
 import com.nyamnyam.coach.user.dto.response.OnboardingResponse;
@@ -50,6 +52,16 @@ public class UserController implements UserApiDocs {
     ) {
         UpdateUserResponse response = userService.updateMe(authenticatedUserId(authentication), request);
         return ResponseEntity.ok(ApiResponse.success(response, "회원 정보가 수정되었습니다."));
+    }
+
+    @Override
+    @PatchMapping("/me/password")
+    public ResponseEntity<ApiResponse<ChangePasswordResponse>> changePassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        ChangePasswordResponse response = userService.changePassword(authenticatedUserId(authentication), request);
+        return ResponseEntity.ok(ApiResponse.success(response, "비밀번호가 변경되었습니다. 다시 로그인해주세요."));
     }
 
     @Override

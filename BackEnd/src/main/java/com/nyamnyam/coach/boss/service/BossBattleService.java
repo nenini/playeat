@@ -81,7 +81,7 @@ public class BossBattleService {
         battle.setTotalDamage(0);
         bossBattleRepository.insertBossBattle(battle);
 
-        List<BossCommonConditionRow> conditions = bossBattleRepository.findBossCommonConditionsBySeasonId(boss.getSeasonId());
+        List<BossCommonConditionRow> conditions = bossBattleRepository.findBossCommonConditionsByBossId(boss.getBossId());
         for (BossCommonConditionRow condition : conditions) {
             bossBattleRepository.insertBossBattleCondition(toBattleCondition(battle.getBattleId(), condition));
         }
@@ -201,7 +201,10 @@ public class BossBattleService {
         battleCondition.setTitle(condition.getTitle());
         battleCondition.setDescription(condition.getDescription());
         battleCondition.setTargetType(condition.getTargetType());
+        battleCondition.setThresholdValue(condition.getThresholdValue());
+        battleCondition.setThresholdUnit(condition.getThresholdUnit());
         battleCondition.setTargetValue(condition.getTargetValue());
+        battleCondition.setRequiredDays(condition.getRequiredDays());
         battleCondition.setCurrentValue(0);
         battleCondition.setCompleted(false);
         battleCondition.setUnit(condition.getUnit());
@@ -233,7 +236,10 @@ public class BossBattleService {
                 row.getTitle(),
                 row.getDescription(),
                 row.getTargetType(),
+                row.getThresholdValue(),
+                row.getThresholdUnit(),
                 row.getTargetValue(),
+                row.getRequiredDays(),
                 row.getCurrentValue(),
                 row.getUnit(),
                 row.getCompleted(),

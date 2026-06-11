@@ -59,7 +59,7 @@ class BossBattleRepositoryTest {
         BossBattle battle = battle(fixture.guildId(), fixture.bossId(), fixture.seasonId());
         bossBattleRepository.insertBossBattle(battle);
 
-        List<BossCommonConditionRow> commonConditions = bossBattleRepository.findBossCommonConditionsBySeasonId(fixture.seasonId());
+        List<BossCommonConditionRow> commonConditions = bossBattleRepository.findBossCommonConditionsByBossId(fixture.bossId());
         for (BossCommonConditionRow commonCondition : commonConditions) {
             BossBattleCondition condition = new BossBattleCondition();
             condition.setBattleId(battle.getBattleId());
@@ -67,7 +67,10 @@ class BossBattleRepositoryTest {
             condition.setTitle(commonCondition.getTitle());
             condition.setDescription(commonCondition.getDescription());
             condition.setTargetType(commonCondition.getTargetType());
+            condition.setThresholdValue(commonCondition.getThresholdValue());
+            condition.setThresholdUnit(commonCondition.getThresholdUnit());
             condition.setTargetValue(commonCondition.getTargetValue());
+            condition.setRequiredDays(commonCondition.getRequiredDays());
             condition.setCurrentValue(0);
             condition.setUnit(commonCondition.getUnit());
             condition.setCompleted(false);
@@ -103,7 +106,7 @@ class BossBattleRepositoryTest {
         insertGuildMember(guildId, ownerId, "OWNER");
         Long seasonId = insertSeason();
         Long bossId = insertBoss(seasonId);
-        insertCommonCondition(seasonId);
+        insertCommonCondition(seasonId, bossId);
         return new Fixture(ownerId, guildId, seasonId, bossId);
     }
 
@@ -190,21 +193,26 @@ class BossBattleRepositoryTest {
         return jdbcTemplate.queryForObject("SELECT boss_id FROM bosses WHERE season_id = ? AND difficulty = 'EASY'", Long.class, seasonId);
     }
 
-    private void insertCommonCondition(Long seasonId) {
+    private void insertCommonCondition(Long seasonId, Long bossId) {
         jdbcTemplate.update(
                 """
                 INSERT INTO boss_common_conditions (
                     season_id,
+                    boss_id,
                     title,
                     description,
                     target_type,
+                    threshold_value,
+                    threshold_unit,
                     target_value,
+                    required_days,
                     unit,
                     sort_order
                 )
-                VALUES (?, '길드원 4명 이상 식단 기록', '조건 설명', 'DIET_RECORD_MEMBER_COUNT', 4, '명', 1)
+                VALUES (?, ?, '길드원 4명 이상 식단 기록', '조건 설명', 'DIET_RECORD_MEMBER_COUNT', 4, '명', 4, 4, '명', 1)
                 """,
-                seasonId
+                seasonId,
+                bossId
         );
     }
 

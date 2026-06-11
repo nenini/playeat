@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS guild_join_requests;
 DROP TABLE IF EXISTS guild_notices;
 DROP TABLE IF EXISTS guild_members;
 DROP TABLE IF EXISTS guilds;
+DROP TABLE IF EXISTS xp_histories;
 DROP TABLE IF EXISTS characters;
 DROP TABLE IF EXISTS health_profiles;
 DROP TABLE IF EXISTS users;
@@ -84,10 +85,14 @@ CREATE TABLE bosses (
 CREATE TABLE boss_common_conditions (
     condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     season_id BIGINT NOT NULL,
+    boss_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
     description VARCHAR(500),
     target_type VARCHAR(50) NOT NULL,
+    threshold_value DECIMAL(10,2),
+    threshold_unit VARCHAR(50),
     target_value INT NOT NULL,
+    required_days INT,
     unit VARCHAR(50),
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -103,9 +108,22 @@ CREATE TABLE characters (
     mood VARCHAR(30) NOT NULL DEFAULT 'NORMAL',
     appearance_type VARCHAR(30) NOT NULL DEFAULT 'NORMAL',
     streak_days INT NOT NULL DEFAULT 0,
+    best_streak_days INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_characters_user UNIQUE (user_id)
+);
+
+CREATE TABLE xp_histories (
+    xp_history_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    character_id BIGINT NOT NULL,
+    source_type VARCHAR(30) NOT NULL,
+    source_id BIGINT NOT NULL,
+    xp_amount INT NOT NULL,
+    reason VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_xp_source UNIQUE (character_id, source_type, source_id)
 );
 
 CREATE TABLE guilds (
@@ -180,7 +198,10 @@ CREATE TABLE boss_battle_conditions (
     title VARCHAR(200) NOT NULL,
     description VARCHAR(500),
     target_type VARCHAR(50) NOT NULL,
+    threshold_value DECIMAL(10,2),
+    threshold_unit VARCHAR(50),
     target_value INT NOT NULL,
+    required_days INT,
     current_value INT NOT NULL DEFAULT 0,
     unit VARCHAR(50),
     completed BOOLEAN NOT NULL DEFAULT FALSE,

@@ -10,6 +10,7 @@ import com.nyamnyam.coach.auth.dto.response.TokenRefreshResponse;
 import com.nyamnyam.coach.auth.jwt.JwtToken;
 import com.nyamnyam.coach.auth.jwt.JwtTokenProvider;
 import com.nyamnyam.coach.auth.repository.RefreshTokenRepository;
+import com.nyamnyam.coach.character.service.CharacterGrowthService;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
 import com.nyamnyam.coach.user.entity.User;
@@ -53,6 +54,9 @@ class AuthServiceTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Mock
+    private CharacterGrowthService characterGrowthService;
+
     private PasswordEncoder passwordEncoder;
     private JwtTokenProvider jwtTokenProvider;
     private JwtTokenProvider expiredJwtTokenProvider;
@@ -67,7 +71,8 @@ class AuthServiceTest {
                 userRepository,
                 refreshTokenRepository,
                 passwordEncoder,
-                jwtTokenProvider
+                jwtTokenProvider,
+                characterGrowthService
         );
     }
 
@@ -98,6 +103,7 @@ class AuthServiceTest {
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
+        verify(characterGrowthService).createDefaultCharacterIfMissing(1L, request.nickname());
 
         User userToSave = userCaptor.getValue();
         assertThat(userToSave.getUserId()).isEqualTo(1L);

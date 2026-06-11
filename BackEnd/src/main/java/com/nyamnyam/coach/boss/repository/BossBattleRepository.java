@@ -29,7 +29,7 @@ public interface BossBattleRepository {
 
     void insertBossBattle(BossBattle battle);
 
-    List<BossCommonConditionRow> findBossCommonConditionsBySeasonId(@Param("seasonId") Long seasonId);
+    List<BossCommonConditionRow> findBossCommonConditionsByBossId(@Param("bossId") Long bossId);
 
     void insertBossBattleCondition(BossBattleCondition condition);
 
