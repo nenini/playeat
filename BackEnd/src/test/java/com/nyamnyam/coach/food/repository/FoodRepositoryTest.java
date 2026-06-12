@@ -59,6 +59,24 @@ class FoodRepositoryTest {
     }
 
     @Test
+    void searchByKeywordDeduplicatesByNameAndPrefersGenericFood() {
+        String coffeeName = "커피_아메리카노 아이스(ICED)";
+        insertFoodWithBrand("F-001", coffeeName, "메가커피", "음료 및 차류", "100ml", "710ml", null);
+        Long genericFoodId = insertFoodWithBrand("F-002", coffeeName, null, "음료 및 차류", "100g", "355g", null);
+        insertFoodWithBrand("F-003", coffeeName, "이디야", "음료 및 차류", "100ml", "414ml", null);
+        insertFoodWithBrand("F-004", "커피_카페 라떼 아이스(ICED)", "이디야", "음료 및 차류", "100ml", "414ml", null);
+
+        List<Food> foods = foodRepository.searchByKeyword("커피", 10, 0);
+        long count = foodRepository.countByKeyword("커피");
+
+        assertThat(foods).hasSize(2);
+        assertThat(count).isEqualTo(2);
+        assertThat(foods.get(0).getFoodId()).isEqualTo(genericFoodId);
+        assertThat(foods.get(0).getName()).isEqualTo(coffeeName);
+        assertThat(foods.get(0).getBrand()).isNull();
+    }
+
+    @Test
     void findByIdReturnsFood() {
         Long foodId = insertFood("F-001", "스무디_코코넛", "음료류", "100ml", "360ml", null);
 
@@ -127,6 +145,26 @@ class FoodRepositoryTest {
             String servingSize,
             BigDecimal gramPerPiece
     ) {
+        return insertFoodWithBrand(
+                externalFoodCode,
+                name,
+                "테스트브랜드",
+                category,
+                nutritionBasis,
+                servingSize,
+                gramPerPiece
+        );
+    }
+
+    private Long insertFoodWithBrand(
+            String externalFoodCode,
+            String name,
+            String brand,
+            String category,
+            String nutritionBasis,
+            String servingSize,
+            BigDecimal gramPerPiece
+    ) {
         ParsedAmountUnit basis = parseAmountUnit(nutritionBasis);
         ParsedAmountUnit serving = parseAmountUnit(servingSize);
         jdbcTemplate.update(
@@ -156,10 +194,11 @@ class FoodRepositoryTest {
                     retinol_ug,
                     source
                 )
-                VALUES (?, ?, '테스트브랜드', ?, ?, ?, ?, ?, ?, 135, 7.17, 5.36, 9.49, 3.25, 88, 0, 0, 0, 0, 0, 0, 0, '테스트출처')
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 135, 7.17, 5.36, 9.49, 3.25, 88, 0, 0, 0, 0, 0, 0, 0, '테스트출처')
                 """,
                 externalFoodCode,
                 name,
+                brand,
                 category,
                 basis.amount(),
                 basis.unit(),

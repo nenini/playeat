@@ -1,5 +1,28 @@
 # FOOD Domain Implementation Plan
 
+## Implementation Status
+
+구현 완료 범위:
+
+- `foods`, `diet_items` 스키마 설계 반영
+- xlsx import 스크립트 추가
+- xlsx 19,495건 기준 `foods-seed.sql` 생성 검증
+- `Food` entity 및 helper method 추가
+- `FoodRepository` / MyBatis mapper 추가
+- 음식 검색, 상세 조회, 자주 먹은 음식 조회 service 추가
+- API response DTO 추가
+- `FoodController` 및 `FoodApiDocs` 추가
+- `GET /api/v1/foods`, `GET /api/v1/foods/{foodId}` public 접근 허용
+- `GET /api/v1/foods/frequent` 인증 필요 처리
+- repository / service / controller test 추가
+- 검색 결과는 음식 태그 목적에 맞춰 `name` 기준 대표 row 1개만 반환하도록 dedup 적용
+
+운영 방식:
+
+- `BackEnd/scripts/generated/foods-seed.sql`은 로컬 생성물이며 git에 커밋하지 않는다.
+- 개발자는 xlsx 원본에서 seed SQL을 생성한 뒤 로컬 MySQL에 import한다.
+- DB 원본 row는 삭제하지 않고, 검색 API에서만 대표 row를 노출한다.
+
 ## Scope
 
 이번 이슈에서는 FOOD 도메인의 1차 기능만 구현한다.
@@ -330,7 +353,7 @@ Avoid putting search pagination or API response shape inside the entity.
 
 ```json
 {
-  "content": [],
+  "foods": [],
   "page": 0,
   "size": 20,
   "totalElements": 0,
@@ -399,6 +422,13 @@ List<FrequentFoodRow> findFrequentFoods(Long userId, int limit);
 SQL notes:
 
 - Search should use `name LIKE CONCAT('%', #{keyword}, '%')`.
+- Search results should deduplicate by `name` and return one representative row per food tag.
+- Representative row priority:
+  1. `brand IS NULL`
+  2. `serving_amount IS NOT NULL`
+  3. `nutrition_basis_unit = 'g'`
+  4. `food_id ASC`
+- `countByKeyword` must use the same dedup basis as search pagination.
 - Consider searching `brand`, `category`, `representative_food_name` later only if those columns are stored.
 - Pagination should use `LIMIT #{limit} OFFSET #{offset}`.
 - Frequent foods should join `diet_items -> diets -> foods`.
@@ -521,7 +551,7 @@ Response:
 {
   "success": true,
   "data": {
-    "content": [
+    "foods": [
       {
         "foodId": 1,
         "name": "김밥",

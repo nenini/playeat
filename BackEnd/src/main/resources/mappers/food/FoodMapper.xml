@@ -68,17 +68,62 @@
         created_at
     </sql>
 
+    <sql id="FoodColumnsWithAlias">
+        f.food_id,
+        f.external_food_code,
+        f.name,
+        f.brand,
+        f.category,
+        f.nutrition_basis_amount,
+        f.nutrition_basis_unit,
+        f.serving_amount,
+        f.serving_unit,
+        f.gram_per_piece,
+        f.calories,
+        f.protein_g,
+        f.carbs_g,
+        f.fat_g,
+        f.sugar_g,
+        f.sodium_mg,
+        f.fiber_g,
+        f.iron_mg,
+        f.phosphorus_mg,
+        f.potassium_mg,
+        f.vitamin_a_ug_rae,
+        f.beta_carotene_ug,
+        f.retinol_ug,
+        f.source,
+        f.created_at
+    </sql>
+
     <select id="searchByKeyword" resultMap="FoodResultMap">
         SELECT
-            <include refid="FoodColumns"/>
-        FROM foods
-        WHERE name LIKE CONCAT('%', #{keyword}, '%')
-        ORDER BY name ASC, food_id ASC
+            <include refid="FoodColumnsWithAlias"/>
+        FROM foods f
+        JOIN (
+            SELECT food_id
+            FROM (
+                SELECT
+                    food_id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY name
+                        ORDER BY
+                            CASE WHEN brand IS NULL THEN 0 ELSE 1 END,
+                            CASE WHEN serving_amount IS NOT NULL THEN 0 ELSE 1 END,
+                            CASE WHEN nutrition_basis_unit = 'g' THEN 0 ELSE 1 END,
+                            food_id ASC
+                    ) AS rn
+                FROM foods
+                WHERE name LIKE CONCAT('%', #{keyword}, '%')
+            ) ranked_foods
+            WHERE rn = 1
+        ) representative_foods ON representative_foods.food_id = f.food_id
+        ORDER BY f.name ASC, f.food_id ASC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="countByKeyword" resultType="long">
-        SELECT COUNT(1)
+        SELECT COUNT(DISTINCT name)
         FROM foods
         WHERE name LIKE CONCAT('%', #{keyword}, '%')
     </select>
