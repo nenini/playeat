@@ -114,7 +114,7 @@
                             food_id ASC
                     ) AS rn
                 FROM foods
-                WHERE name LIKE CONCAT('%', #{keyword}, '%')
+                WHERE name LIKE CONCAT('%', #{keyword}, '%') ESCAPE '\'
             ) ranked_foods
             WHERE rn = 1
         ) representative_foods ON representative_foods.food_id = f.food_id
@@ -125,7 +125,7 @@
     <select id="countByKeyword" resultType="long">
         SELECT COUNT(DISTINCT name)
         FROM foods
-        WHERE name LIKE CONCAT('%', #{keyword}, '%')
+        WHERE name LIKE CONCAT('%', #{keyword}, '%') ESCAPE '\'
     </select>
 
     <select id="findById" resultMap="FoodResultMap">

@@ -74,10 +74,16 @@ public class FoodService {
     }
 
     private String normalizeKeyword(String keyword) {
-        if (keyword == null || keyword.trim().isEmpty()) {
+        if (keyword == null || keyword.isBlank()) {
             throw new BusinessException(FoodErrorCode.INVALID_KEYWORD);
         }
-        return keyword.trim();
+        return escapeLikeWildcards(keyword.trim());
+    }
+
+    private String escapeLikeWildcards(String value) {
+        return value.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     private int normalizePage(Integer page) {
