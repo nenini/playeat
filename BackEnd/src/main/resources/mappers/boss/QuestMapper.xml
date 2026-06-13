@@ -59,6 +59,7 @@
         <result property="guildId" column="guild_id"/>
         <result property="status" column="status"/>
         <result property="maxHp" column="max_hp"/>
+        <result property="difficulty" column="difficulty"/>
     </resultMap>
 
     <resultMap id="QuestGuildMemberRowMap" type="com.nyamnyam.coach.boss.repository.row.QuestGuildMemberRow">
@@ -253,12 +254,14 @@
 
     <select id="findBattleById" resultMap="QuestBattleRowMap">
         SELECT
-            battle_id,
-            guild_id,
-            status,
-            max_hp
-        FROM boss_battles
-        WHERE battle_id = #{battleId}
+            bb.battle_id,
+            bb.guild_id,
+            bb.status,
+            bb.max_hp,
+            b.difficulty
+        FROM boss_battles bb
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        WHERE bb.battle_id = #{battleId}
     </select>
 
     <select id="findGuildIdByBattleId" resultType="long">

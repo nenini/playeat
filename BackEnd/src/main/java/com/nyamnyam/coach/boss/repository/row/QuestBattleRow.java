@@ -6,6 +6,7 @@ public class QuestBattleRow {
     private Long guildId;
     private String status;
     private Integer maxHp;
+    private String difficulty;
 
     public Long getBattleId() {
         return battleId;
@@ -37,5 +38,13 @@ public class QuestBattleRow {
 
     public void setMaxHp(Integer maxHp) {
         this.maxHp = maxHp;
+    }
+
+    public String getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(String difficulty) {
+        this.difficulty = difficulty;
     }
 }
