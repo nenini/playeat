@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS boss_common_conditions;
 DROP TABLE IF EXISTS bosses;
 DROP TABLE IF EXISTS boss_seasons;
 DROP TABLE IF EXISTS guild_join_requests;
+DROP TABLE IF EXISTS guild_chats;
 DROP TABLE IF EXISTS guild_notices;
 DROP TABLE IF EXISTS guild_members;
 DROP TABLE IF EXISTS guilds;
@@ -176,6 +177,20 @@ CREATE TABLE guild_join_requests (
 CREATE INDEX idx_join_requests_guild_status ON guild_join_requests (guild_id, status);
 CREATE INDEX idx_join_requests_user_status ON guild_join_requests (user_id, status);
 CREATE INDEX idx_join_requests_guild_user_status ON guild_join_requests (guild_id, user_id, status);
+
+CREATE TABLE guild_chats (
+    chat_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    sender_user_id BIGINT,
+    message_type VARCHAR(20) NOT NULL DEFAULT 'USER',
+    content VARCHAR(1000) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME
+);
+
+CREATE INDEX idx_guild_chats_guild_created ON guild_chats (guild_id, created_at);
+CREATE INDEX idx_guild_chats_guild_chat_id ON guild_chats (guild_id, chat_id);
+CREATE INDEX idx_guild_chats_sender ON guild_chats (sender_user_id);
 
 CREATE TABLE boss_battles (
     battle_id BIGINT AUTO_INCREMENT PRIMARY KEY,
