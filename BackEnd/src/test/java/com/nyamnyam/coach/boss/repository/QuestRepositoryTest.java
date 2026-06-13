@@ -60,7 +60,10 @@ class QuestRepositoryTest {
         QuestRow detail = questRepository.findQuestDetailById(quest.getQuestId(), fixture.ownerId()).get();
 
         assertThat(detail.getNickname()).isEqualTo("예린");
-        assertThat(questRepository.findBattleById(fixture.battleId())).isPresent();
+        assertThat(questRepository.findBattleById(fixture.battleId()))
+                .get()
+                .extracting("difficulty")
+                .isEqualTo("EASY");
         assertThat(questRepository.findGuildIdByBattleId(fixture.battleId())).contains(fixture.guildId());
         assertThat(questRepository.existsActiveGuildMember(fixture.guildId(), fixture.ownerId())).isTrue();
         assertThat(questRepository.findGuildRole(fixture.guildId(), fixture.ownerId())).contains("OWNER");

@@ -7,6 +7,7 @@ public enum BossErrorCode implements ErrorCode {
     CURRENT_BOSS_NOT_FOUND(HttpStatus.NOT_FOUND, "현재 시즌 보스를 찾을 수 없습니다."),
     BOSS_NOT_FOUND(HttpStatus.NOT_FOUND, "보스를 찾을 수 없습니다."),
     BOSS_INACTIVE(HttpStatus.CONFLICT, "비활성화된 보스입니다."),
+    BOSS_DIFFICULTY_INVALID(HttpStatus.BAD_REQUEST, "보스 난이도가 올바르지 않습니다."),
     BOSS_NOT_CURRENT_SEASON(HttpStatus.BAD_REQUEST, "현재 시즌 보스가 아닙니다."),
     BOSS_COMMON_CONDITION_NOT_FOUND(HttpStatus.NOT_FOUND, "보스 공통 격파 조건을 찾을 수 없습니다."),
     BOSS_BATTLE_NOT_FOUND(HttpStatus.NOT_FOUND, "보스 전투를 찾을 수 없습니다."),

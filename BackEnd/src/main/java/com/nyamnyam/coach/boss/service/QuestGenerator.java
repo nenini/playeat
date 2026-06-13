@@ -9,6 +9,7 @@ public interface QuestGenerator {
     Quest generatePersonalQuest(
             QuestBattleRow battle,
             QuestGuildMemberRow member,
-            int activeMemberCount
+            int activeMemberCount,
+            int memberIndex
     );
 }

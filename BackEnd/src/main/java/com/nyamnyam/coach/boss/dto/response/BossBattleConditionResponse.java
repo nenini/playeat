@@ -12,6 +12,7 @@ public record BossBattleConditionResponse(
         Integer targetValue,
         Integer requiredDays,
         Integer currentValue,
+        Integer damage,
         String unit,
         Boolean completed,
         Integer sortOrder

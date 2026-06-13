@@ -66,7 +66,16 @@ class QuestServiceTest {
         assertThat(response.createdCount()).isEqualTo(2);
         assertThat(response.skippedCount()).isZero();
         assertThat(response.quests()).extracting("title").containsOnly("오늘 식단 기록하기");
+        assertThat(response.quests()).extracting("damage").containsExactly(400, 400);
         verify(questRepository, times(2)).insertQuest(any(Quest.class));
+    }
+
+    @Test
+    @DisplayName("난이도별 개인 퀘스트 damage는 personalDamageRatio 기준으로 분배된다")
+    void generateQuestsDamageByDifficulty() {
+        assertQuestDamage("EASY", 1000, List.of(267, 267, 266));
+        assertQuestDamage("NORMAL", 1000, List.of(234, 233, 233));
+        assertQuestDamage("HARD", 1000, List.of(200, 200, 200));
     }
 
     @Test
@@ -181,11 +190,16 @@ class QuestServiceTest {
     }
 
     private QuestBattleRow battle(String status) {
+        return battle(status, "EASY", 1000);
+    }
+
+    private QuestBattleRow battle(String status, String difficulty, int maxHp) {
         QuestBattleRow row = new QuestBattleRow();
         row.setBattleId(500L);
         row.setGuildId(100L);
         row.setStatus(status);
-        row.setMaxHp(1000);
+        row.setMaxHp(maxHp);
+        row.setDifficulty(difficulty);
         return row;
     }
 
@@ -238,5 +252,33 @@ class QuestServiceTest {
         row.setExpectedDamage(100);
         row.setIsMe(true);
         return row;
+    }
+
+    private void assertQuestDamage(String difficulty, int maxHp, List<Integer> expectedDamages) {
+        QuestService localQuestService = new QuestService(questRepository, new PlaceholderQuestGenerator());
+        when(questRepository.findBattleById(500L)).thenReturn(Optional.of(battle("IN_PROGRESS", difficulty, maxHp)));
+        when(questRepository.existsActiveGuildMember(100L, 1L)).thenReturn(true);
+        when(questRepository.findGuildRole(100L, 1L)).thenReturn(Optional.of("OWNER"));
+        when(questRepository.findActiveGuildMembers(100L)).thenReturn(List.of(
+                member(1L, "예린"),
+                member(2L, "민수"),
+                member(3L, "지민")
+        ));
+        when(questRepository.existsQuestByBattleIdAndUserId(500L, 1L)).thenReturn(false);
+        when(questRepository.existsQuestByBattleIdAndUserId(500L, 2L)).thenReturn(false);
+        when(questRepository.existsQuestByBattleIdAndUserId(500L, 3L)).thenReturn(false);
+        doAnswer(invocation -> {
+            Quest quest = invocation.getArgument(0);
+            quest.setQuestId(quest.getUserId() + 1000);
+            return null;
+        }).when(questRepository).insertQuest(any(Quest.class));
+
+        QuestGenerateResponse response = localQuestService.generateQuests(500L, 1L);
+
+        assertThat(response.quests()).extracting("damage").containsExactlyElementsOf(expectedDamages);
+        int totalDamage = response.quests().stream()
+                .mapToInt(generatedQuest -> generatedQuest.damage())
+                .sum();
+        assertThat(totalDamage).isEqualTo(expectedDamages.stream().mapToInt(Integer::intValue).sum());
     }
 }

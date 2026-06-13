@@ -88,12 +88,13 @@ public class QuestService {
 
         int skippedCount = 0;
         List<GeneratedQuestResponse> generatedQuests = new ArrayList<>();
-        for (QuestGuildMemberRow member : members) {
+        for (int index = 0; index < members.size(); index++) {
+            QuestGuildMemberRow member = members.get(index);
             if (questRepository.existsQuestByBattleIdAndUserId(battleId, member.getUserId())) {
                 skippedCount++;
                 continue;
             }
-            Quest quest = questGenerator.generatePersonalQuest(battle, member, members.size());
+            Quest quest = questGenerator.generatePersonalQuest(battle, member, members.size(), index);
             questRepository.insertQuest(quest);
             generatedQuests.add(toGeneratedResponse(quest, member));
         }

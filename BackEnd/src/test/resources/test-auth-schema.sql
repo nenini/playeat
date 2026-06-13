@@ -219,6 +219,7 @@ CREATE TABLE boss_battle_conditions (
     target_value INT NOT NULL,
     required_days INT,
     current_value INT NOT NULL DEFAULT 0,
+    damage INT NOT NULL DEFAULT 0,
     unit VARCHAR(50),
     completed BOOLEAN NOT NULL DEFAULT FALSE,
     completed_at DATETIME,
