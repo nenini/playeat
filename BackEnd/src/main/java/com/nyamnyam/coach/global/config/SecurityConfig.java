@@ -71,7 +71,8 @@ public class SecurityConfig {
             // 인가 설정
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(PUBLIC_URLS).permitAll()
-                    .requestMatchers(HttpMethod.GET, "/foods/**").permitAll()  // 음식 검색은 비로그인도 허용
+                    .requestMatchers(HttpMethod.GET, "/v1/foods/frequent").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/v1/foods/**").permitAll()  // 음식 검색은 비로그인도 허용
                     .anyRequest().authenticated()
             )
 

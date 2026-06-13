@@ -32,6 +32,20 @@ docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p n
 docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/08-boss-sugar-dragon-seed.sql
 ```
 
+## 음식 데이터 초기 적재 (Food Seed)
+
+`scripts/10-foods-seed.sql`이 저장소에 포함되어 있다.
+`docker-compose up` 시 `docker-entrypoint-initdb.d`가 숫자 순서로 SQL을 자동 실행하므로 **별도 작업 없이 자동 적재**된다.
+
+이미 볼륨이 존재하는 경우(컨테이너를 재시작하는 경우) initdb.d는 실행되지 않는다.
+그럴 때는 아래 명령으로 수동 적재한다.
+
+```bash
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/10-foods-seed.sql
+```
+
+seed SQL은 `ON DUPLICATE KEY UPDATE`로 작성되어 있으므로 중복 실행해도 안전하다.
+
 ## Verification
 
 ```powershell
