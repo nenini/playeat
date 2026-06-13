@@ -431,7 +431,8 @@ CREATE TABLE guild_join_requests (
 CREATE TABLE guild_chats (
     chat_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     guild_id BIGINT NOT NULL,
-    sender_user_id BIGINT NOT NULL,
+    sender_user_id BIGINT,
+    message_type VARCHAR(20) NOT NULL DEFAULT 'USER',
     content VARCHAR(1000) NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at DATETIME,
@@ -442,8 +443,10 @@ CREATE TABLE guild_chats (
     CONSTRAINT fk_guild_chats_sender
         FOREIGN KEY (sender_user_id)
         REFERENCES users(user_id)
-        ON DELETE CASCADE,
-    INDEX idx_guild_chats_guild_created (guild_id, created_at)
+        ON DELETE SET NULL,
+    INDEX idx_guild_chats_guild_created (guild_id, created_at),
+    INDEX idx_guild_chats_guild_chat_id (guild_id, chat_id),
+    INDEX idx_guild_chats_sender (sender_user_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE boss_seasons (

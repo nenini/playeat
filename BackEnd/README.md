@@ -32,6 +32,21 @@ docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p n
 docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/08-boss-sugar-dragon-seed.sql
 ```
 
+## Migration 실행 순서
+
+기존 볼륨을 유지한 상태에서 현재 브랜치까지 DB를 갱신하려면 아래 순서로 실행한다.
+
+```bash
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/07-boss-pr4-migration.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/08-boss-sugar-dragon-seed.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/09-boss-battle-pr5-migration.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/09-food-domain-migration.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/10-foods-seed.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/10-quest-pr6-migration.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/11-boss-battle-balance-migration.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/12-guild-chat-pr9-migration.sql
+```
+
 ## 음식 데이터 초기 적재 (Food Seed)
 
 `scripts/10-foods-seed.sql`이 저장소에 포함되어 있다.
