@@ -26,10 +26,14 @@
     <resultMap id="BossCommonConditionRowMap" type="com.nyamnyam.coach.boss.repository.row.BossCommonConditionRow">
         <id property="conditionId" column="condition_id"/>
         <result property="seasonId" column="season_id"/>
+        <result property="bossId" column="boss_id"/>
         <result property="title" column="title"/>
         <result property="description" column="description"/>
         <result property="targetType" column="target_type"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="thresholdUnit" column="threshold_unit"/>
         <result property="targetValue" column="target_value"/>
+        <result property="requiredDays" column="required_days"/>
         <result property="unit" column="unit"/>
         <result property="sortOrder" column="sort_order"/>
     </resultMap>
@@ -46,7 +50,7 @@
         b.reward_exp,
         b.reward_coin,
         b.status,
-        COALESCE(b.starts_at, CAST(s.start_date AS DATETIME)) AS starts_at,
+        COALESCE(b.starts_at, CAST(CONCAT(s.start_date, ' 00:00:00') AS DATETIME)) AS starts_at,
         COALESCE(b.ends_at, CAST(CONCAT(s.end_date, ' 23:59:59') AS DATETIME)) AS ends_at,
         b.created_at,
         b.updated_at
@@ -67,7 +71,7 @@
               ORDER BY current_season.start_date DESC, current_season.season_id DESC
               LIMIT 1
           )
-          AND NOW() BETWEEN COALESCE(b.starts_at, CAST(s.start_date AS DATETIME))
+          AND NOW() BETWEEN COALESCE(b.starts_at, CAST(CONCAT(s.start_date, ' 00:00:00') AS DATETIME))
                       AND COALESCE(b.ends_at, CAST(CONCAT(s.end_date, ' 23:59:59') AS DATETIME))
         ORDER BY
             CASE b.difficulty
@@ -87,18 +91,22 @@
         WHERE b.boss_id = #{bossId}
     </select>
 
-    <select id="findCommonConditionsBySeasonId" resultMap="BossCommonConditionRowMap">
+    <select id="findCommonConditionsByBossId" resultMap="BossCommonConditionRowMap">
         SELECT
             condition_id,
             season_id,
+            boss_id,
             title,
             description,
             target_type,
+            threshold_value,
+            threshold_unit,
             target_value,
+            required_days,
             unit,
             sort_order
         FROM boss_common_conditions
-        WHERE season_id = #{seasonId}
+        WHERE boss_id = #{bossId}
         ORDER BY sort_order ASC, condition_id ASC
     </select>
 

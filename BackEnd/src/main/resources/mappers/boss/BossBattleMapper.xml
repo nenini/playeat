@@ -30,7 +30,10 @@
         <result property="title" column="title"/>
         <result property="description" column="description"/>
         <result property="targetType" column="target_type"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="thresholdUnit" column="threshold_unit"/>
         <result property="targetValue" column="target_value"/>
+        <result property="requiredDays" column="required_days"/>
         <result property="currentValue" column="current_value"/>
         <result property="unit" column="unit"/>
         <result property="completed" column="completed"/>
@@ -68,10 +71,14 @@
     <resultMap id="BossCommonConditionRowMap" type="com.nyamnyam.coach.boss.repository.row.BossCommonConditionRow">
         <id property="conditionId" column="condition_id"/>
         <result property="seasonId" column="season_id"/>
+        <result property="bossId" column="boss_id"/>
         <result property="title" column="title"/>
         <result property="description" column="description"/>
         <result property="targetType" column="target_type"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="thresholdUnit" column="threshold_unit"/>
         <result property="targetValue" column="target_value"/>
+        <result property="requiredDays" column="required_days"/>
         <result property="unit" column="unit"/>
         <result property="sortOrder" column="sort_order"/>
     </resultMap>
@@ -107,7 +114,7 @@
             b.reward_exp,
             b.reward_coin,
             b.status,
-            COALESCE(b.starts_at, CAST(s.start_date AS DATETIME)) AS starts_at,
+            COALESCE(b.starts_at, CAST(CONCAT(s.start_date, ' 00:00:00') AS DATETIME)) AS starts_at,
             COALESCE(b.ends_at, CAST(CONCAT(s.end_date, ' 23:59:59') AS DATETIME)) AS ends_at
         FROM bosses b
         JOIN boss_seasons s ON s.season_id = b.season_id
@@ -162,18 +169,22 @@
         )
     </insert>
 
-    <select id="findBossCommonConditionsBySeasonId" resultMap="BossCommonConditionRowMap">
+    <select id="findBossCommonConditionsByBossId" resultMap="BossCommonConditionRowMap">
         SELECT
             condition_id,
             season_id,
+            boss_id,
             title,
             description,
             target_type,
+            threshold_value,
+            threshold_unit,
             target_value,
+            required_days,
             unit,
             sort_order
         FROM boss_common_conditions
-        WHERE season_id = #{seasonId}
+        WHERE boss_id = #{bossId}
         ORDER BY sort_order ASC, condition_id ASC
     </select>
 
@@ -188,7 +199,10 @@
             title,
             description,
             target_type,
+            threshold_value,
+            threshold_unit,
             target_value,
+            required_days,
             current_value,
             unit,
             completed,
@@ -200,7 +214,10 @@
             #{title},
             #{description},
             #{targetType},
+            #{thresholdValue},
+            #{thresholdUnit},
             #{targetValue},
+            #{requiredDays},
             COALESCE(#{currentValue}, 0),
             #{unit},
             COALESCE(#{completed}, FALSE),
@@ -237,7 +254,10 @@
             title,
             description,
             target_type,
+            threshold_value,
+            threshold_unit,
             target_value,
+            required_days,
             current_value,
             unit,
             completed,

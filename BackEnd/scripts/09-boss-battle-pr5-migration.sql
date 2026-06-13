@@ -82,7 +82,10 @@ CREATE TABLE IF NOT EXISTS boss_battle_conditions (
     title VARCHAR(200) NOT NULL,
     description VARCHAR(500),
     target_type VARCHAR(50) NOT NULL,
+    threshold_value DECIMAL(10,2) NULL,
+    threshold_unit VARCHAR(50) NULL,
     target_value INT NOT NULL,
+    required_days INT NULL,
     current_value INT NOT NULL DEFAULT 0,
     unit VARCHAR(50),
     completed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -141,6 +144,28 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+SET @has_battle_condition_threshold_value = (
+    SELECT COUNT(1) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_battle_conditions'
+      AND COLUMN_NAME = 'threshold_value'
+);
+SET @sql = IF(@has_battle_condition_threshold_value = 0, 'ALTER TABLE boss_battle_conditions ADD COLUMN threshold_value DECIMAL(10,2) NULL AFTER target_type', 'SELECT ''boss_battle_conditions.threshold_value exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_battle_condition_threshold_unit = (
+    SELECT COUNT(1) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_battle_conditions'
+      AND COLUMN_NAME = 'threshold_unit'
+);
+SET @sql = IF(@has_battle_condition_threshold_unit = 0, 'ALTER TABLE boss_battle_conditions ADD COLUMN threshold_unit VARCHAR(50) NULL AFTER threshold_value', 'SELECT ''boss_battle_conditions.threshold_unit exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 SET @has_battle_condition_description = (
     SELECT COUNT(1) FROM information_schema.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
@@ -159,6 +184,17 @@ SET @has_battle_condition_target_value = (
       AND COLUMN_NAME = 'target_value'
 );
 SET @sql = IF(@has_battle_condition_target_value = 0, 'ALTER TABLE boss_battle_conditions ADD COLUMN target_value INT NOT NULL DEFAULT 0 AFTER target_type', 'SELECT ''boss_battle_conditions.target_value exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_battle_condition_required_days = (
+    SELECT COUNT(1) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_battle_conditions'
+      AND COLUMN_NAME = 'required_days'
+);
+SET @sql = IF(@has_battle_condition_required_days = 0, 'ALTER TABLE boss_battle_conditions ADD COLUMN required_days INT NULL AFTER target_value', 'SELECT ''boss_battle_conditions.required_days exists''');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;

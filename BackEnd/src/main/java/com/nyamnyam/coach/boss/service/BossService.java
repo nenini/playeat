@@ -32,19 +32,12 @@ public class BossService {
         }
 
         BossRow firstBoss = bosses.get(0);
-        List<BossCommonConditionResponse> commonConditions = bossRepository
-                .findCommonConditionsBySeasonId(firstBoss.getSeasonId())
-                .stream()
-                .map(this::toConditionResponse)
-                .toList();
-
         return new CurrentBossResponse(
                 firstBoss.getSeasonId(),
                 firstBoss.getSeasonName(),
                 firstBoss.getStartsAt(),
                 firstBoss.getEndsAt(),
-                bosses.stream().map(this::toSummaryResponse).toList(),
-                commonConditions
+                bosses.stream().map(this::toSummaryResponse).toList()
         );
     }
 
@@ -57,7 +50,7 @@ public class BossService {
         }
 
         List<BossCommonConditionResponse> commonConditions = bossRepository
-                .findCommonConditionsBySeasonId(boss.getSeasonId())
+                .findCommonConditionsByBossId(boss.getBossId())
                 .stream()
                 .map(this::toConditionResponse)
                 .toList();
@@ -80,6 +73,12 @@ public class BossService {
     }
 
     private BossSummaryResponse toSummaryResponse(BossRow boss) {
+        List<BossCommonConditionResponse> commonConditions = bossRepository
+                .findCommonConditionsByBossId(boss.getBossId())
+                .stream()
+                .map(this::toConditionResponse)
+                .toList();
+
         return new BossSummaryResponse(
                 boss.getBossId(),
                 boss.getName(),
@@ -88,7 +87,8 @@ public class BossService {
                 boss.getMaxHp(),
                 boss.getImageUrl(),
                 boss.getRewardExp(),
-                boss.getRewardCoin()
+                boss.getRewardCoin(),
+                commonConditions
         );
     }
 
@@ -98,7 +98,10 @@ public class BossService {
                 condition.getTitle(),
                 condition.getDescription(),
                 condition.getTargetType(),
+                condition.getThresholdValue(),
+                condition.getThresholdUnit(),
                 condition.getTargetValue(),
+                condition.getRequiredDays(),
                 condition.getUnit(),
                 condition.getSortOrder()
         );

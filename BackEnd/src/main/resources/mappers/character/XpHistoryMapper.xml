@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.character.repository.XpHistoryRepository">
+
+    <resultMap id="XpHistoryResultMap" type="com.nyamnyam.coach.character.entity.XpHistory">
+        <id property="xpHistoryId" column="xp_history_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="characterId" column="character_id"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourceId" column="source_id"/>
+        <result property="xpAmount" column="xp_amount"/>
+        <result property="reason" column="reason"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="save"
+            parameterType="com.nyamnyam.coach.character.entity.XpHistory"
+            useGeneratedKeys="true"
+            keyProperty="xpHistoryId"
+            keyColumn="xp_history_id">
+        INSERT INTO xp_histories (
+            user_id,
+            character_id,
+            source_type,
+            source_id,
+            xp_amount,
+            reason
+        )
+        VALUES (
+            #{userId},
+            #{characterId},
+            #{sourceType},
+            #{sourceId},
+            #{xpAmount},
+            #{reason}
+        )
+    </insert>
+
+    <select id="findByUserId" resultMap="XpHistoryResultMap">
+        SELECT
+            xp_history_id,
+            user_id,
+            character_id,
+            source_type,
+            source_id,
+            xp_amount,
+            reason,
+            created_at
+        FROM xp_histories
+        WHERE user_id = #{userId}
+        <if test="sourceType != null and sourceType != ''">
+          AND source_type = #{sourceType}
+        </if>
+        ORDER BY created_at DESC, xp_history_id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" resultType="long">
+        SELECT COUNT(1)
+        FROM xp_histories
+        WHERE user_id = #{userId}
+        <if test="sourceType != null and sourceType != ''">
+          AND source_type = #{sourceType}
+        </if>
+    </select>
+</mapper>

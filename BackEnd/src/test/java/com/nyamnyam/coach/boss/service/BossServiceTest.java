@@ -36,22 +36,37 @@ class BossServiceTest {
     }
 
     @Test
-    @DisplayName("현재 시즌 보스 목록과 공통 격파 조건을 조회한다")
+    @DisplayName("현재 시즌 보스 목록과 보스별 공통 격파 조건을 조회한다")
     void getCurrentBosses() {
         when(bossRepository.findCurrentBosses()).thenReturn(List.of(
-                bossRow(1L, "EASY", "설탕 슬라임", 1000),
-                bossRow(2L, "NORMAL", "야식 골렘", 3000),
-                bossRow(3L, "HARD", "폭식 드래곤", 7000)
+                bossRow(1L, "EASY", "당분 드래곤", 50),
+                bossRow(2L, "NORMAL", "당분 드래곤", 100),
+                bossRow(3L, "HARD", "당분 드래곤", 200)
         ));
-        when(bossRepository.findCommonConditionsBySeasonId(1L))
-                .thenReturn(List.of(conditionRow()));
+        when(bossRepository.findCommonConditionsByBossId(1L))
+                .thenReturn(List.of(conditionRow(1L, 1L, "SUGAR_UNDER_LIMIT", 3, 1)));
+        when(bossRepository.findCommonConditionsByBossId(2L))
+                .thenReturn(List.of(
+                        conditionRow(2L, 2L, "SUGAR_UNDER_LIMIT", 4, 1),
+                        conditionRow(3L, 2L, "PROCESSED_DRINK_ZERO", 4, 2)
+                ));
+        when(bossRepository.findCommonConditionsByBossId(3L))
+                .thenReturn(List.of(
+                        conditionRow(4L, 3L, "SUGAR_UNDER_LIMIT", 4, 1),
+                        conditionRow(5L, 3L, "PROCESSED_DRINK_ZERO", 4, 2),
+                        conditionRow(6L, 3L, "VEGETABLE_VARIETY", 5, 3)
+                ));
 
         CurrentBossResponse response = bossService.getCurrentBosses();
 
         assertThat(response.seasonId()).isEqualTo(1L);
         assertThat(response.bosses()).extracting("difficulty").containsExactly("EASY", "NORMAL", "HARD");
-        assertThat(response.commonConditions()).hasSize(1);
-        assertThat(response.commonConditions().get(0).targetType()).isEqualTo("DIET_RECORD_MEMBER_COUNT");
+        assertThat(response.bosses().get(0).commonConditions()).hasSize(1);
+        assertThat(response.bosses().get(1).commonConditions()).hasSize(2);
+        assertThat(response.bosses().get(2).commonConditions()).hasSize(3);
+        assertThat(response.bosses().get(2).commonConditions())
+                .extracting("targetType")
+                .containsExactly("SUGAR_UNDER_LIMIT", "PROCESSED_DRINK_ZERO", "VEGETABLE_VARIETY");
     }
 
     @Test
@@ -68,15 +83,22 @@ class BossServiceTest {
     @Test
     @DisplayName("특정 bossId로 보스 상세 정보를 조회한다")
     void getBossDetail() {
-        when(bossRepository.findBossById(1L)).thenReturn(Optional.of(bossRow(1L, "EASY", "설탕 슬라임", 1000)));
-        when(bossRepository.findCommonConditionsBySeasonId(1L))
-                .thenReturn(List.of(conditionRow()));
+        when(bossRepository.findBossById(3L)).thenReturn(Optional.of(bossRow(3L, "HARD", "당분 드래곤", 200)));
+        when(bossRepository.findCommonConditionsByBossId(3L))
+                .thenReturn(List.of(
+                        conditionRow(4L, 3L, "SUGAR_UNDER_LIMIT", 4, 1),
+                        conditionRow(5L, 3L, "PROCESSED_DRINK_ZERO", 4, 2),
+                        conditionRow(6L, 3L, "VEGETABLE_VARIETY", 5, 3)
+                ));
 
-        BossDetailResponse response = bossService.getBossDetail(1L);
+        BossDetailResponse response = bossService.getBossDetail(3L);
 
-        assertThat(response.bossId()).isEqualTo(1L);
+        assertThat(response.bossId()).isEqualTo(3L);
         assertThat(response.status()).isEqualTo("ACTIVE");
-        assertThat(response.commonConditions()).hasSize(1);
+        assertThat(response.commonConditions()).hasSize(3);
+        assertThat(response.commonConditions())
+                .extracting("targetType")
+                .containsExactly("SUGAR_UNDER_LIMIT", "PROCESSED_DRINK_ZERO", "VEGETABLE_VARIETY");
     }
 
     @Test
@@ -112,7 +134,7 @@ class BossServiceTest {
         row.setDescription(name + " 설명");
         row.setDifficulty(difficulty);
         row.setMaxHp(maxHp);
-        row.setImageUrl("https://example.com/boss.png");
+        row.setImageUrl("/images/boss/sugar-dragon.png");
         row.setRewardExp(100);
         row.setRewardCoin(50);
         row.setStatus("ACTIVE");
@@ -121,16 +143,24 @@ class BossServiceTest {
         return row;
     }
 
-    private BossCommonConditionRow conditionRow() {
+    private BossCommonConditionRow conditionRow(
+            Long conditionId,
+            Long bossId,
+            String targetType,
+            int targetValue,
+            int sortOrder
+    ) {
         BossCommonConditionRow row = new BossCommonConditionRow();
-        row.setConditionId(1L);
+        row.setConditionId(conditionId);
         row.setSeasonId(1L);
-        row.setTitle("길드원 4명 이상 식단 기록");
-        row.setDescription("이번 시즌 동안 길드원 4명 이상이 식단을 기록해야 합니다.");
-        row.setTargetType("DIET_RECORD_MEMBER_COUNT");
-        row.setTargetValue(4);
-        row.setUnit("명");
-        row.setSortOrder(1);
+        row.setBossId(bossId);
+        row.setTitle(targetType);
+        row.setDescription("조건 설명");
+        row.setTargetType(targetType);
+        row.setTargetValue(targetValue);
+        row.setRequiredDays(targetValue);
+        row.setUnit("일");
+        row.setSortOrder(sortOrder);
         return row;
     }
 }

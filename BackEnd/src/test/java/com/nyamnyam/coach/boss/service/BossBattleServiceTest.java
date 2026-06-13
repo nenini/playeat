@@ -23,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -63,7 +65,7 @@ class BossBattleServiceTest {
             battle.setBattleId(500L);
             return null;
         }).when(bossBattleRepository).insertBossBattle(any(BossBattle.class));
-        when(bossBattleRepository.findBossCommonConditionsBySeasonId(10L)).thenReturn(List.of(condition()));
+        when(bossBattleRepository.findBossCommonConditionsByBossId(1L)).thenReturn(List.of(condition()));
         when(bossBattleRepository.findBattleDetailById(500L)).thenReturn(Optional.of(battleRow()));
 
         BossBattleCreateResponse response = bossBattleService.createBossBattle(
@@ -79,6 +81,8 @@ class BossBattleServiceTest {
         verify(bossBattleRepository).insertBossBattleCondition(conditionCaptor.capture());
         assertThat(battleCaptor.getValue().getCurrentHp()).isEqualTo(1000);
         assertThat(conditionCaptor.getValue().getTitle()).isEqualTo("길드원 4명 이상 식단 기록");
+        assertThat(conditionCaptor.getValue().getThresholdValue()).isEqualByComparingTo("4");
+        assertThat(conditionCaptor.getValue().getRequiredDays()).isEqualTo(4);
         assertThat(response.battleId()).isEqualTo(500L);
         assertThat(response.status()).isEqualTo("IN_PROGRESS");
     }
@@ -157,7 +161,7 @@ class BossBattleServiceTest {
         BossBattleDetailResponse detail = bossBattleService.getBossBattleDetail(500L, 1L);
         BossBattleHpResponse hp = bossBattleService.getBossBattleHp(500L, 1L);
 
-        verify(guildValidator).validateGuildMember(100L, 1L);
+        verify(guildValidator, times(2)).validateGuildMember(100L, 1L);
         assertThat(detail.commonConditions()).hasSize(1);
         assertThat(detail.hpRate()).isEqualTo(80.0);
         assertThat(hp.currentHp()).isEqualTo(800);
@@ -180,7 +184,10 @@ class BossBattleServiceTest {
         row.setTitle("길드원 4명 이상 식단 기록");
         row.setDescription("이번 시즌 동안 길드원 4명 이상이 식단을 기록해야 합니다.");
         row.setTargetType("DIET_RECORD_MEMBER_COUNT");
+        row.setThresholdValue(BigDecimal.valueOf(4));
+        row.setThresholdUnit("명");
         row.setTargetValue(4);
+        row.setRequiredDays(4);
         row.setUnit("명");
         row.setSortOrder(1);
         return row;
@@ -193,7 +200,10 @@ class BossBattleServiceTest {
         row.setConditionId(20L);
         row.setTitle("길드원 4명 이상 식단 기록");
         row.setTargetType("DIET_RECORD_MEMBER_COUNT");
+        row.setThresholdValue(BigDecimal.valueOf(4));
+        row.setThresholdUnit("명");
         row.setTargetValue(4);
+        row.setRequiredDays(4);
         row.setCurrentValue(2);
         row.setUnit("명");
         row.setCompleted(false);

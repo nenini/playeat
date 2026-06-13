@@ -1,5 +1,7 @@
 package com.nyamnyam.coach.boss.entity;
 
+import java.math.BigDecimal;
+
 public class BossBattleCondition {
 
     private Long battleConditionId;
@@ -8,7 +10,10 @@ public class BossBattleCondition {
     private String title;
     private String description;
     private String targetType;
+    private BigDecimal thresholdValue;
+    private String thresholdUnit;
     private Integer targetValue;
+    private Integer requiredDays;
     private Integer currentValue;
     private Boolean completed;
     private String unit;
@@ -62,12 +67,36 @@ public class BossBattleCondition {
         this.targetType = targetType;
     }
 
+    public BigDecimal getThresholdValue() {
+        return thresholdValue;
+    }
+
+    public void setThresholdValue(BigDecimal thresholdValue) {
+        this.thresholdValue = thresholdValue;
+    }
+
+    public String getThresholdUnit() {
+        return thresholdUnit;
+    }
+
+    public void setThresholdUnit(String thresholdUnit) {
+        this.thresholdUnit = thresholdUnit;
+    }
+
     public Integer getTargetValue() {
         return targetValue;
     }
 
     public void setTargetValue(Integer targetValue) {
         this.targetValue = targetValue;
+    }
+
+    public Integer getRequiredDays() {
+        return requiredDays;
+    }
+
+    public void setRequiredDays(Integer requiredDays) {
+        this.requiredDays = requiredDays;
     }
 
     public Integer getCurrentValue() {

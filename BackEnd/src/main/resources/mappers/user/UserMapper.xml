@@ -105,6 +105,14 @@
         WHERE user_id = #{userId}
     </update>
 
+    <update id="updatePassword">
+        UPDATE users
+        SET
+            password_hash = #{passwordHash},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
     <update id="updateProfileImage">
         UPDATE users
         SET

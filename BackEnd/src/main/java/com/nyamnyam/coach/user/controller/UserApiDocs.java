@@ -1,10 +1,12 @@
 package com.nyamnyam.coach.user.controller;
 
 import com.nyamnyam.coach.global.response.ApiResponse;
+import com.nyamnyam.coach.user.dto.request.ChangePasswordRequest;
 import com.nyamnyam.coach.user.dto.request.DeactivateUserRequest;
 import com.nyamnyam.coach.user.dto.request.HealthProfileRequest;
 import com.nyamnyam.coach.user.dto.request.OnboardingRequest;
 import com.nyamnyam.coach.user.dto.request.UpdateUserRequest;
+import com.nyamnyam.coach.user.dto.response.ChangePasswordResponse;
 import com.nyamnyam.coach.user.dto.response.DeactivateUserResponse;
 import com.nyamnyam.coach.user.dto.response.HealthProfileResponse;
 import com.nyamnyam.coach.user.dto.response.OnboardingResponse;
@@ -46,6 +48,19 @@ public interface UserApiDocs {
     ResponseEntity<ApiResponse<UpdateUserResponse>> updateMe(
             @Parameter(hidden = true) Authentication authentication,
             UpdateUserRequest request
+    );
+
+    @Operation(summary = "내 비밀번호 변경", description = "현재 비밀번호를 확인한 뒤 새 비밀번호로 변경하고 기존 refresh token을 무효화합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "비밀번호 변경 성공",
+                    content = @Content(schema = @Schema(implementation = ChangePasswordResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패 또는 새 비밀번호 확인 불일치"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 또는 현재 비밀번호 불일치"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    ResponseEntity<ApiResponse<ChangePasswordResponse>> changePassword(
+            @Parameter(hidden = true) Authentication authentication,
+            ChangePasswordRequest request
     );
 
     @Operation(summary = "프로필 이미지 업로드/수정", description = "현재 로그인한 회원의 프로필 이미지 파일을 로컬 파일시스템에 저장하고 접근 경로를 저장합니다.")
