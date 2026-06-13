@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -81,6 +82,48 @@ class BossBattleRepositoryTest {
         assertThat(bossBattleRepository.findBattleConditionsByBattleId(battle.getBattleId())).hasSize(1);
         assertThat(bossBattleRepository.findBattleConditionsByBattleId(battle.getBattleId()).get(0).getTitle())
                 .isEqualTo("길드원 4명 이상 식단 기록");
+    }
+
+    @Test
+    @DisplayName("같은 시즌이어도 선택한 보스 난이도 조건만 복사한다")
+    void copyOnlySelectedBossDifficultyConditions() {
+        Long ownerId = insertUser("difficulty-owner@example.com", "예린");
+        Long guildId = insertGuild(ownerId);
+        insertGuildMember(guildId, ownerId, "OWNER");
+        Long seasonId = insertSeason();
+        Long easyBossId = insertBoss(seasonId, "EASY", 50);
+        Long normalBossId = insertBoss(seasonId, "NORMAL", 100);
+        Long hardBossId = insertBoss(seasonId, "HARD", 200);
+
+        insertCommonCondition(seasonId, easyBossId, "당류 50g 이하 유지", "SUGAR_UNDER_LIMIT", 50, "g", 3, 3, "일", 1);
+        insertCommonCondition(seasonId, normalBossId, "당류 50g 이하 유지", "SUGAR_UNDER_LIMIT", 50, "g", 4, 4, "일", 1);
+        insertCommonCondition(seasonId, normalBossId, "가공음료 0회", "PROCESSED_DRINK_ZERO", 0, "회", 4, 4, "일", 2);
+        insertCommonCondition(seasonId, hardBossId, "당류 50g 이하 유지", "SUGAR_UNDER_LIMIT", 50, "g", 4, 4, "일", 1);
+        insertCommonCondition(seasonId, hardBossId, "가공음료 0회", "PROCESSED_DRINK_ZERO", 0, "회", 4, 4, "일", 2);
+        insertCommonCondition(seasonId, hardBossId, "채소 하루 2종 이상", "VEGETABLE_VARIETY", 2, "종", 5, 5, "일", 3);
+
+        assertThat(bossBattleRepository.findBossCommonConditionsByBossId(easyBossId)).hasSize(1);
+        assertThat(bossBattleRepository.findBossCommonConditionsByBossId(normalBossId)).hasSize(2);
+        List<BossCommonConditionRow> hardConditions = bossBattleRepository.findBossCommonConditionsByBossId(hardBossId);
+        assertThat(hardConditions).hasSize(3);
+        assertThat(hardConditions)
+                .extracting(BossCommonConditionRow::getTargetType)
+                .containsExactly("SUGAR_UNDER_LIMIT", "PROCESSED_DRINK_ZERO", "VEGETABLE_VARIETY");
+
+        BossBattle battle = battle(guildId, hardBossId, seasonId);
+        bossBattleRepository.insertBossBattle(battle);
+        for (BossCommonConditionRow commonCondition : hardConditions) {
+            bossBattleRepository.insertBossBattleCondition(toBattleCondition(battle.getBattleId(), commonCondition));
+        }
+
+        var copiedConditions = bossBattleRepository.findBattleConditionsByBattleId(battle.getBattleId());
+        assertThat(copiedConditions).hasSize(3);
+        assertThat(copiedConditions)
+                .extracting(row -> row.getTargetType())
+                .containsExactly("SUGAR_UNDER_LIMIT", "PROCESSED_DRINK_ZERO", "VEGETABLE_VARIETY");
+        assertThat(copiedConditions.get(0).getThresholdValue()).isEqualByComparingTo(BigDecimal.valueOf(50));
+        assertThat(copiedConditions.get(0).getThresholdUnit()).isEqualTo("g");
+        assertThat(copiedConditions.get(0).getRequiredDays()).isEqualTo(4);
     }
 
     @Test
@@ -172,6 +215,10 @@ class BossBattleRepositoryTest {
     }
 
     private Long insertBoss(Long seasonId) {
+        return insertBoss(seasonId, "EASY", 1000);
+    }
+
+    private Long insertBoss(Long seasonId, String difficulty, int maxHp) {
         jdbcTemplate.update(
                 """
                 INSERT INTO bosses (
@@ -186,14 +233,42 @@ class BossBattleRepositoryTest {
                     starts_at,
                     ends_at
                 )
-                VALUES (?, '설탕 슬라임', '초급 보스', 'EASY', 1000, 100, 50, 'ACTIVE', DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 6, CURRENT_TIMESTAMP))
+                VALUES (?, '설탕 슬라임', '초급 보스', ?, ?, 100, 50, 'ACTIVE', DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 6, CURRENT_TIMESTAMP))
                 """,
-                seasonId
+                seasonId,
+                difficulty,
+                maxHp
         );
-        return jdbcTemplate.queryForObject("SELECT boss_id FROM bosses WHERE season_id = ? AND difficulty = 'EASY'", Long.class, seasonId);
+        return jdbcTemplate.queryForObject("SELECT boss_id FROM bosses WHERE season_id = ? AND difficulty = ?", Long.class, seasonId, difficulty);
     }
 
     private void insertCommonCondition(Long seasonId, Long bossId) {
+        insertCommonCondition(
+                seasonId,
+                bossId,
+                "길드원 4명 이상 식단 기록",
+                "DIET_RECORD_MEMBER_COUNT",
+                4,
+                "명",
+                4,
+                4,
+                "명",
+                1
+        );
+    }
+
+    private void insertCommonCondition(
+            Long seasonId,
+            Long bossId,
+            String title,
+            String targetType,
+            int thresholdValue,
+            String thresholdUnit,
+            int targetValue,
+            int requiredDays,
+            String unit,
+            int sortOrder
+    ) {
         jdbcTemplate.update(
                 """
                 INSERT INTO boss_common_conditions (
@@ -209,11 +284,37 @@ class BossBattleRepositoryTest {
                     unit,
                     sort_order
                 )
-                VALUES (?, ?, '길드원 4명 이상 식단 기록', '조건 설명', 'DIET_RECORD_MEMBER_COUNT', 4, '명', 4, 4, '명', 1)
+                VALUES (?, ?, ?, '조건 설명', ?, ?, ?, ?, ?, ?, ?)
                 """,
                 seasonId,
-                bossId
+                bossId,
+                title,
+                targetType,
+                thresholdValue,
+                thresholdUnit,
+                targetValue,
+                requiredDays,
+                unit,
+                sortOrder
         );
+    }
+
+    private BossBattleCondition toBattleCondition(Long battleId, BossCommonConditionRow commonCondition) {
+        BossBattleCondition condition = new BossBattleCondition();
+        condition.setBattleId(battleId);
+        condition.setConditionId(commonCondition.getConditionId());
+        condition.setTitle(commonCondition.getTitle());
+        condition.setDescription(commonCondition.getDescription());
+        condition.setTargetType(commonCondition.getTargetType());
+        condition.setThresholdValue(commonCondition.getThresholdValue());
+        condition.setThresholdUnit(commonCondition.getThresholdUnit());
+        condition.setTargetValue(commonCondition.getTargetValue());
+        condition.setRequiredDays(commonCondition.getRequiredDays());
+        condition.setCurrentValue(0);
+        condition.setUnit(commonCondition.getUnit());
+        condition.setCompleted(false);
+        condition.setSortOrder(commonCondition.getSortOrder());
+        return condition;
     }
 
     private BossBattle battle(Long guildId, Long bossId, Long seasonId) {
