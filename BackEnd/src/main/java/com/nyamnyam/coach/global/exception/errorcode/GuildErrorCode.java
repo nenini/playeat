@@ -32,7 +32,10 @@ public enum GuildErrorCode implements ErrorCode {
     JOIN_REQUEST_ALREADY_HANDLED(HttpStatus.CONFLICT, "이미 처리된 길드 참여 요청입니다."),
     INVITE_CODE_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 길드 초대 코드입니다."),
     INVITE_CODE_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "길드 초대 코드 생성에 실패했습니다."),
-    GUILD_NOTICE_INVALID(HttpStatus.BAD_REQUEST, "길드 공지사항 입력값이 올바르지 않습니다.");
+    GUILD_NOTICE_INVALID(HttpStatus.BAD_REQUEST, "길드 공지사항 입력값이 올바르지 않습니다."),
+    GUILD_CHAT_NOT_FOUND(HttpStatus.NOT_FOUND, "길드 채팅 메시지를 찾을 수 없습니다."),
+    GUILD_CHAT_MESSAGE_EMPTY(HttpStatus.BAD_REQUEST, "채팅 메시지를 입력해주세요."),
+    GUILD_CHAT_MESSAGE_TOO_LONG(HttpStatus.BAD_REQUEST, "채팅 메시지는 1000자 이하로 입력해주세요.");
 
     private final HttpStatus status;
     private final String message;
