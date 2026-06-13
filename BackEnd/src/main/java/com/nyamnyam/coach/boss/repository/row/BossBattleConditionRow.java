@@ -15,6 +15,7 @@ public class BossBattleConditionRow {
     private Integer targetValue;
     private Integer requiredDays;
     private Integer currentValue;
+    private Integer damage;
     private String unit;
     private Boolean completed;
     private Integer sortOrder;
@@ -41,6 +42,8 @@ public class BossBattleConditionRow {
     public void setRequiredDays(Integer requiredDays) { this.requiredDays = requiredDays; }
     public Integer getCurrentValue() { return currentValue; }
     public void setCurrentValue(Integer currentValue) { this.currentValue = currentValue; }
+    public Integer getDamage() { return damage; }
+    public void setDamage(Integer damage) { this.damage = damage; }
     public String getUnit() { return unit; }
     public void setUnit(String unit) { this.unit = unit; }
     public Boolean getCompleted() { return completed; }

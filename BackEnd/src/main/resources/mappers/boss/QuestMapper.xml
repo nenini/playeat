@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.boss.repository.QuestRepository">
+
+    <resultMap id="QuestRowMap" type="com.nyamnyam.coach.boss.repository.row.QuestRow">
+        <id property="questId" column="quest_id"/>
+        <result property="battleId" column="battle_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="characterId" column="character_id"/>
+        <result property="characterName" column="character_name"/>
+        <result property="characterLevel" column="character_level"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="questType" column="quest_type"/>
+        <result property="targetValue" column="target_value"/>
+        <result property="currentValue" column="current_value"/>
+        <result property="unit" column="unit"/>
+        <result property="damage" column="damage"/>
+        <result property="rewardExp" column="reward_exp"/>
+        <result property="rewardCoin" column="reward_coin"/>
+        <result property="status" column="status"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="isMe" column="is_me"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="completedAt" column="completed_at"/>
+        <result property="rewardedAt" column="rewarded_at"/>
+    </resultMap>
+
+    <resultMap id="QuestMap" type="com.nyamnyam.coach.boss.entity.Quest">
+        <id property="questId" column="quest_id"/>
+        <result property="battleId" column="battle_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="questType" column="quest_type"/>
+        <result property="targetValue" column="target_value"/>
+        <result property="currentValue" column="current_value"/>
+        <result property="unit" column="unit"/>
+        <result property="damage" column="damage"/>
+        <result property="rewardExp" column="reward_exp"/>
+        <result property="rewardCoin" column="reward_coin"/>
+        <result property="status" column="status"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="completedAt" column="completed_at"/>
+        <result property="rewardedAt" column="rewarded_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="QuestBattleRowMap" type="com.nyamnyam.coach.boss.repository.row.QuestBattleRow">
+        <id property="battleId" column="battle_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="status" column="status"/>
+        <result property="maxHp" column="max_hp"/>
+        <result property="difficulty" column="difficulty"/>
+    </resultMap>
+
+    <resultMap id="QuestGuildMemberRowMap" type="com.nyamnyam.coach.boss.repository.row.QuestGuildMemberRow">
+        <id property="memberId" column="member_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="characterId" column="character_id"/>
+        <result property="characterName" column="character_name"/>
+        <result property="characterLevel" column="character_level"/>
+    </resultMap>
+
+    <resultMap id="QuestContributionRowMap" type="com.nyamnyam.coach.boss.repository.row.QuestContributionRow">
+        <id property="userId" column="user_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="characterName" column="character_name"/>
+        <result property="characterLevel" column="character_level"/>
+        <result property="totalQuestCount" column="total_quest_count"/>
+        <result property="completedQuestCount" column="completed_quest_count"/>
+        <result property="totalDamage" column="total_damage"/>
+        <result property="expectedDamage" column="expected_damage"/>
+        <result property="isMe" column="is_me"/>
+    </resultMap>
+
+    <sql id="QuestSelectColumns">
+        q.quest_id,
+        q.battle_id,
+        q.guild_id,
+        q.user_id,
+        u.nickname,
+        u.profile_image_url,
+        c.character_id,
+        c.name AS character_name,
+        c.level AS character_level,
+        q.title,
+        q.description,
+        q.quest_type,
+        q.target_value,
+        q.current_value,
+        q.unit,
+        q.damage,
+        q.reward_exp,
+        q.reward_coin,
+        q.status,
+        q.source_type,
+        CASE WHEN q.user_id = #{currentUserId} THEN TRUE ELSE FALSE END AS is_me,
+        q.created_at,
+        q.completed_at,
+        q.rewarded_at
+    </sql>
+
+    <select id="findQuestsByBattleId" resultMap="QuestRowMap">
+        SELECT <include refid="QuestSelectColumns"/>
+        FROM quests q
+        JOIN users u ON u.user_id = q.user_id
+        LEFT JOIN characters c ON c.user_id = q.user_id
+        WHERE q.battle_id = #{battleId}
+        ORDER BY
+            CASE WHEN q.user_id = #{currentUserId} THEN 0 ELSE 1 END,
+            CASE q.status
+                WHEN 'IN_PROGRESS' THEN 1
+                WHEN 'COMPLETED' THEN 2
+                WHEN 'REWARDED' THEN 3
+                WHEN 'EXPIRED' THEN 4
+                ELSE 5
+            END,
+            q.created_at ASC,
+            q.quest_id ASC
+    </select>
+
+    <select id="findMyQuestByBattleId" resultMap="QuestRowMap">
+        SELECT
+            q.quest_id,
+            q.battle_id,
+            q.guild_id,
+            q.user_id,
+            u.nickname,
+            u.profile_image_url,
+            c.character_id,
+            c.name AS character_name,
+            c.level AS character_level,
+            q.title,
+            q.description,
+            q.quest_type,
+            q.target_value,
+            q.current_value,
+            q.unit,
+            q.damage,
+            q.reward_exp,
+            q.reward_coin,
+            q.status,
+            q.source_type,
+            TRUE AS is_me,
+            q.created_at,
+            q.completed_at,
+            q.rewarded_at
+        FROM quests q
+        JOIN users u ON u.user_id = q.user_id
+        LEFT JOIN characters c ON c.user_id = q.user_id
+        WHERE q.battle_id = #{battleId}
+          AND q.user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <select id="findQuestDetailById" resultMap="QuestRowMap">
+        SELECT <include refid="QuestSelectColumns"/>
+        FROM quests q
+        JOIN users u ON u.user_id = q.user_id
+        LEFT JOIN characters c ON c.user_id = q.user_id
+        WHERE q.quest_id = #{questId}
+    </select>
+
+    <select id="findQuestByBattleIdAndUserId" resultMap="QuestMap">
+        SELECT
+            quest_id,
+            battle_id,
+            guild_id,
+            user_id,
+            title,
+            description,
+            quest_type,
+            target_value,
+            current_value,
+            unit,
+            damage,
+            reward_exp,
+            reward_coin,
+            status,
+            source_type,
+            created_at,
+            completed_at,
+            rewarded_at,
+            updated_at
+        FROM quests
+        WHERE battle_id = #{battleId}
+          AND user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <insert id="insertQuest"
+            parameterType="com.nyamnyam.coach.boss.entity.Quest"
+            useGeneratedKeys="true"
+            keyProperty="questId"
+            keyColumn="quest_id">
+        INSERT INTO quests (
+            battle_id,
+            guild_id,
+            user_id,
+            title,
+            description,
+            quest_type,
+            target_value,
+            current_value,
+            unit,
+            damage,
+            reward_exp,
+            reward_coin,
+            status,
+            source_type
+        )
+        VALUES (
+            #{battleId},
+            #{guildId},
+            #{userId},
+            #{title},
+            #{description},
+            #{questType},
+            #{targetValue},
+            COALESCE(#{currentValue}, 0),
+            #{unit},
+            COALESCE(#{damage}, 0),
+            COALESCE(#{rewardExp}, 0),
+            COALESCE(#{rewardCoin}, 0),
+            COALESCE(#{status}, 'IN_PROGRESS'),
+            COALESCE(#{sourceType}, 'PLACEHOLDER')
+        )
+    </insert>
+
+    <select id="existsQuestByBattleIdAndUserId" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM quests
+        WHERE battle_id = #{battleId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="countQuestsByBattleId" resultType="int">
+        SELECT COUNT(1)
+        FROM quests
+        WHERE battle_id = #{battleId}
+    </select>
+
+    <select id="findBattleById" resultMap="QuestBattleRowMap">
+        SELECT
+            bb.battle_id,
+            bb.guild_id,
+            bb.status,
+            bb.max_hp,
+            b.difficulty
+        FROM boss_battles bb
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        WHERE bb.battle_id = #{battleId}
+    </select>
+
+    <select id="findGuildIdByBattleId" resultType="long">
+        SELECT guild_id
+        FROM boss_battles
+        WHERE battle_id = #{battleId}
+    </select>
+
+    <select id="existsActiveGuildMember" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
+        WHERE gm.guild_id = #{guildId}
+          AND gm.user_id = #{userId}
+          AND gm.left_at IS NULL
+          AND u.status = 'ACTIVE'
+    </select>
+
+    <select id="findGuildRole" resultType="string">
+        SELECT role
+        FROM guild_members
+        WHERE guild_id = #{guildId}
+          AND user_id = #{userId}
+          AND left_at IS NULL
+        LIMIT 1
+    </select>
+
+    <select id="findActiveGuildMembers" resultMap="QuestGuildMemberRowMap">
+        SELECT
+            gm.guild_member_id AS member_id,
+            gm.user_id,
+            u.nickname,
+            u.profile_image_url,
+            c.character_id,
+            c.name AS character_name,
+            c.level AS character_level
+        FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
+        LEFT JOIN characters c ON c.user_id = gm.user_id
+        WHERE gm.guild_id = #{guildId}
+          AND gm.left_at IS NULL
+          AND u.status = 'ACTIVE'
+        ORDER BY gm.joined_at ASC, gm.guild_member_id ASC
+    </select>
+
+    <select id="findQuestContributionsByBattleId" resultMap="QuestContributionRowMap">
+        SELECT
+            gm.user_id,
+            u.nickname,
+            u.profile_image_url,
+            c.name AS character_name,
+            c.level AS character_level,
+            COUNT(q.quest_id) AS total_quest_count,
+            SUM(CASE WHEN q.status IN ('COMPLETED', 'REWARDED') THEN 1 ELSE 0 END) AS completed_quest_count,
+            SUM(CASE WHEN q.status IN ('COMPLETED', 'REWARDED') THEN q.damage ELSE 0 END) AS total_damage,
+            COALESCE(SUM(q.damage), 0) AS expected_damage,
+            CASE WHEN gm.user_id = #{currentUserId} THEN TRUE ELSE FALSE END AS is_me
+        FROM boss_battles bb
+        JOIN guild_members gm ON gm.guild_id = bb.guild_id
+        JOIN users u ON u.user_id = gm.user_id
+        LEFT JOIN characters c ON c.user_id = gm.user_id
+        LEFT JOIN quests q ON q.battle_id = bb.battle_id
+            AND q.user_id = gm.user_id
+        WHERE bb.battle_id = #{battleId}
+          AND gm.left_at IS NULL
+          AND u.status = 'ACTIVE'
+        GROUP BY
+            gm.user_id,
+            u.nickname,
+            u.profile_image_url,
+            c.name,
+            c.level
+        ORDER BY completed_quest_count DESC, total_damage DESC, gm.user_id ASC
+    </select>
+</mapper>

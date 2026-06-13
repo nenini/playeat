@@ -51,6 +51,7 @@ class BossBattleRepositoryTest {
 
         assertThat(current.getBossName()).isEqualTo("설탕 슬라임");
         assertThat(hp.getCurrentHp()).isEqualTo(1000);
+        assertThat(bossBattleRepository.countActiveGuildMembers(fixture.guildId())).isEqualTo(1);
     }
 
     @Test
@@ -73,6 +74,7 @@ class BossBattleRepositoryTest {
             condition.setTargetValue(commonCondition.getTargetValue());
             condition.setRequiredDays(commonCondition.getRequiredDays());
             condition.setCurrentValue(0);
+            condition.setDamage(160);
             condition.setUnit(commonCondition.getUnit());
             condition.setCompleted(false);
             condition.setSortOrder(commonCondition.getSortOrder());
@@ -82,6 +84,8 @@ class BossBattleRepositoryTest {
         assertThat(bossBattleRepository.findBattleConditionsByBattleId(battle.getBattleId())).hasSize(1);
         assertThat(bossBattleRepository.findBattleConditionsByBattleId(battle.getBattleId()).get(0).getTitle())
                 .isEqualTo("길드원 4명 이상 식단 기록");
+        assertThat(bossBattleRepository.findBattleConditionsByBattleId(battle.getBattleId()).get(0).getDamage())
+                .isEqualTo(160);
     }
 
     @Test
@@ -124,6 +128,7 @@ class BossBattleRepositoryTest {
         assertThat(copiedConditions.get(0).getThresholdValue()).isEqualByComparingTo(BigDecimal.valueOf(50));
         assertThat(copiedConditions.get(0).getThresholdUnit()).isEqualTo("g");
         assertThat(copiedConditions.get(0).getRequiredDays()).isEqualTo(4);
+        assertThat(copiedConditions.get(0).getDamage()).isEqualTo(100);
     }
 
     @Test
@@ -311,6 +316,7 @@ class BossBattleRepositoryTest {
         condition.setTargetValue(commonCondition.getTargetValue());
         condition.setRequiredDays(commonCondition.getRequiredDays());
         condition.setCurrentValue(0);
+        condition.setDamage(100);
         condition.setUnit(commonCondition.getUnit());
         condition.setCompleted(false);
         condition.setSortOrder(commonCondition.getSortOrder());

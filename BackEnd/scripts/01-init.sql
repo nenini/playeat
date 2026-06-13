@@ -554,6 +554,7 @@ CREATE TABLE boss_battle_conditions (
     target_value INT NOT NULL,
     required_days INT,
     current_value INT NOT NULL DEFAULT 0,
+    damage INT NOT NULL DEFAULT 0,
     unit VARCHAR(50),
     completed BOOLEAN NOT NULL DEFAULT FALSE,
     completed_at DATETIME,
@@ -620,31 +621,40 @@ CREATE TABLE boss_battle_condition_progress (
 CREATE TABLE quests (
     quest_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     battle_id BIGINT NOT NULL,
-    assigned_user_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
-    description VARCHAR(1000),
-    condition_type VARCHAR(50) NOT NULL,
-    target_nutrient VARCHAR(50),
-    target_value DECIMAL(10,2),
-    progress_value DECIMAL(10,2) DEFAULT 0,
-    reward_xp INT NOT NULL DEFAULT 0,
+    description VARCHAR(500),
+    quest_type VARCHAR(50) NOT NULL,
+    target_value INT NOT NULL,
+    current_value INT NOT NULL DEFAULT 0,
+    unit VARCHAR(50),
+    damage INT NOT NULL DEFAULT 0,
+    reward_exp INT NOT NULL DEFAULT 0,
     reward_coin INT NOT NULL DEFAULT 0,
-    damage_amount INT NOT NULL DEFAULT 0,
     status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
-    due_date DATE,
+    source_type VARCHAR(30) NOT NULL DEFAULT 'PLACEHOLDER',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,
+    rewarded_at DATETIME,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_quests_battle_user UNIQUE (battle_id, user_id),
     CONSTRAINT fk_quests_battle
         FOREIGN KEY (battle_id)
         REFERENCES boss_battles(battle_id)
         ON DELETE CASCADE,
-    CONSTRAINT fk_quests_assigned_user
-        FOREIGN KEY (assigned_user_id)
+    CONSTRAINT fk_quests_guild
+        FOREIGN KEY (guild_id)
+        REFERENCES guilds(guild_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_quests_user
+        FOREIGN KEY (user_id)
         REFERENCES users(user_id)
         ON DELETE CASCADE,
-    INDEX idx_quests_battle_user_status (battle_id, assigned_user_id, status),
-    INDEX idx_quests_user_status (assigned_user_id, status),
-    INDEX idx_quests_target_nutrient (target_nutrient)
+    INDEX idx_quests_battle_user (battle_id, user_id),
+    INDEX idx_quests_battle_status (battle_id, status),
+    INDEX idx_quests_user_status (user_id, status),
+    INDEX idx_quests_guild_battle (guild_id, battle_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE quest_verifications (

@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS boss_battle_conditions (
     target_value INT NOT NULL,
     required_days INT NULL,
     current_value INT NOT NULL DEFAULT 0,
+    damage INT NOT NULL DEFAULT 0,
     unit VARCHAR(50),
     completed BOOLEAN NOT NULL DEFAULT FALSE,
     completed_at DATETIME NULL,
@@ -206,6 +207,17 @@ SET @has_battle_condition_current_value = (
       AND COLUMN_NAME = 'current_value'
 );
 SET @sql = IF(@has_battle_condition_current_value = 0, 'ALTER TABLE boss_battle_conditions ADD COLUMN current_value INT NOT NULL DEFAULT 0 AFTER target_value', 'SELECT ''boss_battle_conditions.current_value exists''');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @has_battle_condition_damage = (
+    SELECT COUNT(1) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'boss_battle_conditions'
+      AND COLUMN_NAME = 'damage'
+);
+SET @sql = IF(@has_battle_condition_damage = 0, 'ALTER TABLE boss_battle_conditions ADD COLUMN damage INT NOT NULL DEFAULT 0 AFTER current_value', 'SELECT ''boss_battle_conditions.damage exists''');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;

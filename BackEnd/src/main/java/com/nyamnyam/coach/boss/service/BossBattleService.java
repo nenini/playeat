@@ -12,6 +12,7 @@ import com.nyamnyam.coach.boss.dto.response.CurrentBossBattleResponse;
 import com.nyamnyam.coach.boss.entity.BossBattle;
 import com.nyamnyam.coach.boss.entity.BossBattleCondition;
 import com.nyamnyam.coach.boss.entity.BossBattleStatus;
+import com.nyamnyam.coach.boss.entity.BossDifficulty;
 import com.nyamnyam.coach.boss.entity.BossStatus;
 import com.nyamnyam.coach.boss.repository.BossBattleRepository;
 import com.nyamnyam.coach.boss.repository.row.BossBattleConditionRow;
@@ -71,19 +72,30 @@ public class BossBattleService {
             throw new BusinessException(BossErrorCode.BOSS_BATTLE_ALREADY_EXISTS_IN_SEASON);
         }
 
+        int activeMemberCount = bossBattleRepository.countActiveGuildMembers(guildId);
+        BossDifficulty difficulty = parseDifficulty(boss.getDifficulty());
+        int actualMaxHp = difficulty.calculateMaxHp(activeMemberCount);
+
         BossBattle battle = new BossBattle();
         battle.setGuildId(guildId);
         battle.setBossId(boss.getBossId());
         battle.setSeasonId(boss.getSeasonId());
         battle.setStatus(BossBattleStatus.IN_PROGRESS.name());
-        battle.setMaxHp(boss.getMaxHp());
-        battle.setCurrentHp(boss.getMaxHp());
+        battle.setMaxHp(actualMaxHp);
+        battle.setCurrentHp(actualMaxHp);
         battle.setTotalDamage(0);
         bossBattleRepository.insertBossBattle(battle);
 
         List<BossCommonConditionRow> conditions = bossBattleRepository.findBossCommonConditionsByBossId(boss.getBossId());
-        for (BossCommonConditionRow condition : conditions) {
-            bossBattleRepository.insertBossBattleCondition(toBattleCondition(battle.getBattleId(), condition));
+        int commonTotalDamage = difficulty.calculateCommonConditionTotalDamage(actualMaxHp);
+        for (int index = 0; index < conditions.size(); index++) {
+            BossCommonConditionRow condition = conditions.get(index);
+            int conditionDamage = calculateDistributedDamage(commonTotalDamage, conditions.size(), index);
+            bossBattleRepository.insertBossBattleCondition(toBattleCondition(
+                    battle.getBattleId(),
+                    condition,
+                    conditionDamage
+            ));
         }
 
         BossBattleRow savedBattle = findBattle(battle.getBattleId());
@@ -194,7 +206,11 @@ public class BossBattleService {
                 .orElseThrow(() -> new BusinessException(BossErrorCode.BOSS_BATTLE_NOT_FOUND));
     }
 
-    private BossBattleCondition toBattleCondition(Long battleId, BossCommonConditionRow condition) {
+    private BossBattleCondition toBattleCondition(
+            Long battleId,
+            BossCommonConditionRow condition,
+            int damage
+    ) {
         BossBattleCondition battleCondition = new BossBattleCondition();
         battleCondition.setBattleId(battleId);
         battleCondition.setConditionId(condition.getConditionId());
@@ -206,6 +222,7 @@ public class BossBattleService {
         battleCondition.setTargetValue(condition.getTargetValue());
         battleCondition.setRequiredDays(condition.getRequiredDays());
         battleCondition.setCurrentValue(0);
+        battleCondition.setDamage(damage);
         battleCondition.setCompleted(false);
         battleCondition.setUnit(condition.getUnit());
         battleCondition.setSortOrder(condition.getSortOrder());
@@ -241,6 +258,7 @@ public class BossBattleService {
                 row.getTargetValue(),
                 row.getRequiredDays(),
                 row.getCurrentValue(),
+                row.getDamage(),
                 row.getUnit(),
                 row.getCompleted(),
                 row.getSortOrder()
@@ -264,6 +282,23 @@ public class BossBattleService {
             return 0.0;
         }
         return Math.round((currentHp * 10000.0 / maxHp)) / 100.0;
+    }
+
+    private BossDifficulty parseDifficulty(String difficulty) {
+        try {
+            return BossDifficulty.from(difficulty);
+        } catch (IllegalArgumentException | NullPointerException exception) {
+            throw new BusinessException(BossErrorCode.BOSS_DIFFICULTY_INVALID);
+        }
+    }
+
+    private int calculateDistributedDamage(int totalDamage, int count, int index) {
+        if (count <= 0) {
+            return 0;
+        }
+        int baseDamage = totalDamage / count;
+        int remainder = totalDamage % count;
+        return index < remainder ? baseDamage + 1 : baseDamage;
     }
 
     private int normalizePage(Integer page) {

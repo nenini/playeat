@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS quests;
 DROP TABLE IF EXISTS boss_battle_damage_logs;
 DROP TABLE IF EXISTS boss_battle_conditions;
 DROP TABLE IF EXISTS boss_battles;
@@ -298,6 +299,7 @@ CREATE TABLE boss_battle_conditions (
     target_value INT NOT NULL,
     required_days INT,
     current_value INT NOT NULL DEFAULT 0,
+    damage INT NOT NULL DEFAULT 0,
     unit VARCHAR(50),
     completed BOOLEAN NOT NULL DEFAULT FALSE,
     completed_at DATETIME,
@@ -324,3 +326,31 @@ CREATE INDEX idx_battle_conditions_battle ON boss_battle_conditions (battle_id);
 CREATE INDEX idx_battle_conditions_completed ON boss_battle_conditions (battle_id, completed);
 CREATE INDEX idx_damage_logs_battle_created ON boss_battle_damage_logs (battle_id, created_at);
 CREATE INDEX idx_damage_logs_battle_user ON boss_battle_damage_logs (battle_id, user_id);
+
+CREATE TABLE quests (
+    quest_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    battle_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description VARCHAR(500),
+    quest_type VARCHAR(50) NOT NULL,
+    target_value INT NOT NULL,
+    current_value INT NOT NULL DEFAULT 0,
+    unit VARCHAR(50),
+    damage INT NOT NULL DEFAULT 0,
+    reward_exp INT NOT NULL DEFAULT 0,
+    reward_coin INT NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
+    source_type VARCHAR(30) NOT NULL DEFAULT 'PLACEHOLDER',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME,
+    rewarded_at DATETIME,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_quests_battle_user UNIQUE (battle_id, user_id)
+);
+
+CREATE INDEX idx_quests_battle_user ON quests (battle_id, user_id);
+CREATE INDEX idx_quests_battle_status ON quests (battle_id, status);
+CREATE INDEX idx_quests_user_status ON quests (user_id, status);
+CREATE INDEX idx_quests_guild_battle ON quests (guild_id, battle_id);
