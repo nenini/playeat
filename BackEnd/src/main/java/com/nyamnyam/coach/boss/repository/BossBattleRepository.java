@@ -27,6 +27,8 @@ public interface BossBattleRepository {
             @Param("seasonId") Long seasonId
     );
 
+    int countActiveGuildMembers(@Param("guildId") Long guildId);
+
     void insertBossBattle(BossBattle battle);
 
     List<BossCommonConditionRow> findBossCommonConditionsByBossId(@Param("bossId") Long bossId);

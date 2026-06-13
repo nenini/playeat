@@ -15,6 +15,7 @@ public class BossBattleCondition {
     private Integer targetValue;
     private Integer requiredDays;
     private Integer currentValue;
+    private Integer damage;
     private Boolean completed;
     private String unit;
     private Integer sortOrder;
@@ -105,6 +106,14 @@ public class BossBattleCondition {
 
     public void setCurrentValue(Integer currentValue) {
         this.currentValue = currentValue;
+    }
+
+    public Integer getDamage() {
+        return damage;
+    }
+
+    public void setDamage(Integer damage) {
+        this.damage = damage;
     }
 
     public Boolean getCompleted() {

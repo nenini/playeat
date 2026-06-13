@@ -60,13 +60,14 @@ class BossBattleServiceTest {
         when(bossBattleRepository.findCurrentSeasonId()).thenReturn(Optional.of(10L));
         when(bossBattleRepository.existsInProgressBattleByGuildId(100L)).thenReturn(false);
         when(bossBattleRepository.existsBattleByGuildIdAndSeasonId(100L, 10L)).thenReturn(false);
+        when(bossBattleRepository.countActiveGuildMembers(100L)).thenReturn(2);
         doAnswer(invocation -> {
             BossBattle battle = invocation.getArgument(0);
             battle.setBattleId(500L);
             return null;
         }).when(bossBattleRepository).insertBossBattle(any(BossBattle.class));
         when(bossBattleRepository.findBossCommonConditionsByBossId(1L)).thenReturn(List.of(condition()));
-        when(bossBattleRepository.findBattleDetailById(500L)).thenReturn(Optional.of(battleRow()));
+        when(bossBattleRepository.findBattleDetailById(500L)).thenReturn(Optional.of(battleRow(800, 800)));
 
         BossBattleCreateResponse response = bossBattleService.createBossBattle(
                 100L,
@@ -79,12 +80,47 @@ class BossBattleServiceTest {
         verify(guildValidator).validateGuildOwner(100L, 1L);
         verify(bossBattleRepository).insertBossBattle(battleCaptor.capture());
         verify(bossBattleRepository).insertBossBattleCondition(conditionCaptor.capture());
-        assertThat(battleCaptor.getValue().getCurrentHp()).isEqualTo(1000);
+        assertThat(battleCaptor.getValue().getMaxHp()).isEqualTo(800);
+        assertThat(battleCaptor.getValue().getCurrentHp()).isEqualTo(800);
         assertThat(conditionCaptor.getValue().getTitle()).isEqualTo("길드원 4명 이상 식단 기록");
         assertThat(conditionCaptor.getValue().getThresholdValue()).isEqualByComparingTo("4");
         assertThat(conditionCaptor.getValue().getRequiredDays()).isEqualTo(4);
+        assertThat(conditionCaptor.getValue().getDamage()).isEqualTo(160);
         assertThat(response.battleId()).isEqualTo(500L);
         assertThat(response.status()).isEqualTo("IN_PROGRESS");
+    }
+
+    @Test
+    @DisplayName("난이도별 정책으로 보스전 maxHp를 계산한다")
+    void createBossBattleCalculatesMaxHpByDifficulty() {
+        assertBattleMaxHp("EASY", 3, 950);
+        assertBattleMaxHp("NORMAL", 3, 1750);
+        assertBattleMaxHp("HARD", 3, 3000);
+    }
+
+    @Test
+    @DisplayName("공통 조건 damage 합계는 난이도별 공통 조건 비중과 일치한다")
+    void createBossBattleDistributesCommonConditionDamage() {
+        when(bossBattleRepository.findActiveBossById(1L)).thenReturn(Optional.of(activeBoss("HARD")));
+        when(bossBattleRepository.findCurrentSeasonId()).thenReturn(Optional.of(10L));
+        when(bossBattleRepository.existsInProgressBattleByGuildId(100L)).thenReturn(false);
+        when(bossBattleRepository.existsBattleByGuildIdAndSeasonId(100L, 10L)).thenReturn(false);
+        when(bossBattleRepository.countActiveGuildMembers(100L)).thenReturn(4);
+        doAnswer(invocation -> {
+            BossBattle battle = invocation.getArgument(0);
+            battle.setBattleId(500L);
+            return null;
+        }).when(bossBattleRepository).insertBossBattle(any(BossBattle.class));
+        when(bossBattleRepository.findBossCommonConditionsByBossId(1L))
+                .thenReturn(List.of(condition(1), condition(2), condition(3)));
+        when(bossBattleRepository.findBattleDetailById(500L)).thenReturn(Optional.of(battleRow(3400, 3400)));
+
+        bossBattleService.createBossBattle(100L, 1L, new BossBattleCreateRequest(1L));
+
+        ArgumentCaptor<BossBattleCondition> conditionCaptor = ArgumentCaptor.forClass(BossBattleCondition.class);
+        verify(bossBattleRepository, times(3)).insertBossBattleCondition(conditionCaptor.capture());
+        assertThat(conditionCaptor.getAllValues()).extracting(BossBattleCondition::getDamage)
+                .containsExactly(454, 453, 453);
     }
 
     @Test
@@ -163,24 +199,33 @@ class BossBattleServiceTest {
 
         verify(guildValidator, times(2)).validateGuildMember(100L, 1L);
         assertThat(detail.commonConditions()).hasSize(1);
+        assertThat(detail.commonConditions().get(0).damage()).isEqualTo(160);
         assertThat(detail.hpRate()).isEqualTo(80.0);
         assertThat(hp.currentHp()).isEqualTo(800);
     }
 
     private BossRow activeBoss() {
+        return activeBoss("EASY");
+    }
+
+    private BossRow activeBoss(String difficulty) {
         BossRow row = new BossRow();
         row.setBossId(1L);
         row.setSeasonId(10L);
         row.setName("설탕 슬라임");
-        row.setDifficulty("EASY");
+        row.setDifficulty(difficulty);
         row.setMaxHp(1000);
         row.setStatus("ACTIVE");
         return row;
     }
 
     private BossCommonConditionRow condition() {
+        return condition(1);
+    }
+
+    private BossCommonConditionRow condition(int sortOrder) {
         BossCommonConditionRow row = new BossCommonConditionRow();
-        row.setConditionId(20L);
+        row.setConditionId(20L + sortOrder);
         row.setTitle("길드원 4명 이상 식단 기록");
         row.setDescription("이번 시즌 동안 길드원 4명 이상이 식단을 기록해야 합니다.");
         row.setTargetType("DIET_RECORD_MEMBER_COUNT");
@@ -189,7 +234,7 @@ class BossBattleServiceTest {
         row.setTargetValue(4);
         row.setRequiredDays(4);
         row.setUnit("명");
-        row.setSortOrder(1);
+        row.setSortOrder(sortOrder);
         return row;
     }
 
@@ -205,6 +250,7 @@ class BossBattleServiceTest {
         row.setTargetValue(4);
         row.setRequiredDays(4);
         row.setCurrentValue(2);
+        row.setDamage(160);
         row.setUnit("명");
         row.setCompleted(false);
         row.setSortOrder(1);
@@ -212,6 +258,10 @@ class BossBattleServiceTest {
     }
 
     private BossBattleRow battleRow() {
+        return battleRow(1000, 800);
+    }
+
+    private BossBattleRow battleRow(int maxHp, int currentHp) {
         BossBattleRow row = new BossBattleRow();
         row.setBattleId(500L);
         row.setGuildId(100L);
@@ -222,11 +272,36 @@ class BossBattleServiceTest {
         row.setDifficulty("EASY");
         row.setBossImageUrl("https://example.com/boss.png");
         row.setStatus("IN_PROGRESS");
-        row.setMaxHp(1000);
-        row.setCurrentHp(800);
-        row.setTotalDamage(200);
+        row.setMaxHp(maxHp);
+        row.setCurrentHp(currentHp);
+        row.setTotalDamage(maxHp - currentHp);
         row.setStartedAt(LocalDateTime.of(2026, 6, 10, 10, 0));
         row.setEndsAt(LocalDateTime.of(2026, 6, 16, 23, 59));
         return row;
+    }
+
+    private void assertBattleMaxHp(String difficulty, int activeMemberCount, int expectedMaxHp) {
+        when(bossBattleRepository.findActiveBossById(1L)).thenReturn(Optional.of(activeBoss(difficulty)));
+        when(bossBattleRepository.findCurrentSeasonId()).thenReturn(Optional.of(10L));
+        when(bossBattleRepository.existsInProgressBattleByGuildId(100L)).thenReturn(false);
+        when(bossBattleRepository.existsBattleByGuildIdAndSeasonId(100L, 10L)).thenReturn(false);
+        when(bossBattleRepository.countActiveGuildMembers(100L)).thenReturn(activeMemberCount);
+        doAnswer(invocation -> {
+            BossBattle battle = invocation.getArgument(0);
+            battle.setBattleId(500L);
+            return null;
+        }).when(bossBattleRepository).insertBossBattle(any(BossBattle.class));
+        when(bossBattleRepository.findBossCommonConditionsByBossId(1L)).thenReturn(List.of());
+        when(bossBattleRepository.findBattleDetailById(500L))
+                .thenReturn(Optional.of(battleRow(expectedMaxHp, expectedMaxHp)));
+
+        BossBattleCreateResponse response = bossBattleService.createBossBattle(
+                100L,
+                1L,
+                new BossBattleCreateRequest(1L)
+        );
+
+        assertThat(response.maxHp()).isEqualTo(expectedMaxHp);
+        assertThat(response.currentHp()).isEqualTo(expectedMaxHp);
     }
 }

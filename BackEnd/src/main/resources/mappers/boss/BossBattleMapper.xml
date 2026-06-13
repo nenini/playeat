@@ -35,6 +35,7 @@
         <result property="targetValue" column="target_value"/>
         <result property="requiredDays" column="required_days"/>
         <result property="currentValue" column="current_value"/>
+        <result property="damage" column="damage"/>
         <result property="unit" column="unit"/>
         <result property="completed" column="completed"/>
         <result property="sortOrder" column="sort_order"/>
@@ -144,6 +145,15 @@
           AND season_id = #{seasonId}
     </select>
 
+    <select id="countActiveGuildMembers" resultType="int">
+        SELECT COUNT(1)
+        FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
+        WHERE gm.guild_id = #{guildId}
+          AND gm.left_at IS NULL
+          AND u.status = 'ACTIVE'
+    </select>
+
     <insert id="insertBossBattle"
             parameterType="com.nyamnyam.coach.boss.entity.BossBattle"
             useGeneratedKeys="true"
@@ -204,6 +214,7 @@
             target_value,
             required_days,
             current_value,
+            damage,
             unit,
             completed,
             sort_order
@@ -219,6 +230,7 @@
             #{targetValue},
             #{requiredDays},
             COALESCE(#{currentValue}, 0),
+            COALESCE(#{damage}, 0),
             #{unit},
             COALESCE(#{completed}, FALSE),
             COALESCE(#{sortOrder}, 0)
@@ -259,6 +271,7 @@
             target_value,
             required_days,
             current_value,
+            damage,
             unit,
             completed,
             sort_order
