@@ -41,7 +41,7 @@ docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p�
 docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/08-boss-sugar-dragon-seed.sql
 docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/09-boss-battle-pr5-migration.sql
 docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/10-quest-pr6-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/11-guild-chat-pr9-migration.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/12-guild-chat-pr9-migration.sql
 ```
 
 ## Verification
