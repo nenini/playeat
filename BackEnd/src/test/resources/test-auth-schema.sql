@@ -12,6 +12,10 @@ DROP TABLE IF EXISTS guild_members;
 DROP TABLE IF EXISTS guilds;
 DROP TABLE IF EXISTS xp_histories;
 DROP TABLE IF EXISTS characters;
+DROP TABLE IF EXISTS diet_items;
+DROP TABLE IF EXISTS diets;
+DROP TABLE IF EXISTS food_favorites;
+DROP TABLE IF EXISTS foods;
 DROP TABLE IF EXISTS health_profiles;
 DROP TABLE IF EXISTS users;
 
@@ -52,6 +56,97 @@ CREATE TABLE health_profiles (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_health_profiles_user UNIQUE (user_id)
 );
+
+CREATE TABLE foods (
+    food_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    external_food_code VARCHAR(100),
+    name VARCHAR(200) NOT NULL,
+    brand VARCHAR(100),
+    category VARCHAR(100),
+    nutrition_basis_amount DECIMAL(8,2) NOT NULL DEFAULT 100,
+    nutrition_basis_unit VARCHAR(10) NOT NULL DEFAULT 'g',
+    serving_amount DECIMAL(8,2),
+    serving_unit VARCHAR(10),
+    gram_per_piece DECIMAL(8,4),
+    calories DECIMAL(10,2) DEFAULT 0,
+    protein_g DECIMAL(10,2) DEFAULT 0,
+    carbs_g DECIMAL(10,2) DEFAULT 0,
+    fat_g DECIMAL(10,2) DEFAULT 0,
+    sugar_g DECIMAL(10,2) DEFAULT 0,
+    sodium_mg DECIMAL(10,2) DEFAULT 0,
+    fiber_g DECIMAL(10,2) DEFAULT 0,
+    iron_mg DECIMAL(10,2) DEFAULT 0,
+    phosphorus_mg DECIMAL(10,2) DEFAULT 0,
+    potassium_mg DECIMAL(10,2) DEFAULT 0,
+    vitamin_a_ug_rae DECIMAL(10,2) DEFAULT 0,
+    beta_carotene_ug DECIMAL(10,2) DEFAULT 0,
+    retinol_ug DECIMAL(10,2) DEFAULT 0,
+    source VARCHAR(50),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_foods_external_food_code UNIQUE (external_food_code)
+);
+
+CREATE INDEX idx_foods_name ON foods (name);
+CREATE INDEX idx_foods_category ON foods (category);
+
+CREATE TABLE food_favorites (
+    favorite_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    food_id BIGINT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_food_favorites_user_food UNIQUE (user_id, food_id)
+);
+
+CREATE TABLE diets (
+    diet_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    meal_type VARCHAR(20) NOT NULL,
+    eaten_at DATETIME NOT NULL,
+    memo TEXT,
+    total_calories DECIMAL(10,2) DEFAULT 0,
+    total_protein_g DECIMAL(10,2) DEFAULT 0,
+    total_carbs_g DECIMAL(10,2) DEFAULT 0,
+    total_fat_g DECIMAL(10,2) DEFAULT 0,
+    total_sugar_g DECIMAL(10,2) DEFAULT 0,
+    total_sodium_mg DECIMAL(10,2) DEFAULT 0,
+    total_fiber_g DECIMAL(10,2) DEFAULT 0,
+    total_iron_mg DECIMAL(10,2) DEFAULT 0,
+    total_phosphorus_mg DECIMAL(10,2) DEFAULT 0,
+    total_potassium_mg DECIMAL(10,2) DEFAULT 0,
+    total_vitamin_a_ug_rae DECIMAL(10,2) DEFAULT 0,
+    total_beta_carotene_ug DECIMAL(10,2) DEFAULT 0,
+    total_retinol_ug DECIMAL(10,2) DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_diets_user_eaten_at ON diets (user_id, eaten_at);
+
+CREATE TABLE diet_items (
+    diet_item_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    diet_id BIGINT NOT NULL,
+    food_id BIGINT NOT NULL,
+    input_amount DECIMAL(8,2) NOT NULL,
+    input_unit VARCHAR(10) NOT NULL,
+    amount_g DECIMAL(8,2),
+    amount_ml DECIMAL(8,2),
+    calories DECIMAL(10,2) DEFAULT 0,
+    protein_g DECIMAL(10,2) DEFAULT 0,
+    carbs_g DECIMAL(10,2) DEFAULT 0,
+    fat_g DECIMAL(10,2) DEFAULT 0,
+    sugar_g DECIMAL(10,2) DEFAULT 0,
+    sodium_mg DECIMAL(10,2) DEFAULT 0,
+    fiber_g DECIMAL(10,2) DEFAULT 0,
+    iron_mg DECIMAL(10,2) DEFAULT 0,
+    phosphorus_mg DECIMAL(10,2) DEFAULT 0,
+    potassium_mg DECIMAL(10,2) DEFAULT 0,
+    vitamin_a_ug_rae DECIMAL(10,2) DEFAULT 0,
+    beta_carotene_ug DECIMAL(10,2) DEFAULT 0,
+    retinol_ug DECIMAL(10,2) DEFAULT 0
+);
+
+CREATE INDEX idx_diet_items_diet ON diet_items (diet_id);
+CREATE INDEX idx_diet_items_food ON diet_items (food_id);
 
 CREATE TABLE boss_seasons (
     season_id BIGINT AUTO_INCREMENT PRIMARY KEY,
