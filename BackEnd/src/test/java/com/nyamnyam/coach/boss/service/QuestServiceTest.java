@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,7 +66,7 @@ class QuestServiceTest {
         assertThat(response.createdCount()).isEqualTo(2);
         assertThat(response.skippedCount()).isZero();
         assertThat(response.quests()).extracting("title").containsOnly("오늘 식단 기록하기");
-        verify(questRepository).insertQuest(any(Quest.class));
+        verify(questRepository, times(2)).insertQuest(any(Quest.class));
     }
 
     @Test
