@@ -81,9 +81,9 @@ public class FoodService {
     }
 
     private String escapeLikeWildcards(String value) {
-        return value.replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
+        return value.replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
     }
 
     private int normalizePage(Integer page) {

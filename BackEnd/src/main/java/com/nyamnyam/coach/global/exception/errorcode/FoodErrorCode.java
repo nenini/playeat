@@ -1,4 +1,4 @@
-﻿package com.nyamnyam.coach.global.exception.errorcode;
+package com.nyamnyam.coach.global.exception.errorcode;
 
 import org.springframework.http.HttpStatus;
 
