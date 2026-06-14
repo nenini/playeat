@@ -85,6 +85,48 @@
         <result property="isMe" column="is_me"/>
     </resultMap>
 
+    <resultMap id="DailyNutritionSummaryRowMap" type="com.nyamnyam.coach.boss.repository.row.DailyNutritionSummaryRow">
+        <id property="summaryId" column="summary_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="summaryDate" column="summary_date"/>
+        <result property="totalSugarG" column="total_sugar_g"/>
+    </resultMap>
+
+    <resultMap id="DietVerificationRowMap" type="com.nyamnyam.coach.boss.repository.row.DietVerificationRow">
+        <id property="dietId" column="diet_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="summaryDate" column="summary_date"/>
+        <result property="totalSugarG" column="total_sugar_g"/>
+    </resultMap>
+
+    <resultMap id="BattleStateRowMap" type="com.nyamnyam.coach.boss.repository.row.BattleStateRow">
+        <id property="battleId" column="battle_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="bossId" column="boss_id"/>
+        <result property="bossName" column="boss_name"/>
+        <result property="difficulty" column="difficulty"/>
+        <result property="status" column="status"/>
+        <result property="maxHp" column="max_hp"/>
+        <result property="currentHp" column="current_hp"/>
+        <result property="totalDamage" column="total_damage"/>
+        <result property="rewardExp" column="reward_exp"/>
+        <result property="rewardCoin" column="reward_coin"/>
+        <result property="startedAt" column="started_at"/>
+        <result property="endedAt" column="ended_at"/>
+    </resultMap>
+
+    <resultMap id="BattleConditionStateRowMap" type="com.nyamnyam.coach.boss.repository.row.BattleConditionStateRow">
+        <id property="battleConditionId" column="battle_condition_id"/>
+        <result property="battleId" column="battle_id"/>
+        <result property="title" column="title"/>
+        <result property="targetType" column="target_type"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="targetValue" column="target_value"/>
+        <result property="currentValue" column="current_value"/>
+        <result property="damage" column="damage"/>
+        <result property="completed" column="completed"/>
+    </resultMap>
+
     <sql id="QuestSelectColumns">
         q.quest_id,
         q.battle_id,
@@ -336,4 +378,271 @@
             c.level
         ORDER BY completed_quest_count DESC, total_damage DESC, gm.user_id ASC
     </select>
+
+    <select id="findQuestForUpdate" resultMap="QuestMap">
+        SELECT
+            quest_id,
+            battle_id,
+            guild_id,
+            user_id,
+            title,
+            description,
+            quest_type,
+            target_value,
+            current_value,
+            unit,
+            damage,
+            reward_exp,
+            reward_coin,
+            status,
+            source_type,
+            created_at,
+            completed_at,
+            rewarded_at,
+            updated_at
+        FROM quests
+        WHERE quest_id = #{questId}
+        FOR UPDATE
+    </select>
+
+    <update id="updateQuestCompleted">
+        UPDATE quests
+        SET status = 'COMPLETED',
+            current_value = #{currentValue},
+            completed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE quest_id = #{questId}
+          AND status = 'IN_PROGRESS'
+    </update>
+
+    <update id="updateQuestRewarded">
+        UPDATE quests
+        SET status = 'REWARDED',
+            rewarded_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE quest_id = #{questId}
+          AND status = 'COMPLETED'
+          AND rewarded_at IS NULL
+    </update>
+
+    <insert id="insertQuestVerification"
+            parameterType="com.nyamnyam.coach.boss.entity.QuestVerification"
+            useGeneratedKeys="true"
+            keyProperty="verificationId"
+            keyColumn="verification_id">
+        INSERT INTO quest_verifications (
+            quest_id,
+            user_id,
+            battle_id,
+            summary_id,
+            diet_id,
+            quest_type,
+            verified,
+            damage_amount,
+            message,
+            verified_date
+        )
+        VALUES (
+            #{questId},
+            #{userId},
+            #{battleId},
+            #{summaryId},
+            #{dietId},
+            #{questType},
+            COALESCE(#{verified}, TRUE),
+            COALESCE(#{damageAmount}, 0),
+            #{message},
+            #{verifiedDate}
+        )
+    </insert>
+
+    <select id="existsQuestVerificationByQuestId" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM quest_verifications
+        WHERE quest_id = #{questId}
+    </select>
+
+    <select id="findTodayDietForVerification" resultMap="DietVerificationRowMap">
+        SELECT
+            diet_id,
+            user_id,
+            CAST(eaten_at AS DATE) AS summary_date,
+            total_sugar_g
+        FROM diets
+        WHERE user_id = #{userId}
+          AND eaten_at &gt;= #{startAt}
+          AND eaten_at &lt; #{endAt}
+        ORDER BY eaten_at ASC, diet_id ASC
+        LIMIT 1
+    </select>
+
+    <select id="findBattleStateForUpdate" resultMap="BattleStateRowMap">
+        SELECT
+            bb.battle_id,
+            bb.guild_id,
+            bb.boss_id,
+            b.name AS boss_name,
+            b.difficulty,
+            bb.status,
+            bb.max_hp,
+            bb.current_hp,
+            bb.total_damage,
+            b.reward_exp,
+            b.reward_coin,
+            bb.started_at,
+            bb.ended_at
+        FROM boss_battles bb
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        WHERE bb.battle_id = #{battleId}
+        FOR UPDATE
+    </select>
+
+    <select id="findBattleRewardInfo" resultMap="BattleStateRowMap">
+        SELECT
+            bb.battle_id,
+            bb.guild_id,
+            bb.boss_id,
+            b.name AS boss_name,
+            b.difficulty,
+            bb.status,
+            bb.max_hp,
+            bb.current_hp,
+            bb.total_damage,
+            b.reward_exp,
+            b.reward_coin,
+            bb.started_at,
+            bb.ended_at
+        FROM boss_battles bb
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        WHERE bb.battle_id = #{battleId}
+    </select>
+
+    <update id="updateBattleDamage">
+        UPDATE boss_battles
+        SET current_hp = GREATEST(current_hp - #{damage}, 0),
+            total_damage = total_damage + #{damage},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE battle_id = #{battleId}
+          AND status = 'IN_PROGRESS'
+    </update>
+
+    <update id="updateBattleDefeated">
+        UPDATE boss_battles
+        SET status = 'DEFEATED',
+            current_hp = 0,
+            ended_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE battle_id = #{battleId}
+          AND status = 'IN_PROGRESS'
+          AND current_hp &lt;= 0
+    </update>
+
+    <insert id="insertBossBattleDamageLog">
+        INSERT INTO boss_battle_damage_logs (
+            battle_id,
+            user_id,
+            damage,
+            source_type,
+            source_id,
+            description
+        )
+        VALUES (
+            #{battleId},
+            #{userId},
+            #{damage},
+            #{sourceType},
+            #{sourceId},
+            #{description}
+        )
+    </insert>
+
+    <select id="findBattleConditionsForUpdate" resultMap="BattleConditionStateRowMap">
+        SELECT
+            battle_condition_id,
+            battle_id,
+            title,
+            target_type,
+            threshold_value,
+            target_value,
+            current_value,
+            damage,
+            completed
+        FROM boss_battle_conditions
+        WHERE battle_id = #{battleId}
+        ORDER BY sort_order ASC, battle_condition_id ASC
+        FOR UPDATE
+    </select>
+
+    <select id="countSugarUnderLimitMemberDates" resultType="int">
+        SELECT COUNT(1)
+        FROM (
+            SELECT dns.user_id, dns.summary_date
+            FROM daily_nutrition_summaries dns
+            JOIN guild_members gm ON gm.user_id = dns.user_id
+            JOIN users u ON u.user_id = gm.user_id
+            WHERE gm.guild_id = #{guildId}
+              AND gm.left_at IS NULL
+              AND u.status = 'ACTIVE'
+              AND dns.summary_date BETWEEN #{startDate} AND #{endDate}
+              AND dns.total_sugar_g &lt;= #{thresholdValue}
+            GROUP BY dns.user_id, dns.summary_date
+        ) counted
+    </select>
+
+    <update id="updateBattleConditionProgressValue">
+        UPDATE boss_battle_conditions
+        SET current_value = #{currentValue},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE battle_condition_id = #{battleConditionId}
+    </update>
+
+    <update id="completeBattleCondition">
+        UPDATE boss_battle_conditions
+        SET current_value = #{currentValue},
+            completed = TRUE,
+            completed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE battle_condition_id = #{battleConditionId}
+          AND completed = FALSE
+    </update>
+
+    <select id="countIncompleteBattleConditions" resultType="int">
+        SELECT COUNT(1)
+        FROM boss_battle_conditions
+        WHERE battle_id = #{battleId}
+          AND completed = FALSE
+    </select>
+
+    <select id="existsRewardClaim" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM reward_claims
+        WHERE user_id = #{userId}
+          AND source_type = #{sourceType}
+          AND source_id = #{sourceId}
+    </select>
+
+    <insert id="insertRewardClaim"
+            parameterType="com.nyamnyam.coach.boss.entity.RewardClaim"
+            useGeneratedKeys="true"
+            keyProperty="rewardClaimId"
+            keyColumn="reward_claim_id">
+        INSERT INTO reward_claims (
+            user_id,
+            source_type,
+            source_id,
+            xp_amount,
+            badge_id,
+            guild_point,
+            coin_amount
+        )
+        VALUES (
+            #{userId},
+            #{sourceType},
+            #{sourceId},
+            COALESCE(#{xpAmount}, 0),
+            #{badgeId},
+            COALESCE(#{guildPoint}, 0),
+            COALESCE(#{coinAmount}, 0)
+        )
+    </insert>
 </mapper>

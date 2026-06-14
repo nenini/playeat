@@ -1,6 +1,11 @@
 package com.nyamnyam.coach.boss.repository;
 
 import com.nyamnyam.coach.boss.entity.Quest;
+import com.nyamnyam.coach.boss.entity.QuestVerification;
+import com.nyamnyam.coach.boss.entity.RewardClaim;
+import com.nyamnyam.coach.boss.repository.row.BattleConditionStateRow;
+import com.nyamnyam.coach.boss.repository.row.BattleStateRow;
+import com.nyamnyam.coach.boss.repository.row.DietVerificationRow;
 import com.nyamnyam.coach.boss.repository.row.QuestBattleRow;
 import com.nyamnyam.coach.boss.repository.row.QuestContributionRow;
 import com.nyamnyam.coach.boss.repository.row.QuestGuildMemberRow;
@@ -10,6 +15,8 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Mapper
 public interface QuestRepository {
@@ -63,4 +70,72 @@ public interface QuestRepository {
             @Param("battleId") Long battleId,
             @Param("currentUserId") Long currentUserId
     );
+
+    Optional<Quest> findQuestForUpdate(@Param("questId") Long questId);
+
+    int updateQuestCompleted(
+            @Param("questId") Long questId,
+            @Param("currentValue") int currentValue
+    );
+
+    int updateQuestRewarded(@Param("questId") Long questId);
+
+    void insertQuestVerification(QuestVerification verification);
+
+    boolean existsQuestVerificationByQuestId(@Param("questId") Long questId);
+
+    Optional<DietVerificationRow> findTodayDietForVerification(
+            @Param("userId") Long userId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt
+    );
+
+    Optional<BattleStateRow> findBattleStateForUpdate(@Param("battleId") Long battleId);
+
+    Optional<BattleStateRow> findBattleRewardInfo(@Param("battleId") Long battleId);
+
+    int updateBattleDamage(
+            @Param("battleId") Long battleId,
+            @Param("damage") int damage
+    );
+
+    int updateBattleDefeated(@Param("battleId") Long battleId);
+
+    void insertBossBattleDamageLog(
+            @Param("battleId") Long battleId,
+            @Param("userId") Long userId,
+            @Param("damage") int damage,
+            @Param("sourceType") String sourceType,
+            @Param("sourceId") Long sourceId,
+            @Param("description") String description
+    );
+
+    List<BattleConditionStateRow> findBattleConditionsForUpdate(@Param("battleId") Long battleId);
+
+    int countSugarUnderLimitMemberDates(
+            @Param("guildId") Long guildId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("thresholdValue") java.math.BigDecimal thresholdValue
+    );
+
+    int updateBattleConditionProgressValue(
+            @Param("battleConditionId") Long battleConditionId,
+            @Param("currentValue") int currentValue
+    );
+
+    int completeBattleCondition(
+            @Param("battleConditionId") Long battleConditionId,
+            @Param("currentValue") int currentValue
+    );
+
+    int countIncompleteBattleConditions(@Param("battleId") Long battleId);
+
+    boolean existsRewardClaim(
+            @Param("userId") Long userId,
+            @Param("sourceType") String sourceType,
+            @Param("sourceId") Long sourceId
+    );
+
+    void insertRewardClaim(RewardClaim rewardClaim);
 }
