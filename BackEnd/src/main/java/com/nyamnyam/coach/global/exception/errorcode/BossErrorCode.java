@@ -15,6 +15,8 @@ public enum BossErrorCode implements ErrorCode {
     BOSS_BATTLE_ALREADY_IN_PROGRESS(HttpStatus.CONFLICT, "이미 진행 중인 보스전이 있습니다."),
     BOSS_BATTLE_ALREADY_EXISTS_IN_SEASON(HttpStatus.CONFLICT, "이미 해당 시즌에 생성된 보스전이 있습니다."),
     BOSS_BATTLE_NOT_IN_PROGRESS(HttpStatus.CONFLICT, "진행 중인 보스전이 아닙니다."),
+    BOSS_BATTLE_NOT_DEFEATED(HttpStatus.CONFLICT, "클리어된 보스전이 아닙니다."),
+    BOSS_BATTLE_REWARD_ALREADY_CLAIMED(HttpStatus.CONFLICT, "이미 보스전 보상을 수령했습니다."),
     BOSS_BATTLE_NOT_ACTIVE(HttpStatus.CONFLICT, "진행 중인 보스 전투가 아닙니다.");
 
     private final HttpStatus status;
