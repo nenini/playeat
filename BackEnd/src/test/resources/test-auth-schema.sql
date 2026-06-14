@@ -1,4 +1,5 @@
 DROP TABLE IF EXISTS quests;
+DROP TABLE IF EXISTS guild_score_logs;
 DROP TABLE IF EXISTS boss_battle_damage_logs;
 DROP TABLE IF EXISTS boss_battle_conditions;
 DROP TABLE IF EXISTS boss_battles;
@@ -369,3 +370,21 @@ CREATE INDEX idx_quests_battle_user ON quests (battle_id, user_id);
 CREATE INDEX idx_quests_battle_status ON quests (battle_id, status);
 CREATE INDEX idx_quests_user_status ON quests (user_id, status);
 CREATE INDEX idx_quests_guild_battle ON quests (guild_id, battle_id);
+
+CREATE TABLE guild_score_logs (
+    score_log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT,
+    battle_id BIGINT,
+    source_type VARCHAR(50) NOT NULL,
+    source_id BIGINT,
+    score INT NOT NULL,
+    score_date DATE NOT NULL,
+    description VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_guild_score_logs_guild_date ON guild_score_logs (guild_id, score_date);
+CREATE INDEX idx_guild_score_logs_battle ON guild_score_logs (battle_id);
+CREATE INDEX idx_guild_score_logs_source ON guild_score_logs (source_type, source_id);
+CREATE INDEX idx_guild_score_logs_date ON guild_score_logs (score_date);
