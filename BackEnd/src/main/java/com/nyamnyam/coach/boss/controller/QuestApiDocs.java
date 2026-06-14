@@ -5,6 +5,8 @@ import com.nyamnyam.coach.boss.dto.response.MyQuestResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestContributionListResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestDetailResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestGenerateResponse;
+import com.nyamnyam.coach.boss.dto.response.QuestVerifyResponse;
+import com.nyamnyam.coach.boss.dto.response.RewardClaimResponse;
 import com.nyamnyam.coach.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -43,5 +45,17 @@ public interface QuestApiDocs {
     ResponseEntity<ApiResponse<QuestContributionListResponse>> getQuestContributions(
             @Parameter(hidden = true) Authentication authentication,
             Long battleId
+    );
+
+    @Operation(summary = "퀘스트 검증", description = "퀘스트 담당자가 달성 여부를 검증하고 성공 시 보스 HP와 점수를 반영합니다.")
+    ResponseEntity<ApiResponse<QuestVerifyResponse>> verifyQuest(
+            @Parameter(hidden = true) Authentication authentication,
+            Long questId
+    );
+
+    @Operation(summary = "퀘스트 보상 수령", description = "완료된 개인 퀘스트의 XP와 코인 보상을 수령합니다.")
+    ResponseEntity<ApiResponse<RewardClaimResponse>> claimQuestReward(
+            @Parameter(hidden = true) Authentication authentication,
+            Long questId
     );
 }

@@ -6,7 +6,9 @@ import com.nyamnyam.coach.boss.dto.response.BossBattleDetailResponse;
 import com.nyamnyam.coach.boss.dto.response.BossBattleHistoryResponse;
 import com.nyamnyam.coach.boss.dto.response.BossBattleHpResponse;
 import com.nyamnyam.coach.boss.dto.response.CurrentBossBattleResponse;
+import com.nyamnyam.coach.boss.dto.response.RewardClaimResponse;
 import com.nyamnyam.coach.boss.service.BossBattleService;
+import com.nyamnyam.coach.boss.service.QuestRewardService;
 import com.nyamnyam.coach.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +26,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class BossBattleController implements BossBattleApiDocs {
 
     private final BossBattleService bossBattleService;
+    private final QuestRewardService questRewardService;
 
-    public BossBattleController(BossBattleService bossBattleService) {
+    public BossBattleController(
+            BossBattleService bossBattleService,
+            QuestRewardService questRewardService
+    ) {
         this.bossBattleService = bossBattleService;
+        this.questRewardService = questRewardService;
     }
 
     @Override
@@ -98,6 +105,19 @@ public class BossBattleController implements BossBattleApiDocs {
                 size
         );
         return ResponseEntity.ok(ApiResponse.success(response, "보스전 이력 조회에 성공했습니다."));
+    }
+
+    @Override
+    @PostMapping("/boss-battles/{battleId}/reward")
+    public ResponseEntity<ApiResponse<RewardClaimResponse>> claimBossBattleReward(
+            Authentication authentication,
+            @PathVariable Long battleId
+    ) {
+        RewardClaimResponse response = questRewardService.claimBossBattleReward(
+                battleId,
+                authenticatedUserId(authentication)
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "보스전 보상을 수령했습니다."));
     }
 
     private Long authenticatedUserId(Authentication authentication) {

@@ -47,6 +47,7 @@ docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p�
 docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/12-guild-chat-pr9-migration.sql
 docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/13-coin-shop-item-pr10-migration.sql
 docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/14-ranking-dashboard-pr8-migration.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/15-quest-verification-reward-pr7-migration.sql
 ```
 
 ## 음식 데이터 초기 적재 (Food Seed)

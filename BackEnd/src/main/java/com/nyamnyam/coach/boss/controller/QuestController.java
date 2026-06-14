@@ -5,7 +5,11 @@ import com.nyamnyam.coach.boss.dto.response.MyQuestResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestContributionListResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestDetailResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestGenerateResponse;
+import com.nyamnyam.coach.boss.dto.response.QuestVerifyResponse;
+import com.nyamnyam.coach.boss.dto.response.RewardClaimResponse;
+import com.nyamnyam.coach.boss.service.QuestRewardService;
 import com.nyamnyam.coach.boss.service.QuestService;
+import com.nyamnyam.coach.boss.service.QuestVerificationService;
 import com.nyamnyam.coach.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,9 +24,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class QuestController implements QuestApiDocs {
 
     private final QuestService questService;
+    private final QuestVerificationService questVerificationService;
+    private final QuestRewardService questRewardService;
 
-    public QuestController(QuestService questService) {
+    public QuestController(
+            QuestService questService,
+            QuestVerificationService questVerificationService,
+            QuestRewardService questRewardService
+    ) {
         this.questService = questService;
+        this.questVerificationService = questVerificationService;
+        this.questRewardService = questRewardService;
     }
 
     @Override
@@ -88,6 +100,32 @@ public class QuestController implements QuestApiDocs {
                 authenticatedUserId(authentication)
         );
         return ResponseEntity.ok(ApiResponse.success(response, "보스전 퀘스트 기여도 조회에 성공했습니다."));
+    }
+
+    @Override
+    @PostMapping("/quests/{questId}/verify")
+    public ResponseEntity<ApiResponse<QuestVerifyResponse>> verifyQuest(
+            Authentication authentication,
+            @PathVariable Long questId
+    ) {
+        QuestVerifyResponse response = questVerificationService.verifyQuest(
+                questId,
+                authenticatedUserId(authentication)
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "퀘스트 검증에 성공했습니다."));
+    }
+
+    @Override
+    @PostMapping("/quests/{questId}/reward")
+    public ResponseEntity<ApiResponse<RewardClaimResponse>> claimQuestReward(
+            Authentication authentication,
+            @PathVariable Long questId
+    ) {
+        RewardClaimResponse response = questRewardService.claimQuestReward(
+                questId,
+                authenticatedUserId(authentication)
+        );
+        return ResponseEntity.ok(ApiResponse.success(response, "퀘스트 보상을 수령했습니다."));
     }
 
     private Long authenticatedUserId(Authentication authentication) {

@@ -1,5 +1,8 @@
+DROP TABLE IF EXISTS reward_claims;
+DROP TABLE IF EXISTS quest_verifications;
 DROP TABLE IF EXISTS quests;
 DROP TABLE IF EXISTS guild_score_logs;
+DROP TABLE IF EXISTS boss_battle_condition_progress;
 DROP TABLE IF EXISTS boss_battle_damage_logs;
 DROP TABLE IF EXISTS boss_battle_conditions;
 DROP TABLE IF EXISTS boss_battles;
@@ -13,6 +16,7 @@ DROP TABLE IF EXISTS guild_members;
 DROP TABLE IF EXISTS guilds;
 DROP TABLE IF EXISTS xp_histories;
 DROP TABLE IF EXISTS characters;
+DROP TABLE IF EXISTS daily_nutrition_summaries;
 DROP TABLE IF EXISTS diet_items;
 DROP TABLE IF EXISTS diets;
 DROP TABLE IF EXISTS food_favorites;
@@ -148,6 +152,22 @@ CREATE TABLE diet_items (
 
 CREATE INDEX idx_diet_items_diet ON diet_items (diet_id);
 CREATE INDEX idx_diet_items_food ON diet_items (food_id);
+
+CREATE TABLE daily_nutrition_summaries (
+    summary_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    summary_date DATE NOT NULL,
+    total_calories DECIMAL(10,2) DEFAULT 0,
+    total_protein_g DECIMAL(10,2) DEFAULT 0,
+    total_carbs_g DECIMAL(10,2) DEFAULT 0,
+    total_fat_g DECIMAL(10,2) DEFAULT 0,
+    total_sugar_g DECIMAL(10,2) DEFAULT 0,
+    total_sodium_mg DECIMAL(10,2) DEFAULT 0,
+    health_score INT DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_daily_summaries_user_date UNIQUE (user_id, summary_date)
+);
 
 CREATE TABLE boss_seasons (
     season_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -343,6 +363,20 @@ CREATE INDEX idx_battle_conditions_completed ON boss_battle_conditions (battle_i
 CREATE INDEX idx_damage_logs_battle_created ON boss_battle_damage_logs (battle_id, created_at);
 CREATE INDEX idx_damage_logs_battle_user ON boss_battle_damage_logs (battle_id, user_id);
 
+CREATE TABLE boss_battle_condition_progress (
+    progress_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    battle_condition_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    current_streak_days INT NOT NULL DEFAULT 0,
+    best_streak_days INT NOT NULL DEFAULT 0,
+    progress_value DECIMAL(12,4),
+    last_checked_date DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
+    completed_at DATETIME,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_condition_progress_condition_user UNIQUE (battle_condition_id, user_id)
+);
+
 CREATE TABLE quests (
     quest_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     battle_id BIGINT NOT NULL,
@@ -370,6 +404,39 @@ CREATE INDEX idx_quests_battle_user ON quests (battle_id, user_id);
 CREATE INDEX idx_quests_battle_status ON quests (battle_id, status);
 CREATE INDEX idx_quests_user_status ON quests (user_id, status);
 CREATE INDEX idx_quests_guild_battle ON quests (guild_id, battle_id);
+
+CREATE TABLE quest_verifications (
+    verification_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    quest_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    battle_id BIGINT NOT NULL,
+    summary_id BIGINT,
+    diet_id BIGINT,
+    quest_type VARCHAR(50) NOT NULL,
+    verified BOOLEAN NOT NULL DEFAULT FALSE,
+    damage_amount INT NOT NULL DEFAULT 0,
+    message VARCHAR(500),
+    verified_date DATE,
+    verified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_quest_verifications_quest UNIQUE (quest_id)
+);
+
+CREATE INDEX idx_quest_verifications_quest ON quest_verifications (quest_id);
+CREATE INDEX idx_quest_verifications_user_date ON quest_verifications (user_id, verified_date);
+CREATE INDEX idx_quest_verifications_battle ON quest_verifications (battle_id);
+
+CREATE TABLE reward_claims (
+    reward_claim_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    source_type VARCHAR(30) NOT NULL,
+    source_id BIGINT NOT NULL,
+    xp_amount INT NOT NULL DEFAULT 0,
+    badge_id BIGINT,
+    guild_point INT NOT NULL DEFAULT 0,
+    coin_amount INT NOT NULL DEFAULT 0,
+    claimed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_reward_claims_user_source UNIQUE (user_id, source_type, source_id)
+);
 
 CREATE TABLE guild_score_logs (
     score_log_id BIGINT AUTO_INCREMENT PRIMARY KEY,

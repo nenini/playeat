@@ -5,6 +5,8 @@ import java.util.Arrays;
 public enum XpSourceType {
     DIET,
     BOSS,
+    QUEST,
+    BOSS_BATTLE,
     ADMIN;
 
     public static boolean isValid(String value) {

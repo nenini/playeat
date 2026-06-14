@@ -664,21 +664,40 @@ CREATE TABLE quests (
 CREATE TABLE quest_verifications (
     verification_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     quest_id BIGINT NOT NULL,
-    diet_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    battle_id BIGINT NOT NULL,
+    summary_id BIGINT,
+    diet_id BIGINT,
+    quest_type VARCHAR(50) NOT NULL,
     verified BOOLEAN NOT NULL DEFAULT FALSE,
     damage_amount INT NOT NULL DEFAULT 0,
     message VARCHAR(500),
+    verified_date DATE,
     verified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_quest_verifications_quest UNIQUE (quest_id),
     CONSTRAINT fk_quest_verifications_quest
         FOREIGN KEY (quest_id)
         REFERENCES quests(quest_id)
         ON DELETE CASCADE,
+    CONSTRAINT fk_quest_verifications_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_quest_verifications_battle
+        FOREIGN KEY (battle_id)
+        REFERENCES boss_battles(battle_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_quest_verifications_summary
+        FOREIGN KEY (summary_id)
+        REFERENCES daily_nutrition_summaries(summary_id)
+        ON DELETE SET NULL,
     CONSTRAINT fk_quest_verifications_diet
         FOREIGN KEY (diet_id)
         REFERENCES diets(diet_id)
-        ON DELETE CASCADE,
+        ON DELETE SET NULL,
     INDEX idx_quest_verifications_quest (quest_id),
-    INDEX idx_quest_verifications_diet (diet_id)
+    INDEX idx_quest_verifications_user_date (user_id, verified_date),
+    INDEX idx_quest_verifications_battle (battle_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE reward_claims (
