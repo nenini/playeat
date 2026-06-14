@@ -29,4 +29,9 @@ public interface GuildScoreRepository {
             @Param("weekStartDate") LocalDate weekStartDate,
             @Param("weekEndDate") LocalDate weekEndDate
     );
+
+    boolean existsScoreLog(
+            @Param("sourceType") String sourceType,
+            @Param("sourceId") Long sourceId
+    );
 }

@@ -60,4 +60,11 @@
         GROUP BY score_date
         ORDER BY score_date ASC
     </select>
+
+    <select id="existsScoreLog" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM guild_score_logs
+        WHERE source_type = #{sourceType}
+          AND source_id = #{sourceId}
+    </select>
 </mapper>
