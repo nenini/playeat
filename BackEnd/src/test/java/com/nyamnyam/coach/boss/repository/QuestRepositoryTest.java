@@ -1,6 +1,8 @@
 package com.nyamnyam.coach.boss.repository;
 
 import com.nyamnyam.coach.boss.entity.Quest;
+import com.nyamnyam.coach.boss.entity.QuestVerification;
+import com.nyamnyam.coach.boss.repository.row.DietVerificationRow;
 import com.nyamnyam.coach.boss.repository.row.QuestRow;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,6 +13,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.util.List;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -69,6 +73,73 @@ class QuestRepositoryTest {
         assertThat(questRepository.findGuildRole(fixture.guildId(), fixture.ownerId())).contains("OWNER");
         assertThat(questRepository.findActiveGuildMembers(fixture.guildId())).hasSize(2);
         assertThat(questRepository.findQuestContributionsByBattleId(fixture.battleId(), fixture.ownerId())).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("오늘 식단 기록이 있으면 RECORD_DIET 검증용 diet를 조회한다")
+    void findTodayDietForVerification() {
+        Fixture fixture = fixture();
+        Long dietId = insertDiet(fixture.ownerId(), LocalDateTime.now().withHour(8));
+
+        DietVerificationRow row = questRepository.findTodayDietForVerification(
+                        fixture.ownerId(),
+                        LocalDate.now().atStartOfDay(),
+                        LocalDate.now().plusDays(1).atStartOfDay()
+                )
+                .orElseThrow();
+
+        assertThat(row.getDietId()).isEqualTo(dietId);
+        assertThat(row.getSummaryDate()).isEqualTo(LocalDate.now());
+        assertThat(row.getTotalSugarG()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("오늘 식단 기록이 없으면 RECORD_DIET 검증용 diet를 조회하지 않는다")
+    void findTodayDietForVerificationEmpty() {
+        Fixture fixture = fixture();
+        insertDiet(fixture.ownerId(), LocalDate.now().minusDays(1).atTime(23, 30));
+
+        assertThat(questRepository.findTodayDietForVerification(
+                fixture.ownerId(),
+                LocalDate.now().atStartOfDay(),
+                LocalDate.now().plusDays(1).atStartOfDay()
+        )).isEmpty();
+    }
+
+    @Test
+    @DisplayName("퀘스트 검증 이력에는 diet_id를 저장하고 summary_id는 null로 둘 수 있다")
+    void insertQuestVerificationWithDietId() {
+        Fixture fixture = fixture();
+        Quest quest = quest(fixture.battleId(), fixture.guildId(), fixture.ownerId());
+        questRepository.insertQuest(quest);
+        Long dietId = insertDiet(fixture.ownerId(), LocalDateTime.now());
+
+        QuestVerification verification = new QuestVerification();
+        verification.setQuestId(quest.getQuestId());
+        verification.setUserId(fixture.ownerId());
+        verification.setBattleId(fixture.battleId());
+        verification.setDietId(dietId);
+        verification.setQuestType("RECORD_DIET");
+        verification.setVerified(true);
+        verification.setDamageAmount(quest.getDamage());
+        verification.setMessage("퀘스트 검증에 성공했습니다.");
+        verification.setVerifiedDate(LocalDate.now());
+
+        questRepository.insertQuestVerification(verification);
+
+        Long savedDietId = jdbcTemplate.queryForObject(
+                "SELECT diet_id FROM quest_verifications WHERE quest_id = ?",
+                Long.class,
+                quest.getQuestId()
+        );
+        Long savedSummaryId = jdbcTemplate.queryForObject(
+                "SELECT summary_id FROM quest_verifications WHERE quest_id = ?",
+                Long.class,
+                quest.getQuestId()
+        );
+
+        assertThat(savedDietId).isEqualTo(dietId);
+        assertThat(savedSummaryId).isNull();
     }
 
     private Fixture fixture() {
@@ -200,6 +271,28 @@ class QuestRepositoryTest {
                 seasonId
         );
         return jdbcTemplate.queryForObject("SELECT battle_id FROM boss_battles WHERE guild_id = ?", Long.class, guildId);
+    }
+
+    private Long insertDiet(Long userId, LocalDateTime eatenAt) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO diets (
+                    user_id,
+                    meal_type,
+                    eaten_at,
+                    total_calories,
+                    total_sugar_g
+                )
+                VALUES (?, 'BREAKFAST', ?, 450, 12.5)
+                """,
+                userId,
+                eatenAt
+        );
+        return jdbcTemplate.queryForObject(
+                "SELECT diet_id FROM diets WHERE user_id = ? ORDER BY diet_id DESC LIMIT 1",
+                Long.class,
+                userId
+        );
     }
 
     private Quest quest(Long battleId, Long guildId, Long userId) {
