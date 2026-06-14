@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.ai.repository.AiFeedbackRepository">
+
+    <resultMap id="AiFeedbackResultMap" type="com.nyamnyam.coach.ai.entity.AiFeedback">
+        <id property="feedbackId" column="feedback_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="dietId" column="diet_id"/>
+        <result property="coachId" column="coach_id"/>
+        <result property="message" column="message"/>
+        <result property="modelName" column="model_name"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.nyamnyam.coach.ai.entity.AiFeedback"
+            useGeneratedKeys="true" keyProperty="feedbackId">
+        INSERT INTO ai_feedbacks (
+            user_id,
+            diet_id,
+            coach_id,
+            message,
+            model_name
+        )
+        VALUES (
+            #{userId},
+            #{dietId},
+            #{coachId},
+            #{message},
+            #{modelName}
+        )
+    </insert>
+
+    <select id="findLatestByUserIdAndDietId" resultMap="AiFeedbackResultMap">
+        SELECT
+            feedback_id,
+            user_id,
+            diet_id,
+            coach_id,
+            message,
+            model_name,
+            created_at
+        FROM ai_feedbacks
+        WHERE user_id = #{userId}
+          AND diet_id = #{dietId}
+        ORDER BY created_at DESC, feedback_id DESC
+        LIMIT 1
+    </select>
+</mapper>
