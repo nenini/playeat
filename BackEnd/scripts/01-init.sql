@@ -7,6 +7,7 @@ USE nyamnyam;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS guild_rankings;
+DROP TABLE IF EXISTS guild_score_logs;
 DROP TABLE IF EXISTS reward_claims;
 DROP TABLE IF EXISTS quest_verifications;
 DROP TABLE IF EXISTS quests;
@@ -699,6 +700,35 @@ CREATE TABLE reward_claims (
         FOREIGN KEY (badge_id)
         REFERENCES badges(badge_id)
         ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE guild_score_logs (
+    score_log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT,
+    battle_id BIGINT,
+    source_type VARCHAR(50) NOT NULL,
+    source_id BIGINT,
+    score INT NOT NULL,
+    score_date DATE NOT NULL,
+    description VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_guild_score_logs_guild
+        FOREIGN KEY (guild_id)
+        REFERENCES guilds(guild_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_guild_score_logs_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_guild_score_logs_battle
+        FOREIGN KEY (battle_id)
+        REFERENCES boss_battles(battle_id)
+        ON DELETE SET NULL,
+    INDEX idx_guild_score_logs_guild_date (guild_id, score_date),
+    INDEX idx_guild_score_logs_battle (battle_id),
+    INDEX idx_guild_score_logs_source (source_type, source_id),
+    INDEX idx_guild_score_logs_date (score_date)
 ) ENGINE=InnoDB;
 
 CREATE TABLE guild_rankings (

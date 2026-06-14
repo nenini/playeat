@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.ranking.repository.GuildScoreRepository">
+
+    <resultMap id="DailyScoreRowMap" type="com.nyamnyam.coach.dashboard.repository.row.DailyScoreRow">
+        <id property="scoreDate" column="score_date"/>
+        <result property="score" column="score"/>
+    </resultMap>
+
+    <insert id="insertScoreLog"
+            parameterType="com.nyamnyam.coach.ranking.entity.GuildScoreLog"
+            useGeneratedKeys="true"
+            keyProperty="scoreLogId"
+            keyColumn="score_log_id">
+        INSERT INTO guild_score_logs (
+            guild_id,
+            user_id,
+            battle_id,
+            source_type,
+            source_id,
+            score,
+            score_date,
+            description
+        )
+        VALUES (
+            #{guildId},
+            #{userId},
+            #{battleId},
+            #{sourceType},
+            #{sourceId},
+            #{score},
+            #{scoreDate},
+            #{description}
+        )
+    </insert>
+
+    <select id="sumScoreByGuildAndDate" resultType="int">
+        SELECT COALESCE(SUM(score), 0)
+        FROM guild_score_logs
+        WHERE guild_id = #{guildId}
+          AND score_date = #{scoreDate}
+    </select>
+
+    <select id="sumScoreByGuildAndWeek" resultType="int">
+        SELECT COALESCE(SUM(score), 0)
+        FROM guild_score_logs
+        WHERE guild_id = #{guildId}
+          AND score_date BETWEEN #{weekStartDate} AND #{weekEndDate}
+    </select>
+
+    <select id="findDailyScores" resultMap="DailyScoreRowMap">
+        SELECT score_date,
+               COALESCE(SUM(score), 0) AS score
+        FROM guild_score_logs
+        WHERE guild_id = #{guildId}
+          AND score_date BETWEEN #{weekStartDate} AND #{weekEndDate}
+        GROUP BY score_date
+        ORDER BY score_date ASC
+    </select>
+</mapper>

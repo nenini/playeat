@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.ranking.repository.RankingRepository">
+
+    <resultMap id="GuildWeeklyStatRowMap" type="com.nyamnyam.coach.ranking.repository.row.GuildWeeklyStatRow">
+        <id property="guildId" column="guild_id"/>
+        <result property="guildName" column="guild_name"/>
+        <result property="activeMemberCount" column="active_member_count"/>
+        <result property="recordedMemberDateCount" column="recorded_member_date_count"/>
+        <result property="questTotalCount" column="quest_total_count"/>
+        <result property="questCompletedCount" column="quest_completed_count"/>
+        <result property="bossDamage" column="boss_damage"/>
+        <result property="bossMaxHp" column="boss_max_hp"/>
+        <result property="bossCurrentHp" column="boss_current_hp"/>
+        <result property="battleStatus" column="battle_status"/>
+        <result property="difficulty" column="difficulty"/>
+    </resultMap>
+
+    <resultMap id="BossInfoRowMap" type="com.nyamnyam.coach.ranking.repository.row.BossInfoRow">
+        <id property="bossId" column="boss_id"/>
+        <result property="bossName" column="boss_name"/>
+        <result property="difficulty" column="difficulty"/>
+    </resultMap>
+
+    <resultMap id="BossRankingRowMap" type="com.nyamnyam.coach.ranking.repository.row.BossRankingRow">
+        <id property="guildId" column="guild_id"/>
+        <result property="guildName" column="guild_name"/>
+        <result property="status" column="status"/>
+        <result property="maxHp" column="max_hp"/>
+        <result property="currentHp" column="current_hp"/>
+        <result property="totalDamage" column="total_damage"/>
+        <result property="startedAt" column="started_at"/>
+        <result property="endedAt" column="ended_at"/>
+    </resultMap>
+
+    <select id="findMyGuildId" resultType="long">
+        SELECT guild_id
+        FROM guild_members
+        WHERE user_id = #{userId}
+          AND left_at IS NULL
+        ORDER BY joined_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="findGuildWeeklyStats" resultMap="GuildWeeklyStatRowMap">
+        SELECT g.guild_id,
+               g.name AS guild_name,
+               COALESCE(m.active_member_count, 0) AS active_member_count,
+               COALESCE(r.recorded_member_date_count, 0) AS recorded_member_date_count,
+               COALESCE(q.quest_total_count, 0) AS quest_total_count,
+               COALESCE(q.quest_completed_count, 0) AS quest_completed_count,
+               COALESCE(bb.total_damage, 0) AS boss_damage,
+               COALESCE(bb.max_hp, 0) AS boss_max_hp,
+               COALESCE(bb.current_hp, 0) AS boss_current_hp,
+               bb.status AS battle_status,
+               b.difficulty AS difficulty
+        FROM guilds g
+        LEFT JOIN (
+            SELECT gm.guild_id,
+                   COUNT(1) AS active_member_count
+            FROM guild_members gm
+            JOIN users u ON u.user_id = gm.user_id
+            WHERE gm.left_at IS NULL
+              AND u.status = 'ACTIVE'
+            GROUP BY gm.guild_id
+        ) m ON m.guild_id = g.guild_id
+        LEFT JOIN (
+            SELECT gm.guild_id,
+                   COUNT(DISTINCT CONCAT(dns.user_id, '-', dns.summary_date)) AS recorded_member_date_count
+            FROM guild_members gm
+            JOIN daily_nutrition_summaries dns ON dns.user_id = gm.user_id
+            WHERE gm.left_at IS NULL
+              AND dns.summary_date BETWEEN #{weekStartDate} AND #{weekEndDate}
+            GROUP BY gm.guild_id
+        ) r ON r.guild_id = g.guild_id
+        LEFT JOIN (
+            SELECT q.guild_id,
+                   COUNT(1) AS quest_total_count,
+                   SUM(CASE WHEN q.status IN ('COMPLETED', 'REWARDED') THEN 1 ELSE 0 END) AS quest_completed_count
+            FROM quests q
+            WHERE CAST(q.created_at AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
+            GROUP BY q.guild_id
+        ) q ON q.guild_id = g.guild_id
+        LEFT JOIN boss_battles bb
+            ON bb.battle_id = (
+                SELECT bb2.battle_id
+                FROM boss_battles bb2
+                WHERE bb2.guild_id = g.guild_id
+                  AND CAST(bb2.started_at AS DATE) &lt;= #{weekEndDate}
+                ORDER BY CASE WHEN bb2.status = 'IN_PROGRESS' THEN 0 ELSE 1 END,
+                         bb2.started_at DESC,
+                         bb2.battle_id DESC
+                LIMIT 1
+            )
+        LEFT JOIN bosses b ON b.boss_id = bb.boss_id
+        WHERE g.status = 'ACTIVE'
+        ORDER BY g.guild_id ASC
+    </select>
+
+    <select id="findBossInfo" resultMap="BossInfoRowMap">
+        SELECT boss_id,
+               name AS boss_name,
+               difficulty
+        FROM bosses
+        WHERE boss_id = #{bossId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="findBossRankingByBossId" resultMap="BossRankingRowMap">
+        SELECT bb.guild_id,
+               g.name AS guild_name,
+               bb.status,
+               bb.max_hp,
+               bb.current_hp,
+               bb.total_damage,
+               bb.started_at,
+               bb.ended_at
+        FROM boss_battles bb
+        JOIN guilds g ON g.guild_id = bb.guild_id
+        WHERE bb.boss_id = #{bossId}
+        ORDER BY CASE WHEN bb.status = 'DEFEATED' THEN 0 ELSE 1 END,
+                 bb.total_damage DESC,
+                 CASE WHEN bb.ended_at IS NULL THEN 1 ELSE 0 END,
+                 bb.ended_at ASC,
+                 bb.started_at ASC,
+                 bb.guild_id ASC
+    </select>
+</mapper>
