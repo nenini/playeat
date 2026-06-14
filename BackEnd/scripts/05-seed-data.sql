@@ -1,3 +1,9 @@
+-- Korean seed data must be inserted through an UTF-8 connection.
+-- Recommended:
+-- mysql -u nyamnyam -p --default-character-set=utf8mb4 < BackEnd/scripts/05-seed-data.sql
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
 USE nyamnyam;
 
 INSERT INTO coaches (
