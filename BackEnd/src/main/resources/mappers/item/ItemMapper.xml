@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.item.repository.ItemRepository">
+
+    <resultMap id="ItemMap" type="com.nyamnyam.coach.item.entity.Item">
+        <id property="itemId" column="item_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="itemType" column="item_type"/>
+        <result property="slotType" column="slot_type"/>
+        <result property="price" column="price"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="defaultItem" column="default_item"/>
+        <result property="purchasable" column="purchasable"/>
+        <result property="active" column="active"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="ShopItemRowMap" type="com.nyamnyam.coach.item.repository.row.ShopItemRow">
+        <id property="itemId" column="item_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="itemType" column="item_type"/>
+        <result property="slotType" column="slot_type"/>
+        <result property="price" column="price"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="defaultItem" column="default_item"/>
+        <result property="purchasable" column="purchasable"/>
+        <result property="active" column="active"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="userItemId" column="user_item_id"/>
+        <result property="owned" column="owned"/>
+        <result property="equipped" column="equipped"/>
+    </resultMap>
+
+    <resultMap id="UserItemRowMap" type="com.nyamnyam.coach.item.repository.row.UserItemRow">
+        <id property="userItemId" column="user_item_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="itemId" column="item_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="itemType" column="item_type"/>
+        <result property="slotType" column="slot_type"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="acquiredType" column="acquired_type"/>
+        <result property="acquiredAt" column="acquired_at"/>
+        <result property="equipped" column="equipped"/>
+        <result property="active" column="active"/>
+    </resultMap>
+
+    <sql id="ItemColumns">
+        item_id,
+        name,
+        description,
+        item_type,
+        slot_type,
+        price,
+        image_url,
+        default_item,
+        purchasable,
+        active,
+        sort_order,
+        created_at,
+        updated_at
+    </sql>
+
+    <sql id="ShopItemSelect">
+        i.item_id,
+        i.name,
+        i.description,
+        i.item_type,
+        i.slot_type,
+        i.price,
+        i.image_url,
+        i.default_item,
+        i.purchasable,
+        i.active,
+        i.sort_order,
+        ui.user_item_id,
+        CASE WHEN ui.user_item_id IS NOT NULL THEN TRUE ELSE FALSE END AS owned,
+        CASE WHEN ce.equipment_id IS NOT NULL THEN TRUE ELSE FALSE END AS equipped
+    </sql>
+
+    <select id="findActiveItems" resultMap="ShopItemRowMap">
+        SELECT
+            <include refid="ShopItemSelect"/>
+        FROM items i
+        LEFT JOIN user_items ui
+            ON ui.item_id = i.item_id
+           AND ui.user_id = #{userId}
+        LEFT JOIN characters c
+            ON c.user_id = #{userId}
+        LEFT JOIN character_equipments ce
+            ON ce.character_id = c.character_id
+           AND ce.user_item_id = ui.user_item_id
+        WHERE i.active = TRUE
+        ORDER BY i.sort_order ASC, i.item_id ASC
+    </select>
+
+    <select id="findActiveItemById" resultMap="ShopItemRowMap">
+        SELECT
+            <include refid="ShopItemSelect"/>
+        FROM items i
+        LEFT JOIN user_items ui
+            ON ui.item_id = i.item_id
+           AND ui.user_id = #{userId}
+        LEFT JOIN characters c
+            ON c.user_id = #{userId}
+        LEFT JOIN character_equipments ce
+            ON ce.character_id = c.character_id
+           AND ce.user_item_id = ui.user_item_id
+        WHERE i.item_id = #{itemId}
+          AND i.active = TRUE
+        LIMIT 1
+    </select>
+
+    <select id="findItemById" resultMap="ItemMap">
+        SELECT
+            <include refid="ItemColumns"/>
+        FROM items
+        WHERE item_id = #{itemId}
+    </select>
+
+    <select id="findDefaultItems" resultMap="ItemMap">
+        SELECT
+            <include refid="ItemColumns"/>
+        FROM items
+        WHERE default_item = TRUE
+          AND active = TRUE
+        ORDER BY sort_order ASC, item_id ASC
+    </select>
+
+    <select id="findUserItemsByUserId" resultMap="UserItemRowMap">
+        SELECT ui.user_item_id,
+               ui.user_id,
+               i.item_id,
+               i.name,
+               i.description,
+               i.item_type,
+               i.slot_type,
+               i.image_url,
+               ui.acquired_type,
+               ui.acquired_at,
+               i.active,
+               CASE WHEN ce.equipment_id IS NOT NULL THEN TRUE ELSE FALSE END AS equipped
+        FROM user_items ui
+        JOIN items i ON i.item_id = ui.item_id
+        LEFT JOIN characters c ON c.user_id = ui.user_id
+        LEFT JOIN character_equipments ce
+            ON ce.character_id = c.character_id
+           AND ce.user_item_id = ui.user_item_id
+        WHERE ui.user_id = #{userId}
+        ORDER BY i.sort_order ASC, ui.user_item_id ASC
+    </select>
+
+    <select id="findUserItemById" resultMap="UserItemRowMap">
+        SELECT ui.user_item_id,
+               ui.user_id,
+               i.item_id,
+               i.name,
+               i.description,
+               i.item_type,
+               i.slot_type,
+               i.image_url,
+               ui.acquired_type,
+               ui.acquired_at,
+               i.active,
+               CASE WHEN ce.equipment_id IS NOT NULL THEN TRUE ELSE FALSE END AS equipped
+        FROM user_items ui
+        JOIN items i ON i.item_id = ui.item_id
+        LEFT JOIN characters c ON c.user_id = ui.user_id
+        LEFT JOIN character_equipments ce
+            ON ce.character_id = c.character_id
+           AND ce.user_item_id = ui.user_item_id
+        WHERE ui.user_item_id = #{userItemId}
+        LIMIT 1
+    </select>
+
+    <select id="existsUserItem" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM user_items
+        WHERE user_id = #{userId}
+          AND item_id = #{itemId}
+    </select>
+
+    <insert id="insertUserItem"
+            parameterType="com.nyamnyam.coach.item.entity.UserItem"
+            useGeneratedKeys="true"
+            keyProperty="userItemId"
+            keyColumn="user_item_id">
+        INSERT INTO user_items (
+            user_id,
+            item_id,
+            acquired_type,
+            acquired_source_id
+        )
+        VALUES (
+            #{userId},
+            #{itemId},
+            #{acquiredType},
+            #{acquiredSourceId}
+        )
+    </insert>
+
+    <select id="findUserItemByUserIdAndItemId" resultMap="UserItemRowMap">
+        SELECT ui.user_item_id,
+               ui.user_id,
+               i.item_id,
+               i.name,
+               i.description,
+               i.item_type,
+               i.slot_type,
+               i.image_url,
+               ui.acquired_type,
+               ui.acquired_at,
+               i.active,
+               FALSE AS equipped
+        FROM user_items ui
+        JOIN items i ON i.item_id = ui.item_id
+        WHERE ui.user_id = #{userId}
+          AND ui.item_id = #{itemId}
+        LIMIT 1
+    </select>
+</mapper>

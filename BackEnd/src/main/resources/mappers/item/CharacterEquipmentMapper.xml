@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.item.repository.CharacterEquipmentRepository">
+
+    <resultMap id="CharacterEquipmentRowMap" type="com.nyamnyam.coach.item.repository.row.CharacterEquipmentRow">
+        <id property="equipmentId" column="equipment_id"/>
+        <result property="characterId" column="character_id"/>
+        <result property="slotType" column="slot_type"/>
+        <result property="userItemId" column="user_item_id"/>
+        <result property="itemId" column="item_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="equippedAt" column="equipped_at"/>
+    </resultMap>
+
+    <select id="findByCharacterId" resultMap="CharacterEquipmentRowMap">
+        SELECT ce.equipment_id,
+               ce.character_id,
+               ce.slot_type,
+               ce.user_item_id,
+               i.item_id,
+               i.name,
+               i.description,
+               i.image_url,
+               ce.equipped_at
+        FROM character_equipments ce
+        JOIN user_items ui ON ui.user_item_id = ce.user_item_id
+        JOIN items i ON i.item_id = ui.item_id
+        WHERE ce.character_id = #{characterId}
+        ORDER BY CASE ce.slot_type WHEN 'HAND' THEN 1 WHEN 'HEAD' THEN 2 ELSE 99 END
+    </select>
+
+    <select id="findByCharacterIdAndSlotType" resultMap="CharacterEquipmentRowMap">
+        SELECT ce.equipment_id,
+               ce.character_id,
+               ce.slot_type,
+               ce.user_item_id,
+               i.item_id,
+               i.name,
+               i.description,
+               i.image_url,
+               ce.equipped_at
+        FROM character_equipments ce
+        JOIN user_items ui ON ui.user_item_id = ce.user_item_id
+        JOIN items i ON i.item_id = ui.item_id
+        WHERE ce.character_id = #{characterId}
+          AND ce.slot_type = #{slotType}
+        LIMIT 1
+    </select>
+
+    <insert id="upsertEquipment">
+        INSERT INTO character_equipments (
+            character_id,
+            slot_type,
+            user_item_id
+        )
+        VALUES (
+            #{characterId},
+            #{slotType},
+            #{userItemId}
+        )
+        ON DUPLICATE KEY UPDATE
+            user_item_id = VALUES(user_item_id),
+            equipped_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <delete id="deleteByCharacterIdAndSlotType">
+        DELETE FROM character_equipments
+        WHERE character_id = #{characterId}
+          AND slot_type = #{slotType}
+    </delete>
+</mapper>
