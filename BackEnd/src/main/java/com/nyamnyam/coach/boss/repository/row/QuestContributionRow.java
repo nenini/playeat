@@ -1,5 +1,7 @@
 package com.nyamnyam.coach.boss.repository.row;
 
+import java.time.LocalDateTime;
+
 public class QuestContributionRow {
 
     private Long userId;
@@ -11,6 +13,8 @@ public class QuestContributionRow {
     private Integer completedQuestCount;
     private Integer totalDamage;
     private Integer expectedDamage;
+    private String participantStatus;
+    private LocalDateTime leftAt;
     private Boolean isMe;
 
     public Long getUserId() {
@@ -83,6 +87,22 @@ public class QuestContributionRow {
 
     public void setExpectedDamage(Integer expectedDamage) {
         this.expectedDamage = expectedDamage;
+    }
+
+    public String getParticipantStatus() {
+        return participantStatus;
+    }
+
+    public void setParticipantStatus(String participantStatus) {
+        this.participantStatus = participantStatus;
+    }
+
+    public LocalDateTime getLeftAt() {
+        return leftAt;
+    }
+
+    public void setLeftAt(LocalDateTime leftAt) {
+        this.leftAt = leftAt;
     }
 
     public Boolean getIsMe() {

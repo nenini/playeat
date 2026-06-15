@@ -26,6 +26,8 @@
         <result property="rewardCoin" column="reward_coin"/>
         <result property="status" column="status"/>
         <result property="sourceType" column="source_type"/>
+        <result property="participantStatus" column="participant_status"/>
+        <result property="participantLeftAt" column="participant_left_at"/>
         <result property="isMe" column="is_me"/>
         <result property="createdAt" column="created_at"/>
         <result property="completedAt" column="completed_at"/>
@@ -82,6 +84,8 @@
         <result property="completedQuestCount" column="completed_quest_count"/>
         <result property="totalDamage" column="total_damage"/>
         <result property="expectedDamage" column="expected_damage"/>
+        <result property="participantStatus" column="participant_status"/>
+        <result property="leftAt" column="left_at"/>
         <result property="isMe" column="is_me"/>
     </resultMap>
 
@@ -129,14 +133,14 @@
 
     <sql id="QuestSelectColumns">
         q.quest_id,
-        q.battle_id,
-        q.guild_id,
-        q.user_id,
-        u.nickname,
-        u.profile_image_url,
-        c.character_id,
-        c.name AS character_name,
-        c.level AS character_level,
+        bp.battle_id,
+        bp.guild_id,
+        bp.user_id,
+        bp.snapshot_nickname AS nickname,
+        bp.snapshot_profile_image_url AS profile_image_url,
+        bp.snapshot_character_id AS character_id,
+        bp.snapshot_character_name AS character_name,
+        bp.snapshot_character_level AS character_level,
         q.title,
         q.description,
         q.quest_type,
@@ -148,7 +152,9 @@
         q.reward_coin,
         q.status,
         q.source_type,
-        CASE WHEN q.user_id = #{currentUserId} THEN TRUE ELSE FALSE END AS is_me,
+        bp.status AS participant_status,
+        bp.left_at AS participant_left_at,
+        CASE WHEN bp.user_id = #{currentUserId} THEN TRUE ELSE FALSE END AS is_me,
         q.created_at,
         q.completed_at,
         q.rewarded_at
@@ -156,12 +162,12 @@
 
     <select id="findQuestsByBattleId" resultMap="QuestRowMap">
         SELECT <include refid="QuestSelectColumns"/>
-        FROM quests q
-        JOIN users u ON u.user_id = q.user_id
-        LEFT JOIN characters c ON c.user_id = q.user_id
-        WHERE q.battle_id = #{battleId}
+        FROM boss_battle_participants bp
+        LEFT JOIN quests q ON q.battle_id = bp.battle_id
+            AND q.user_id = bp.user_id
+        WHERE bp.battle_id = #{battleId}
         ORDER BY
-            CASE WHEN q.user_id = #{currentUserId} THEN 0 ELSE 1 END,
+            CASE WHEN bp.user_id = #{currentUserId} THEN 0 ELSE 1 END,
             CASE q.status
                 WHEN 'IN_PROGRESS' THEN 1
                 WHEN 'COMPLETED' THEN 2
@@ -169,8 +175,8 @@
                 WHEN 'EXPIRED' THEN 4
                 ELSE 5
             END,
-            q.created_at ASC,
-            q.quest_id ASC
+            bp.joined_at ASC,
+            bp.participant_id ASC
     </select>
 
     <select id="findMyQuestByBattleId" resultMap="QuestRowMap">
@@ -179,11 +185,11 @@
             q.battle_id,
             q.guild_id,
             q.user_id,
-            u.nickname,
-            u.profile_image_url,
-            c.character_id,
-            c.name AS character_name,
-            c.level AS character_level,
+            bp.snapshot_nickname AS nickname,
+            bp.snapshot_profile_image_url AS profile_image_url,
+            bp.snapshot_character_id AS character_id,
+            bp.snapshot_character_name AS character_name,
+            bp.snapshot_character_level AS character_level,
             q.title,
             q.description,
             q.quest_type,
@@ -195,13 +201,15 @@
             q.reward_coin,
             q.status,
             q.source_type,
+            bp.status AS participant_status,
+            bp.left_at AS participant_left_at,
             TRUE AS is_me,
             q.created_at,
             q.completed_at,
             q.rewarded_at
         FROM quests q
-        JOIN users u ON u.user_id = q.user_id
-        LEFT JOIN characters c ON c.user_id = q.user_id
+        JOIN boss_battle_participants bp ON bp.battle_id = q.battle_id
+            AND bp.user_id = q.user_id
         WHERE q.battle_id = #{battleId}
           AND q.user_id = #{userId}
         LIMIT 1
@@ -210,8 +218,8 @@
     <select id="findQuestDetailById" resultMap="QuestRowMap">
         SELECT <include refid="QuestSelectColumns"/>
         FROM quests q
-        JOIN users u ON u.user_id = q.user_id
-        LEFT JOIN characters c ON c.user_id = q.user_id
+        JOIN boss_battle_participants bp ON bp.battle_id = q.battle_id
+            AND bp.user_id = q.user_id
         WHERE q.quest_id = #{questId}
     </select>
 
@@ -351,32 +359,31 @@
 
     <select id="findQuestContributionsByBattleId" resultMap="QuestContributionRowMap">
         SELECT
-            gm.user_id,
-            u.nickname,
-            u.profile_image_url,
-            c.name AS character_name,
-            c.level AS character_level,
+            bp.user_id,
+            bp.snapshot_nickname AS nickname,
+            bp.snapshot_profile_image_url AS profile_image_url,
+            bp.snapshot_character_name AS character_name,
+            bp.snapshot_character_level AS character_level,
             COUNT(q.quest_id) AS total_quest_count,
             SUM(CASE WHEN q.status IN ('COMPLETED', 'REWARDED') THEN 1 ELSE 0 END) AS completed_quest_count,
             SUM(CASE WHEN q.status IN ('COMPLETED', 'REWARDED') THEN q.damage ELSE 0 END) AS total_damage,
             COALESCE(SUM(q.damage), 0) AS expected_damage,
-            CASE WHEN gm.user_id = #{currentUserId} THEN TRUE ELSE FALSE END AS is_me
-        FROM boss_battles bb
-        JOIN guild_members gm ON gm.guild_id = bb.guild_id
-        JOIN users u ON u.user_id = gm.user_id
-        LEFT JOIN characters c ON c.user_id = gm.user_id
-        LEFT JOIN quests q ON q.battle_id = bb.battle_id
-            AND q.user_id = gm.user_id
-        WHERE bb.battle_id = #{battleId}
-          AND gm.left_at IS NULL
-          AND u.status = 'ACTIVE'
+            bp.status AS participant_status,
+            bp.left_at,
+            CASE WHEN bp.user_id = #{currentUserId} THEN TRUE ELSE FALSE END AS is_me
+        FROM boss_battle_participants bp
+        LEFT JOIN quests q ON q.battle_id = bp.battle_id
+            AND q.user_id = bp.user_id
+        WHERE bp.battle_id = #{battleId}
         GROUP BY
-            gm.user_id,
-            u.nickname,
-            u.profile_image_url,
-            c.name,
-            c.level
-        ORDER BY completed_quest_count DESC, total_damage DESC, gm.user_id ASC
+            bp.user_id,
+            bp.snapshot_nickname,
+            bp.snapshot_profile_image_url,
+            bp.snapshot_character_name,
+            bp.snapshot_character_level,
+            bp.status,
+            bp.left_at
+        ORDER BY completed_quest_count DESC, total_damage DESC, bp.user_id ASC
     </select>
 
     <select id="findQuestForUpdate" resultMap="QuestMap">

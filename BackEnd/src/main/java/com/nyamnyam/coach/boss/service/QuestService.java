@@ -10,7 +10,9 @@ import com.nyamnyam.coach.boss.dto.response.QuestGenerateResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestSummaryResponse;
 import com.nyamnyam.coach.boss.entity.BossBattleStatus;
 import com.nyamnyam.coach.boss.entity.Quest;
+import com.nyamnyam.coach.boss.repository.BossBattleParticipantRepository;
 import com.nyamnyam.coach.boss.repository.QuestRepository;
+import com.nyamnyam.coach.boss.repository.row.BossBattleParticipantRow;
 import com.nyamnyam.coach.boss.repository.row.QuestBattleRow;
 import com.nyamnyam.coach.boss.repository.row.QuestContributionRow;
 import com.nyamnyam.coach.boss.repository.row.QuestGuildMemberRow;
@@ -30,13 +32,16 @@ import java.util.List;
 public class QuestService {
 
     private final QuestRepository questRepository;
+    private final BossBattleParticipantRepository bossBattleParticipantRepository;
     private final QuestGenerator questGenerator;
 
     public QuestService(
             QuestRepository questRepository,
+            BossBattleParticipantRepository bossBattleParticipantRepository,
             QuestGenerator questGenerator
     ) {
         this.questRepository = questRepository;
+        this.bossBattleParticipantRepository = bossBattleParticipantRepository;
         this.questGenerator = questGenerator;
     }
 
@@ -81,7 +86,10 @@ public class QuestService {
         }
         validateBattleOwner(battle.getGuildId(), userId);
 
-        List<QuestGuildMemberRow> members = questRepository.findActiveGuildMembers(battle.getGuildId());
+        List<QuestGuildMemberRow> members = bossBattleParticipantRepository.findActiveParticipantsByBattleId(battleId)
+                .stream()
+                .map(this::toQuestGuildMemberRow)
+                .toList();
         if (members.isEmpty()) {
             throw new BusinessException(QuestErrorCode.ACTIVE_GUILD_MEMBER_NOT_FOUND);
         }
@@ -163,7 +171,9 @@ public class QuestService {
                 row.getStatus(),
                 row.getIsMe(),
                 row.getCreatedAt(),
-                row.getCompletedAt()
+                row.getCompletedAt(),
+                row.getParticipantStatus(),
+                row.getParticipantLeftAt()
         );
     }
 
@@ -223,7 +233,21 @@ public class QuestService {
                 row.getCompletedQuestCount(),
                 row.getTotalDamage(),
                 row.getExpectedDamage(),
+                row.getParticipantStatus(),
+                row.getLeftAt(),
                 row.getIsMe()
         );
+    }
+
+    private QuestGuildMemberRow toQuestGuildMemberRow(BossBattleParticipantRow participant) {
+        QuestGuildMemberRow row = new QuestGuildMemberRow();
+        row.setMemberId(participant.getParticipantId());
+        row.setUserId(participant.getUserId());
+        row.setNickname(participant.getSnapshotNickname());
+        row.setProfileImageUrl(participant.getSnapshotProfileImageUrl());
+        row.setCharacterId(participant.getSnapshotCharacterId());
+        row.setCharacterName(participant.getSnapshotCharacterName());
+        row.setCharacterLevel(participant.getSnapshotCharacterLevel());
+        return row;
     }
 }

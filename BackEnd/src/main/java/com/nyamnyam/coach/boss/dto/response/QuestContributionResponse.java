@@ -1,5 +1,7 @@
 package com.nyamnyam.coach.boss.dto.response;
 
+import java.time.LocalDateTime;
+
 public record QuestContributionResponse(
         Long userId,
         String nickname,
@@ -10,6 +12,8 @@ public record QuestContributionResponse(
         Integer completedQuestCount,
         Integer totalDamage,
         Integer expectedDamage,
+        String participantStatus,
+        LocalDateTime leftAt,
         Boolean isMe
 ) {
 }

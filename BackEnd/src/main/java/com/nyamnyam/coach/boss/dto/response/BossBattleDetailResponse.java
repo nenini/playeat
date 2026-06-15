@@ -20,6 +20,9 @@ public record BossBattleDetailResponse(
         LocalDateTime endedAt,
         LocalDateTime endsAt,
         List<BossBattleConditionResponse> commonConditions,
-        List<BossBattleDamageLogResponse> recentDamageLogs
+        List<BossBattleDamageLogResponse> recentDamageLogs,
+        Integer participantCount,
+        Integer activeParticipantCount,
+        Integer leftParticipantCount
 ) {
 }

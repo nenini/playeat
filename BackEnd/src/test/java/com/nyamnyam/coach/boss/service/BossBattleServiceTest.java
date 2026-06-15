@@ -6,8 +6,12 @@ import com.nyamnyam.coach.boss.dto.response.BossBattleDetailResponse;
 import com.nyamnyam.coach.boss.dto.response.BossBattleHpResponse;
 import com.nyamnyam.coach.boss.entity.BossBattle;
 import com.nyamnyam.coach.boss.entity.BossBattleCondition;
+import com.nyamnyam.coach.boss.entity.BossBattleParticipant;
+import com.nyamnyam.coach.boss.repository.BossBattleParticipantRepository;
 import com.nyamnyam.coach.boss.repository.BossBattleRepository;
 import com.nyamnyam.coach.boss.repository.row.BossBattleConditionRow;
+import com.nyamnyam.coach.boss.repository.row.BossBattleParticipantCountRow;
+import com.nyamnyam.coach.boss.repository.row.BossBattleParticipantRow;
 import com.nyamnyam.coach.boss.repository.row.BossBattleRow;
 import com.nyamnyam.coach.boss.repository.row.BossCommonConditionRow;
 import com.nyamnyam.coach.boss.repository.row.BossRow;
@@ -44,13 +48,20 @@ class BossBattleServiceTest {
     private BossBattleRepository bossBattleRepository;
 
     @Mock
+    private BossBattleParticipantRepository bossBattleParticipantRepository;
+
+    @Mock
     private GuildValidator guildValidator;
 
     private BossBattleService bossBattleService;
 
     @BeforeEach
     void setUp() {
-        bossBattleService = new BossBattleService(bossBattleRepository, guildValidator);
+        bossBattleService = new BossBattleService(
+                bossBattleRepository,
+                bossBattleParticipantRepository,
+                guildValidator
+        );
     }
 
     @Test
@@ -60,7 +71,8 @@ class BossBattleServiceTest {
         when(bossBattleRepository.findCurrentSeasonId()).thenReturn(Optional.of(10L));
         when(bossBattleRepository.existsInProgressBattleByGuildId(100L)).thenReturn(false);
         when(bossBattleRepository.existsBattleByGuildIdAndSeasonId(100L, 10L)).thenReturn(false);
-        when(bossBattleRepository.countActiveGuildMembers(100L)).thenReturn(2);
+        when(bossBattleParticipantRepository.findActiveGuildMembersForBattleSnapshot(100L))
+                .thenReturn(participants(2));
         doAnswer(invocation -> {
             BossBattle battle = invocation.getArgument(0);
             battle.setBattleId(500L);
@@ -80,6 +92,7 @@ class BossBattleServiceTest {
         verify(guildValidator).validateGuildOwner(100L, 1L);
         verify(bossBattleRepository).insertBossBattle(battleCaptor.capture());
         verify(bossBattleRepository).insertBossBattleCondition(conditionCaptor.capture());
+        verify(bossBattleParticipantRepository, times(2)).insertBossBattleParticipant(any(BossBattleParticipant.class));
         assertThat(battleCaptor.getValue().getMaxHp()).isEqualTo(800);
         assertThat(battleCaptor.getValue().getCurrentHp()).isEqualTo(800);
         assertThat(conditionCaptor.getValue().getTitle()).isEqualTo("길드원 4명 이상 식단 기록");
@@ -105,7 +118,8 @@ class BossBattleServiceTest {
         when(bossBattleRepository.findCurrentSeasonId()).thenReturn(Optional.of(10L));
         when(bossBattleRepository.existsInProgressBattleByGuildId(100L)).thenReturn(false);
         when(bossBattleRepository.existsBattleByGuildIdAndSeasonId(100L, 10L)).thenReturn(false);
-        when(bossBattleRepository.countActiveGuildMembers(100L)).thenReturn(4);
+        when(bossBattleParticipantRepository.findActiveGuildMembersForBattleSnapshot(100L))
+                .thenReturn(participants(4));
         doAnswer(invocation -> {
             BossBattle battle = invocation.getArgument(0);
             battle.setBattleId(500L);
@@ -193,6 +207,7 @@ class BossBattleServiceTest {
         when(bossBattleRepository.findBattleConditionsByBattleId(500L)).thenReturn(List.of(conditionRow()));
         when(bossBattleRepository.findRecentDamageLogsByBattleId(500L, 10)).thenReturn(List.of());
         when(bossBattleRepository.findBattleHpById(500L)).thenReturn(Optional.of(battleRow()));
+        when(bossBattleParticipantRepository.countParticipantsByBattleId(500L)).thenReturn(participantCounts(2, 2, 0));
 
         BossBattleDetailResponse detail = bossBattleService.getBossBattleDetail(500L, 1L);
         BossBattleHpResponse hp = bossBattleService.getBossBattleHp(500L, 1L);
@@ -285,7 +300,8 @@ class BossBattleServiceTest {
         when(bossBattleRepository.findCurrentSeasonId()).thenReturn(Optional.of(10L));
         when(bossBattleRepository.existsInProgressBattleByGuildId(100L)).thenReturn(false);
         when(bossBattleRepository.existsBattleByGuildIdAndSeasonId(100L, 10L)).thenReturn(false);
-        when(bossBattleRepository.countActiveGuildMembers(100L)).thenReturn(activeMemberCount);
+        when(bossBattleParticipantRepository.findActiveGuildMembersForBattleSnapshot(100L))
+                .thenReturn(participants(activeMemberCount));
         doAnswer(invocation -> {
             BossBattle battle = invocation.getArgument(0);
             battle.setBattleId(500L);
@@ -303,5 +319,37 @@ class BossBattleServiceTest {
 
         assertThat(response.maxHp()).isEqualTo(expectedMaxHp);
         assertThat(response.currentHp()).isEqualTo(expectedMaxHp);
+    }
+
+    private List<BossBattleParticipantRow> participants(int count) {
+        return java.util.stream.IntStream.rangeClosed(1, count)
+                .mapToObj(index -> participant((long) index))
+                .toList();
+    }
+
+    private BossBattleParticipantRow participant(Long userId) {
+        BossBattleParticipantRow row = new BossBattleParticipantRow();
+        row.setGuildId(100L);
+        row.setUserId(userId);
+        row.setGuildMemberId(userId + 10);
+        row.setRoleAtStart(userId == 1L ? "OWNER" : "MEMBER");
+        row.setStatus("ACTIVE");
+        row.setSnapshotNickname("참여자" + userId);
+        row.setSnapshotCharacterId(userId + 100);
+        row.setSnapshotCharacterName("냠냠이");
+        row.setSnapshotCharacterLevel(7);
+        return row;
+    }
+
+    private BossBattleParticipantCountRow participantCounts(
+            int participantCount,
+            int activeParticipantCount,
+            int leftParticipantCount
+    ) {
+        BossBattleParticipantCountRow row = new BossBattleParticipantCountRow();
+        row.setParticipantCount(participantCount);
+        row.setActiveParticipantCount(activeParticipantCount);
+        row.setLeftParticipantCount(leftParticipantCount);
+        return row;
     }
 }

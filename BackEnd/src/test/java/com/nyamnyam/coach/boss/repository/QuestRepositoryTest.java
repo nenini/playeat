@@ -153,6 +153,8 @@ class QuestRepositoryTest {
         Long seasonId = insertSeason();
         Long bossId = insertBoss(seasonId);
         Long battleId = insertBattle(guildId, bossId, seasonId);
+        insertBattleParticipant(battleId, guildId, ownerId, "OWNER", "예린", "냠냠이");
+        insertBattleParticipant(battleId, guildId, memberId, "MEMBER", "민수", "민냠이");
         return new Fixture(ownerId, guildId, battleId);
     }
 
@@ -271,6 +273,52 @@ class QuestRepositoryTest {
                 seasonId
         );
         return jdbcTemplate.queryForObject("SELECT battle_id FROM boss_battles WHERE guild_id = ?", Long.class, guildId);
+    }
+
+    private void insertBattleParticipant(
+            Long battleId,
+            Long guildId,
+            Long userId,
+            String role,
+            String nickname,
+            String characterName
+    ) {
+        Long guildMemberId = jdbcTemplate.queryForObject(
+                "SELECT guild_member_id FROM guild_members WHERE guild_id = ? AND user_id = ?",
+                Long.class,
+                guildId,
+                userId
+        );
+        Long characterId = jdbcTemplate.queryForObject(
+                "SELECT character_id FROM characters WHERE user_id = ?",
+                Long.class,
+                userId
+        );
+        jdbcTemplate.update(
+                """
+                INSERT INTO boss_battle_participants (
+                    battle_id,
+                    guild_id,
+                    user_id,
+                    guild_member_id,
+                    role_at_start,
+                    status,
+                    snapshot_nickname,
+                    snapshot_character_id,
+                    snapshot_character_name,
+                    snapshot_character_level
+                )
+                VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, 7)
+                """,
+                battleId,
+                guildId,
+                userId,
+                guildMemberId,
+                role,
+                nickname,
+                characterId,
+                characterName
+        );
     }
 
     private Long insertDiet(Long userId, LocalDateTime eatenAt) {
