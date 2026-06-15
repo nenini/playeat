@@ -3,6 +3,7 @@ package com.nyamnyam.coach.coach.service;
 import com.nyamnyam.coach.ai.entity.AiFeedback;
 import com.nyamnyam.coach.ai.service.AiFeedbackService;
 import com.nyamnyam.coach.ai.service.AiTextGenerator;
+import com.nyamnyam.coach.ai.service.parser.AiJsonResponseParser;
 import com.nyamnyam.coach.ai.service.prompt.CoachFeedbackPrompt;
 import com.nyamnyam.coach.coach.dto.response.CoachFeedbackResponse;
 import com.nyamnyam.coach.coach.dto.response.CoachListResponse;
@@ -24,17 +25,20 @@ public class CoachService {
     private final DietRepository dietRepository;
     private final AiFeedbackService aiFeedbackService;
     private final AiTextGenerator aiTextGenerator;
+    private final AiJsonResponseParser aiJsonResponseParser;
 
     public CoachService(
             CoachRepository coachRepository,
             DietRepository dietRepository,
             AiFeedbackService aiFeedbackService,
-            AiTextGenerator aiTextGenerator
+            AiTextGenerator aiTextGenerator,
+            AiJsonResponseParser aiJsonResponseParser
     ) {
         this.coachRepository = coachRepository;
         this.dietRepository = dietRepository;
         this.aiFeedbackService = aiFeedbackService;
         this.aiTextGenerator = aiTextGenerator;
+        this.aiJsonResponseParser = aiJsonResponseParser;
     }
 
     @Transactional(readOnly = true)
@@ -65,7 +69,7 @@ public class CoachService {
                 .orElseThrow(() -> new BusinessException(DietErrorCode.DIET_NOT_FOUND));
         Coach coach = resolveCoach(userId);
 
-        String message = aiTextGenerator.generateCoachFeedback(new CoachFeedbackPrompt(
+        String rawFeedback = aiTextGenerator.generateCoachFeedback(new CoachFeedbackPrompt(
                 coach.getName(),
                 coach.getToneDescription(),
                 diet.getTotalCalories(),
@@ -73,6 +77,7 @@ public class CoachService {
                 diet.getTotalCarbsG(),
                 diet.getTotalFatG()
         ));
+        String message = aiJsonResponseParser.parseCoachFeedback(rawFeedback).message();
         AiFeedback feedback = aiFeedbackService.save(userId, dietId, coach.getCoachId(), message, aiTextGenerator.modelName());
         return toFeedbackResponse(feedback, coach);
     }
