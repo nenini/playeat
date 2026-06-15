@@ -71,17 +71,27 @@
 
     <resultMap id="BossCommonConditionRowMap" type="com.nyamnyam.coach.boss.repository.row.BossCommonConditionRow">
         <id property="conditionId" column="condition_id"/>
+        <result property="conditionTemplateId" column="condition_template_id"/>
         <result property="seasonId" column="season_id"/>
         <result property="bossId" column="boss_id"/>
         <result property="title" column="title"/>
         <result property="description" column="description"/>
         <result property="targetType" column="target_type"/>
+        <result property="conditionCategory" column="condition_category"/>
+        <result property="metricType" column="metric_type"/>
+        <result property="comparisonType" column="comparison_type"/>
+        <result property="aggregationType" column="aggregation_type"/>
+        <result property="evaluationScope" column="evaluation_scope"/>
         <result property="thresholdValue" column="threshold_value"/>
+        <result property="thresholdMinValue" column="threshold_min_value"/>
+        <result property="thresholdMaxValue" column="threshold_max_value"/>
         <result property="thresholdUnit" column="threshold_unit"/>
         <result property="targetValue" column="target_value"/>
         <result property="requiredDays" column="required_days"/>
         <result property="unit" column="unit"/>
         <result property="sortOrder" column="sort_order"/>
+        <result property="requiredForClear" column="required_for_clear"/>
+        <result property="verificationSupported" column="verification_supported"/>
     </resultMap>
 
     <sql id="BattleSelectColumns">
@@ -182,17 +192,27 @@
     <select id="findBossCommonConditionsByBossId" resultMap="BossCommonConditionRowMap">
         SELECT
             condition_id,
+            condition_template_id,
             season_id,
             boss_id,
             title,
             description,
             target_type,
+            condition_category,
+            metric_type,
+            comparison_type,
+            aggregation_type,
+            evaluation_scope,
             threshold_value,
+            threshold_min_value,
+            threshold_max_value,
             threshold_unit,
             target_value,
             required_days,
             unit,
-            sort_order
+            sort_order,
+            required_for_clear,
+            verification_supported
         FROM boss_common_conditions
         WHERE boss_id = #{bossId}
         ORDER BY sort_order ASC, condition_id ASC
@@ -206,10 +226,18 @@
         INSERT INTO boss_battle_conditions (
             battle_id,
             condition_id,
+            condition_template_id,
             title,
             description,
             target_type,
+            condition_category,
+            metric_type,
+            comparison_type,
+            aggregation_type,
+            evaluation_scope,
             threshold_value,
+            threshold_min_value,
+            threshold_max_value,
             threshold_unit,
             target_value,
             required_days,
@@ -217,15 +245,25 @@
             damage,
             unit,
             completed,
-            sort_order
+            sort_order,
+            required_for_clear,
+            verification_supported
         )
         VALUES (
             #{battleId},
             #{conditionId},
+            #{conditionTemplateId},
             #{title},
             #{description},
             #{targetType},
+            #{conditionCategory},
+            #{metricType},
+            #{comparisonType},
+            #{aggregationType},
+            #{evaluationScope},
             #{thresholdValue},
+            #{thresholdMinValue},
+            #{thresholdMaxValue},
             #{thresholdUnit},
             #{targetValue},
             #{requiredDays},
@@ -233,7 +271,9 @@
             COALESCE(#{damage}, 0),
             #{unit},
             COALESCE(#{completed}, FALSE),
-            COALESCE(#{sortOrder}, 0)
+            COALESCE(#{sortOrder}, 0),
+            COALESCE(#{requiredForClear}, TRUE),
+            COALESCE(#{verificationSupported}, TRUE)
         )
     </insert>
 

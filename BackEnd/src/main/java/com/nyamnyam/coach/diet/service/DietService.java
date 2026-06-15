@@ -12,6 +12,7 @@ import com.nyamnyam.coach.diet.dto.response.DietMealResponse;
 import com.nyamnyam.coach.diet.entity.Diet;
 import com.nyamnyam.coach.diet.entity.DietItem;
 import com.nyamnyam.coach.diet.entity.MealType;
+import com.nyamnyam.coach.diet.event.DietChangedEvent;
 import com.nyamnyam.coach.diet.repository.DietRepository;
 import com.nyamnyam.coach.diet.repository.row.DietItemRow;
 import com.nyamnyam.coach.diet.repository.row.NutritionTargetRow;
@@ -20,6 +21,7 @@ import com.nyamnyam.coach.food.repository.FoodRepository;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.DietErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.FoodErrorCode;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,15 +43,18 @@ public class DietService {
     private final DietRepository dietRepository;
     private final FoodRepository foodRepository;
     private final DietNutritionCalculator nutritionCalculator;
+    private final ApplicationEventPublisher eventPublisher;
 
     public DietService(
             DietRepository dietRepository,
             FoodRepository foodRepository,
-            DietNutritionCalculator nutritionCalculator
+            DietNutritionCalculator nutritionCalculator,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.dietRepository = dietRepository;
         this.foodRepository = foodRepository;
         this.nutritionCalculator = nutritionCalculator;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -92,6 +97,7 @@ public class DietService {
             item.setDietId(diet.getDietId());
             dietRepository.insertDietItem(item);
         }
+        publishDietChanged(userId, date);
 
         return getDietDetail(userId, diet.getDietId());
     }
@@ -106,6 +112,7 @@ public class DietService {
     public DietDetailResponse updateDiet(Long userId, Long dietId, DietUpdateRequest request) {
         validateItems(request.items());
         Diet diet = findDiet(userId, dietId);
+        LocalDate oldDate = diet.getEatenAt().toLocalDate();
         LocalDate newDate = request.eatenAt().toLocalDate();
         assertNotDuplicated(userId, newDate, request.mealType(), dietId);
 
@@ -122,18 +129,28 @@ public class DietService {
             dietRepository.insertDietItem(item);
         }
         dietRepository.updateDietTotals(diet);
+        publishDietChanged(userId, oldDate);
+        if (!oldDate.equals(newDate)) {
+            publishDietChanged(userId, newDate);
+        }
 
         return getDietDetail(userId, dietId);
     }
 
     @Transactional
     public DietDeleteResponse deleteDiet(Long userId, Long dietId) {
-        findDiet(userId, dietId);
+        Diet diet = findDiet(userId, dietId);
+        LocalDate deletedDate = diet.getEatenAt().toLocalDate();
         int deletedCount = dietRepository.deleteByIdAndUserId(dietId, userId);
         if (deletedCount == 0) {
             throw new BusinessException(DietErrorCode.DIET_NOT_FOUND);
         }
+        publishDietChanged(userId, deletedDate);
         return new DietDeleteResponse(dietId, true, LocalDateTime.now());
+    }
+
+    private void publishDietChanged(Long userId, LocalDate activityDate) {
+        eventPublisher.publishEvent(new DietChangedEvent(userId, activityDate));
     }
 
     private Diet findDiet(Long userId, Long dietId) {

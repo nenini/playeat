@@ -5,6 +5,7 @@ import com.nyamnyam.coach.boss.dto.response.BossBattleCreateResponse;
 import com.nyamnyam.coach.boss.dto.response.BossBattleDetailResponse;
 import com.nyamnyam.coach.boss.dto.response.BossBattleHistoryResponse;
 import com.nyamnyam.coach.boss.dto.response.BossBattleHpResponse;
+import com.nyamnyam.coach.boss.dto.response.CommonConditionVerifyResponse;
 import com.nyamnyam.coach.boss.dto.response.CurrentBossBattleResponse;
 import com.nyamnyam.coach.boss.dto.response.RewardClaimResponse;
 import com.nyamnyam.coach.global.response.ApiResponse;
@@ -52,6 +53,12 @@ public interface BossBattleApiDocs {
 
     @Operation(summary = "보스전 보상 수령", description = "클리어된 보스전의 XP와 코인 보상을 길드원이 수령합니다.")
     ResponseEntity<ApiResponse<RewardClaimResponse>> claimBossBattleReward(
+            @Parameter(hidden = true) Authentication authentication,
+            Long battleId
+    );
+
+    @Operation(summary = "공통 격파 조건 확인")
+    ResponseEntity<ApiResponse<CommonConditionVerifyResponse>> verifyCommonConditions(
             @Parameter(hidden = true) Authentication authentication,
             Long battleId
     );

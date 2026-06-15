@@ -241,10 +241,18 @@ public class BossBattleService {
         BossBattleCondition battleCondition = new BossBattleCondition();
         battleCondition.setBattleId(battleId);
         battleCondition.setConditionId(condition.getConditionId());
+        battleCondition.setConditionTemplateId(condition.getConditionTemplateId());
         battleCondition.setTitle(condition.getTitle());
         battleCondition.setDescription(condition.getDescription());
         battleCondition.setTargetType(condition.getTargetType());
+        battleCondition.setConditionCategory(condition.getConditionCategory());
+        battleCondition.setMetricType(condition.getMetricType());
+        battleCondition.setComparisonType(condition.getComparisonType());
+        battleCondition.setAggregationType(condition.getAggregationType());
+        battleCondition.setEvaluationScope(condition.getEvaluationScope());
         battleCondition.setThresholdValue(condition.getThresholdValue());
+        battleCondition.setThresholdMinValue(condition.getThresholdMinValue());
+        battleCondition.setThresholdMaxValue(condition.getThresholdMaxValue());
         battleCondition.setThresholdUnit(condition.getThresholdUnit());
         battleCondition.setTargetValue(condition.getTargetValue());
         battleCondition.setRequiredDays(condition.getRequiredDays());
@@ -253,6 +261,8 @@ public class BossBattleService {
         battleCondition.setCompleted(false);
         battleCondition.setUnit(condition.getUnit());
         battleCondition.setSortOrder(condition.getSortOrder());
+        battleCondition.setRequiredForClear(condition.getRequiredForClear());
+        battleCondition.setVerificationSupported(condition.getVerificationSupported());
         return battleCondition;
     }
 

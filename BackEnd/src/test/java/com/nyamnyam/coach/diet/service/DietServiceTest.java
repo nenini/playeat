@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -44,6 +45,9 @@ class DietServiceTest {
     @Mock
     private FoodRepository foodRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private DietService dietService;
 
     @BeforeEach
@@ -51,7 +55,8 @@ class DietServiceTest {
         dietService = new DietService(
                 dietRepository,
                 foodRepository,
-                new DietNutritionCalculator()
+                new DietNutritionCalculator(),
+                eventPublisher
         );
     }
 

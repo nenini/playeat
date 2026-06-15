@@ -7,16 +7,26 @@ public class BossBattleCondition {
     private Long battleConditionId;
     private Long battleId;
     private Long conditionId;
+    private Long conditionTemplateId;
     private String title;
     private String description;
     private String targetType;
+    private String conditionCategory;
+    private String metricType;
+    private String comparisonType;
+    private String aggregationType;
+    private String evaluationScope;
     private BigDecimal thresholdValue;
+    private BigDecimal thresholdMinValue;
+    private BigDecimal thresholdMaxValue;
     private String thresholdUnit;
     private Integer targetValue;
     private Integer requiredDays;
     private Integer currentValue;
     private Integer damage;
     private Boolean completed;
+    private Boolean requiredForClear;
+    private Boolean verificationSupported;
     private String unit;
     private Integer sortOrder;
 
@@ -44,6 +54,9 @@ public class BossBattleCondition {
         this.conditionId = conditionId;
     }
 
+    public Long getConditionTemplateId() { return conditionTemplateId; }
+    public void setConditionTemplateId(Long conditionTemplateId) { this.conditionTemplateId = conditionTemplateId; }
+
     public String getTitle() {
         return title;
     }
@@ -68,6 +81,17 @@ public class BossBattleCondition {
         this.targetType = targetType;
     }
 
+    public String getConditionCategory() { return conditionCategory; }
+    public void setConditionCategory(String conditionCategory) { this.conditionCategory = conditionCategory; }
+    public String getMetricType() { return metricType; }
+    public void setMetricType(String metricType) { this.metricType = metricType; }
+    public String getComparisonType() { return comparisonType; }
+    public void setComparisonType(String comparisonType) { this.comparisonType = comparisonType; }
+    public String getAggregationType() { return aggregationType; }
+    public void setAggregationType(String aggregationType) { this.aggregationType = aggregationType; }
+    public String getEvaluationScope() { return evaluationScope; }
+    public void setEvaluationScope(String evaluationScope) { this.evaluationScope = evaluationScope; }
+
     public BigDecimal getThresholdValue() {
         return thresholdValue;
     }
@@ -75,6 +99,11 @@ public class BossBattleCondition {
     public void setThresholdValue(BigDecimal thresholdValue) {
         this.thresholdValue = thresholdValue;
     }
+
+    public BigDecimal getThresholdMinValue() { return thresholdMinValue; }
+    public void setThresholdMinValue(BigDecimal thresholdMinValue) { this.thresholdMinValue = thresholdMinValue; }
+    public BigDecimal getThresholdMaxValue() { return thresholdMaxValue; }
+    public void setThresholdMaxValue(BigDecimal thresholdMaxValue) { this.thresholdMaxValue = thresholdMaxValue; }
 
     public String getThresholdUnit() {
         return thresholdUnit;
@@ -123,6 +152,11 @@ public class BossBattleCondition {
     public void setCompleted(Boolean completed) {
         this.completed = completed;
     }
+
+    public Boolean getRequiredForClear() { return requiredForClear; }
+    public void setRequiredForClear(Boolean requiredForClear) { this.requiredForClear = requiredForClear; }
+    public Boolean getVerificationSupported() { return verificationSupported; }
+    public void setVerificationSupported(Boolean verificationSupported) { this.verificationSupported = verificationSupported; }
 
     public String getUnit() {
         return unit;
