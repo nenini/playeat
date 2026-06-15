@@ -1,5 +1,6 @@
 package com.nyamnyam.coach.guild.service;
 
+import com.nyamnyam.coach.boss.repository.BossBattleParticipantRepository;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.GuildErrorCode;
 import com.nyamnyam.coach.guild.dto.request.GuildCreateRequest;
@@ -72,12 +73,20 @@ class GuildServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private BossBattleParticipantRepository bossBattleParticipantRepository;
+
     private GuildService guildService;
 
     @BeforeEach
     void setUp() {
         GuildValidator guildValidator = new GuildValidator(guildRepository);
-        guildService = new GuildService(guildRepository, userRepository, guildValidator);
+        guildService = new GuildService(
+                guildRepository,
+                bossBattleParticipantRepository,
+                userRepository,
+                guildValidator
+        );
     }
 
     @Test
@@ -398,6 +407,7 @@ class GuildServiceTest {
         GuildLeaveResponse response = guildService.leaveGuild(10L, 2L);
 
         verify(guildRepository).leaveGuild(10L, 2L);
+        verify(bossBattleParticipantRepository).markParticipantLeftByGuildAndUser(10L, 2L);
         assertThat(response.leftAt()).isEqualTo(LocalDateTime.of(2026, 6, 10, 10, 30));
     }
 
@@ -449,6 +459,7 @@ class GuildServiceTest {
         GuildKickResponse response = guildService.kickGuildMember(10L, 101L, 1L);
 
         verify(guildRepository).kickGuildMember(10L, 101L);
+        verify(bossBattleParticipantRepository).markParticipantKickedByGuildAndUser(10L, 2L);
         assertThat(response.userId()).isEqualTo(2L);
         assertThat(response.kickedAt()).isEqualTo(LocalDateTime.of(2026, 6, 10, 10, 30));
     }
