@@ -1,6 +1,6 @@
 package com.nyamnyam.coach.diet.event;
 
-import com.nyamnyam.coach.boss.service.QuestActivityVerificationService;
+import com.nyamnyam.coach.quest.service.QuestActivityVerificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
