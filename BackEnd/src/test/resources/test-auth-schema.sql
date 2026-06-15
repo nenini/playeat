@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS guild_score_logs;
 DROP TABLE IF EXISTS boss_battle_condition_progress;
 DROP TABLE IF EXISTS boss_battle_damage_logs;
 DROP TABLE IF EXISTS boss_battle_conditions;
+DROP TABLE IF EXISTS boss_battle_participants;
 DROP TABLE IF EXISTS boss_battles;
 DROP TABLE IF EXISTS boss_common_conditions;
 DROP TABLE IF EXISTS bosses;
@@ -322,6 +323,31 @@ CREATE TABLE boss_battles (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE boss_battle_participants (
+    participant_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    battle_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    guild_member_id BIGINT,
+    role_at_start VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    left_at DATETIME,
+    snapshot_nickname VARCHAR(100),
+    snapshot_profile_image_url VARCHAR(500),
+    snapshot_character_id BIGINT,
+    snapshot_character_name VARCHAR(100),
+    snapshot_character_level INT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_battle_participant_user UNIQUE (battle_id, user_id)
+);
+
+CREATE INDEX idx_battle_participants_battle ON boss_battle_participants (battle_id);
+CREATE INDEX idx_battle_participants_guild_status ON boss_battle_participants (guild_id, status);
+CREATE INDEX idx_battle_participants_user_status ON boss_battle_participants (user_id, status);
+CREATE INDEX idx_battle_participants_battle_status ON boss_battle_participants (battle_id, status);
 
 CREATE TABLE boss_battle_conditions (
     battle_condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
