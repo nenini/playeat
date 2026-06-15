@@ -1,9 +1,10 @@
 package com.nyamnyam.coach.boss.repository;
 
-import com.nyamnyam.coach.boss.entity.Quest;
-import com.nyamnyam.coach.boss.entity.QuestVerification;
-import com.nyamnyam.coach.boss.repository.row.DietVerificationRow;
-import com.nyamnyam.coach.boss.repository.row.QuestRow;
+import com.nyamnyam.coach.quest.entity.Quest;
+import com.nyamnyam.coach.quest.entity.QuestVerification;
+import com.nyamnyam.coach.quest.repository.row.DietVerificationRow;
+import com.nyamnyam.coach.quest.repository.row.QuestRow;
+import com.nyamnyam.coach.quest.repository.QuestRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
