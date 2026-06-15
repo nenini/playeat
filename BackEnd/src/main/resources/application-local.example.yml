@@ -43,7 +43,7 @@ spring:
 
 jwt:
   # openssl rand -base64 64 로 생성한 값으로 교체하세요
-  secret: bnlhbW55YW1Mb2NhbERldlNlY3JldEtleUZvckp3dFRva2VuU2lnbmluZzIwMjQ=
+  secret: jwt-key
   access-token-expiration: 1800000
   refresh-token-expiration: 604800000
 
@@ -58,6 +58,6 @@ gms:
 rag:
   health-guides:
     seed-location: classpath:rag/health-guides/health-guides.jsonl
-    ingestion-enabled: false
+    ingestion-enabled: true
     top-k: 5
     similarity-threshold: 0.5
