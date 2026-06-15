@@ -25,6 +25,7 @@
 
     <resultMap id="BossCommonConditionRowMap" type="com.nyamnyam.coach.boss.repository.row.BossCommonConditionRow">
         <id property="conditionId" column="condition_id"/>
+        <result property="conditionTemplateId" column="condition_template_id"/>
         <result property="seasonId" column="season_id"/>
         <result property="bossId" column="boss_id"/>
         <result property="title" column="title"/>
@@ -94,6 +95,7 @@
     <select id="findCommonConditionsByBossId" resultMap="BossCommonConditionRowMap">
         SELECT
             condition_id,
+            condition_template_id,
             season_id,
             boss_id,
             title,

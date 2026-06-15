@@ -90,6 +90,28 @@ public interface QuestRepository {
             @Param("endAt") LocalDateTime endAt
     );
 
+    int countDietsByUserAndDate(
+            @Param("userId") Long userId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt
+    );
+
+    boolean existsDietByUserDateMealType(
+            @Param("userId") Long userId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt,
+            @Param("mealType") String mealType
+    );
+
+    java.math.BigDecimal sumDailyNutritionMetric(
+            @Param("userId") Long userId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt,
+            @Param("metricType") String metricType
+    );
+
+    List<BattleStateRow> findInProgressBattlesByActiveParticipant(@Param("userId") Long userId);
+
     Optional<BattleStateRow> findBattleStateForUpdate(@Param("battleId") Long battleId);
 
     Optional<BattleStateRow> findBattleRewardInfo(@Param("battleId") Long battleId);
@@ -117,6 +139,17 @@ public interface QuestRepository {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("thresholdValue") java.math.BigDecimal thresholdValue
+    );
+
+    int countGuildBattleSatisfiedMemberDates(
+            @Param("battleId") Long battleId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("metricType") String metricType,
+            @Param("comparisonType") String comparisonType,
+            @Param("thresholdValue") java.math.BigDecimal thresholdValue,
+            @Param("thresholdMinValue") java.math.BigDecimal thresholdMinValue,
+            @Param("thresholdMaxValue") java.math.BigDecimal thresholdMaxValue
     );
 
     int updateBattleConditionProgressValue(

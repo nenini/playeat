@@ -49,11 +49,34 @@ public class PlaceholderQuestGenerator implements QuestGenerator {
         quest.setTargetValue(template.getTargetValue());
         quest.setCurrentValue(0);
         quest.setUnit(template.getUnit());
-        quest.setDamage(template.getDamage());
-        quest.setRewardExp(template.getRewardExp());
+        quest.setDamage(calculateDamage(battle, activeMemberCount, memberIndex));        quest.setRewardExp(template.getRewardExp());
         quest.setRewardCoin(template.getRewardCoin());
         quest.setStatus(QuestStatus.IN_PROGRESS.name());
         quest.setSourceType(QuestSourceType.PLACEHOLDER.name());
         return quest;
+    }
+
+    private int calculateDamage(QuestBattleRow battle, int activeMemberCount, int memberIndex) {
+        if (battle == null || battle.getMaxHp() == null || activeMemberCount <= 0) {
+            return 0;
+        }
+
+        double personalRatio = getPersonalQuestRatio(battle.getDifficulty());
+        int personalTotalDamage = (int) Math.round(battle.getMaxHp() * personalRatio);
+
+        int baseDamage = personalTotalDamage / activeMemberCount;
+        int remainder = personalTotalDamage % activeMemberCount;
+
+        return memberIndex < remainder ? baseDamage + 1 : baseDamage;
+    }
+
+    private double getPersonalQuestRatio(String difficulty) {
+        if ("NORMAL".equals(difficulty)) {
+            return 0.7;
+        }
+        if ("HARD".equals(difficulty)) {
+            return 0.6;
+        }
+        return 0.8;
     }
 }

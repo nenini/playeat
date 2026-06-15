@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS boss_battle_conditions;
 DROP TABLE IF EXISTS boss_battle_participants;
 DROP TABLE IF EXISTS boss_battles;
 DROP TABLE IF EXISTS boss_common_conditions;
+DROP TABLE IF EXISTS boss_condition_templates;
 DROP TABLE IF EXISTS bosses;
 DROP TABLE IF EXISTS boss_seasons;
 DROP TABLE IF EXISTS guild_join_requests;
@@ -202,17 +203,53 @@ CREATE TABLE bosses (
     CONSTRAINT uk_bosses_season_difficulty UNIQUE (season_id, difficulty)
 );
 
+CREATE TABLE boss_condition_templates (
+    condition_template_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description VARCHAR(500) NOT NULL,
+    target_type VARCHAR(50) NOT NULL,
+    condition_category VARCHAR(50) NOT NULL,
+    metric_type VARCHAR(50) NOT NULL,
+    comparison_type VARCHAR(50) NOT NULL,
+    aggregation_type VARCHAR(50) NOT NULL,
+    evaluation_scope VARCHAR(50) NOT NULL,
+    threshold_value DECIMAL(10,2),
+    threshold_min_value DECIMAL(10,2),
+    threshold_max_value DECIMAL(10,2),
+    threshold_unit VARCHAR(30),
+    target_value INT NOT NULL DEFAULT 1,
+    required_days INT,
+    unit VARCHAR(30) NOT NULL,
+    difficulty VARCHAR(20) NOT NULL DEFAULT 'EASY',
+    required_for_clear BOOLEAN NOT NULL DEFAULT TRUE,
+    verification_supported BOOLEAN NOT NULL DEFAULT TRUE,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE boss_common_conditions (
     condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    condition_template_id BIGINT,
     season_id BIGINT NOT NULL,
     boss_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
     description VARCHAR(500),
     target_type VARCHAR(50) NOT NULL,
+    condition_category VARCHAR(50),
+    metric_type VARCHAR(50),
+    comparison_type VARCHAR(50),
+    aggregation_type VARCHAR(50),
+    evaluation_scope VARCHAR(50),
     threshold_value DECIMAL(10,2),
+    threshold_min_value DECIMAL(10,2),
+    threshold_max_value DECIMAL(10,2),
     threshold_unit VARCHAR(50),
     target_value INT NOT NULL,
     required_days INT,
+    required_for_clear BOOLEAN NOT NULL DEFAULT TRUE,
+    verification_supported BOOLEAN NOT NULL DEFAULT TRUE,
     unit VARCHAR(50),
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -354,10 +391,18 @@ CREATE TABLE boss_battle_conditions (
     battle_condition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     battle_id BIGINT NOT NULL,
     condition_id BIGINT,
+    condition_template_id BIGINT,
     title VARCHAR(200) NOT NULL,
     description VARCHAR(500),
     target_type VARCHAR(50) NOT NULL,
+    condition_category VARCHAR(50),
+    metric_type VARCHAR(50),
+    comparison_type VARCHAR(50),
+    aggregation_type VARCHAR(50),
+    evaluation_scope VARCHAR(50),
     threshold_value DECIMAL(10,2),
+    threshold_min_value DECIMAL(10,2),
+    threshold_max_value DECIMAL(10,2),
     threshold_unit VARCHAR(50),
     target_value INT NOT NULL,
     required_days INT,
@@ -365,6 +410,8 @@ CREATE TABLE boss_battle_conditions (
     damage INT NOT NULL DEFAULT 0,
     unit VARCHAR(50),
     completed BOOLEAN NOT NULL DEFAULT FALSE,
+    required_for_clear BOOLEAN NOT NULL DEFAULT TRUE,
+    verification_supported BOOLEAN NOT NULL DEFAULT TRUE,
     completed_at DATETIME,
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
