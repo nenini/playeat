@@ -17,6 +17,9 @@ public enum BossErrorCode implements ErrorCode {
     BOSS_BATTLE_NOT_IN_PROGRESS(HttpStatus.CONFLICT, "진행 중인 보스전이 아닙니다."),
     BOSS_BATTLE_NOT_DEFEATED(HttpStatus.CONFLICT, "클리어된 보스전이 아닙니다."),
     BOSS_BATTLE_REWARD_ALREADY_CLAIMED(HttpStatus.CONFLICT, "이미 보스전 보상을 수령했습니다."),
+    ACTIVE_GUILD_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "활성 길드원을 찾을 수 없습니다."),
+    BOSS_BATTLE_PARTICIPANT_NOT_FOUND(HttpStatus.NOT_FOUND, "보스전 참여자를 찾을 수 없습니다."),
+    BOSS_BATTLE_PARTICIPANT_INACTIVE(HttpStatus.FORBIDDEN, "현재 보스전에 참여할 수 없는 상태입니다."),
     BOSS_BATTLE_NOT_ACTIVE(HttpStatus.CONFLICT, "진행 중인 보스 전투가 아닙니다.");
 
     private final HttpStatus status;

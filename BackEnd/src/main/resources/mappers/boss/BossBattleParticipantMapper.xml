@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.boss.repository.BossBattleParticipantRepository">
+
+    <resultMap id="BossBattleParticipantRowMap" type="com.nyamnyam.coach.boss.repository.row.BossBattleParticipantRow">
+        <id property="participantId" column="participant_id"/>
+        <result property="battleId" column="battle_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="guildMemberId" column="guild_member_id"/>
+        <result property="roleAtStart" column="role_at_start"/>
+        <result property="status" column="status"/>
+        <result property="joinedAt" column="joined_at"/>
+        <result property="leftAt" column="left_at"/>
+        <result property="snapshotNickname" column="snapshot_nickname"/>
+        <result property="snapshotProfileImageUrl" column="snapshot_profile_image_url"/>
+        <result property="snapshotCharacterId" column="snapshot_character_id"/>
+        <result property="snapshotCharacterName" column="snapshot_character_name"/>
+        <result property="snapshotCharacterLevel" column="snapshot_character_level"/>
+    </resultMap>
+
+    <resultMap id="BossBattleParticipantCountRowMap" type="com.nyamnyam.coach.boss.repository.row.BossBattleParticipantCountRow">
+        <result property="participantCount" column="participant_count"/>
+        <result property="activeParticipantCount" column="active_participant_count"/>
+        <result property="leftParticipantCount" column="left_participant_count"/>
+    </resultMap>
+
+    <sql id="ParticipantColumns">
+        participant_id,
+        battle_id,
+        guild_id,
+        user_id,
+        guild_member_id,
+        role_at_start,
+        status,
+        joined_at,
+        left_at,
+        snapshot_nickname,
+        snapshot_profile_image_url,
+        snapshot_character_id,
+        snapshot_character_name,
+        snapshot_character_level
+    </sql>
+
+    <select id="findActiveGuildMembersForBattleSnapshot" resultMap="BossBattleParticipantRowMap">
+        SELECT
+            NULL AS participant_id,
+            NULL AS battle_id,
+            gm.guild_id,
+            gm.user_id,
+            gm.guild_member_id,
+            gm.role AS role_at_start,
+            'ACTIVE' AS status,
+            CURRENT_TIMESTAMP AS joined_at,
+            NULL AS left_at,
+            u.nickname AS snapshot_nickname,
+            u.profile_image_url AS snapshot_profile_image_url,
+            c.character_id AS snapshot_character_id,
+            c.name AS snapshot_character_name,
+            c.level AS snapshot_character_level
+        FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
+        LEFT JOIN characters c ON c.user_id = gm.user_id
+        WHERE gm.guild_id = #{guildId}
+          AND gm.left_at IS NULL
+          AND u.status = 'ACTIVE'
+        ORDER BY gm.joined_at ASC, gm.guild_member_id ASC
+    </select>
+
+    <insert id="insertBossBattleParticipant"
+            parameterType="com.nyamnyam.coach.boss.entity.BossBattleParticipant"
+            useGeneratedKeys="true"
+            keyProperty="participantId"
+            keyColumn="participant_id">
+        INSERT INTO boss_battle_participants (
+            battle_id,
+            guild_id,
+            user_id,
+            guild_member_id,
+            role_at_start,
+            status,
+            joined_at,
+            snapshot_nickname,
+            snapshot_profile_image_url,
+            snapshot_character_id,
+            snapshot_character_name,
+            snapshot_character_level
+        )
+        VALUES (
+            #{battleId},
+            #{guildId},
+            #{userId},
+            #{guildMemberId},
+            #{roleAtStart},
+            COALESCE(#{status}, 'ACTIVE'),
+            COALESCE(#{joinedAt}, CURRENT_TIMESTAMP),
+            #{snapshotNickname},
+            #{snapshotProfileImageUrl},
+            #{snapshotCharacterId},
+            #{snapshotCharacterName},
+            #{snapshotCharacterLevel}
+        )
+    </insert>
+
+    <select id="countActiveParticipantsByBattleId" resultType="int">
+        SELECT COUNT(1)
+        FROM boss_battle_participants
+        WHERE battle_id = #{battleId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="countParticipantsByBattleId" resultMap="BossBattleParticipantCountRowMap">
+        SELECT
+            COUNT(1) AS participant_count,
+            COALESCE(SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END), 0) AS active_participant_count,
+            COALESCE(SUM(CASE WHEN status IN ('LEFT', 'KICKED') THEN 1 ELSE 0 END), 0) AS left_participant_count
+        FROM boss_battle_participants
+        WHERE battle_id = #{battleId}
+    </select>
+
+    <select id="findParticipantsByBattleId" resultMap="BossBattleParticipantRowMap">
+        SELECT <include refid="ParticipantColumns"/>
+        FROM boss_battle_participants
+        WHERE battle_id = #{battleId}
+        ORDER BY joined_at ASC, participant_id ASC
+    </select>
+
+    <select id="findActiveParticipantsByBattleId" resultMap="BossBattleParticipantRowMap">
+        SELECT <include refid="ParticipantColumns"/>
+        FROM boss_battle_participants
+        WHERE battle_id = #{battleId}
+          AND status = 'ACTIVE'
+        ORDER BY joined_at ASC, participant_id ASC
+    </select>
+
+    <select id="existsActiveParticipant" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM boss_battle_participants
+        WHERE battle_id = #{battleId}
+          AND user_id = #{userId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="findParticipantByBattleIdAndUserId" resultMap="BossBattleParticipantRowMap">
+        SELECT <include refid="ParticipantColumns"/>
+        FROM boss_battle_participants
+        WHERE battle_id = #{battleId}
+          AND user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <update id="markParticipantLeftByGuildAndUser">
+        UPDATE boss_battle_participants
+        SET status = 'LEFT',
+            left_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND user_id = #{userId}
+          AND status = 'ACTIVE'
+          AND EXISTS (
+              SELECT 1
+              FROM boss_battles bb
+              WHERE bb.battle_id = boss_battle_participants.battle_id
+                AND bb.status = 'IN_PROGRESS'
+          )
+    </update>
+
+    <update id="markParticipantKickedByGuildAndUser">
+        UPDATE boss_battle_participants
+        SET status = 'KICKED',
+            left_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE guild_id = #{guildId}
+          AND user_id = #{userId}
+          AND status = 'ACTIVE'
+          AND EXISTS (
+              SELECT 1
+              FROM boss_battles bb
+              WHERE bb.battle_id = boss_battle_participants.battle_id
+                AND bb.status = 'IN_PROGRESS'
+          )
+    </update>
+</mapper>

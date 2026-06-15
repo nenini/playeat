@@ -22,6 +22,8 @@ public record QuestSummaryResponse(
         String status,
         Boolean isMe,
         LocalDateTime createdAt,
-        LocalDateTime completedAt
+        LocalDateTime completedAt,
+        String participantStatus,
+        LocalDateTime leftAt
 ) {
 }

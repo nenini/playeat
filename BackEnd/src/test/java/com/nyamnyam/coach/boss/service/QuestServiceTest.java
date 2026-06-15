@@ -6,10 +6,11 @@ import com.nyamnyam.coach.boss.dto.response.QuestContributionListResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestDetailResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestGenerateResponse;
 import com.nyamnyam.coach.boss.entity.Quest;
+import com.nyamnyam.coach.boss.repository.BossBattleParticipantRepository;
 import com.nyamnyam.coach.boss.repository.QuestRepository;
+import com.nyamnyam.coach.boss.repository.row.BossBattleParticipantRow;
 import com.nyamnyam.coach.boss.repository.row.QuestBattleRow;
 import com.nyamnyam.coach.boss.repository.row.QuestContributionRow;
-import com.nyamnyam.coach.boss.repository.row.QuestGuildMemberRow;
 import com.nyamnyam.coach.boss.repository.row.QuestRow;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.BossErrorCode;
@@ -39,11 +40,18 @@ class QuestServiceTest {
     @Mock
     private QuestRepository questRepository;
 
+    @Mock
+    private BossBattleParticipantRepository bossBattleParticipantRepository;
+
     private QuestService questService;
 
     @BeforeEach
     void setUp() {
-        questService = new QuestService(questRepository, new PlaceholderQuestGenerator());
+        questService = new QuestService(
+                questRepository,
+                bossBattleParticipantRepository,
+                new PlaceholderQuestGenerator()
+        );
     }
 
     @Test
@@ -52,7 +60,8 @@ class QuestServiceTest {
         when(questRepository.findBattleById(500L)).thenReturn(Optional.of(battle("IN_PROGRESS")));
         when(questRepository.existsActiveGuildMember(100L, 1L)).thenReturn(true);
         when(questRepository.findGuildRole(100L, 1L)).thenReturn(Optional.of("OWNER"));
-        when(questRepository.findActiveGuildMembers(100L)).thenReturn(List.of(member(1L, "예린"), member(2L, "민수")));
+        when(bossBattleParticipantRepository.findActiveParticipantsByBattleId(500L))
+                .thenReturn(List.of(participant(1L, "예린"), participant(2L, "민수")));
         when(questRepository.existsQuestByBattleIdAndUserId(500L, 1L)).thenReturn(false);
         when(questRepository.existsQuestByBattleIdAndUserId(500L, 2L)).thenReturn(false);
         doAnswer(invocation -> {
@@ -108,7 +117,8 @@ class QuestServiceTest {
         when(questRepository.findBattleById(500L)).thenReturn(Optional.of(battle("IN_PROGRESS")));
         when(questRepository.existsActiveGuildMember(100L, 1L)).thenReturn(true);
         when(questRepository.findGuildRole(100L, 1L)).thenReturn(Optional.of("OWNER"));
-        when(questRepository.findActiveGuildMembers(100L)).thenReturn(List.of(member(1L, "예린"), member(2L, "민수")));
+        when(bossBattleParticipantRepository.findActiveParticipantsByBattleId(500L))
+                .thenReturn(List.of(participant(1L, "예린"), participant(2L, "민수")));
         when(questRepository.existsQuestByBattleIdAndUserId(500L, 1L)).thenReturn(true);
         when(questRepository.existsQuestByBattleIdAndUserId(500L, 2L)).thenReturn(false);
         doAnswer(invocation -> {
@@ -203,14 +213,20 @@ class QuestServiceTest {
         return row;
     }
 
-    private QuestGuildMemberRow member(Long userId, String nickname) {
-        QuestGuildMemberRow row = new QuestGuildMemberRow();
-        row.setMemberId(userId + 10);
+    private BossBattleParticipantRow participant(Long userId, String nickname) {
+        BossBattleParticipantRow row = new BossBattleParticipantRow();
+        row.setParticipantId(userId + 10);
+        row.setBattleId(500L);
+        row.setGuildId(100L);
         row.setUserId(userId);
-        row.setNickname(nickname);
-        row.setCharacterId(userId + 100);
-        row.setCharacterName("냠냠이");
-        row.setCharacterLevel(7);
+        row.setGuildMemberId(userId + 20);
+        row.setRoleAtStart(userId == 1L ? "OWNER" : "MEMBER");
+        row.setStatus("ACTIVE");
+        row.setSnapshotNickname(nickname);
+        row.setSnapshotProfileImageUrl("https://example.com/profile.png");
+        row.setSnapshotCharacterId(userId + 100);
+        row.setSnapshotCharacterName("냠냠이");
+        row.setSnapshotCharacterLevel(7);
         return row;
     }
 
@@ -255,14 +271,18 @@ class QuestServiceTest {
     }
 
     private void assertQuestDamage(String difficulty, int maxHp, List<Integer> expectedDamages) {
-        QuestService localQuestService = new QuestService(questRepository, new PlaceholderQuestGenerator());
+        QuestService localQuestService = new QuestService(
+                questRepository,
+                bossBattleParticipantRepository,
+                new PlaceholderQuestGenerator()
+        );
         when(questRepository.findBattleById(500L)).thenReturn(Optional.of(battle("IN_PROGRESS", difficulty, maxHp)));
         when(questRepository.existsActiveGuildMember(100L, 1L)).thenReturn(true);
         when(questRepository.findGuildRole(100L, 1L)).thenReturn(Optional.of("OWNER"));
-        when(questRepository.findActiveGuildMembers(100L)).thenReturn(List.of(
-                member(1L, "예린"),
-                member(2L, "민수"),
-                member(3L, "지민")
+        when(bossBattleParticipantRepository.findActiveParticipantsByBattleId(500L)).thenReturn(List.of(
+                participant(1L, "예린"),
+                participant(2L, "민수"),
+                participant(3L, "지민")
         ));
         when(questRepository.existsQuestByBattleIdAndUserId(500L, 1L)).thenReturn(false);
         when(questRepository.existsQuestByBattleIdAndUserId(500L, 2L)).thenReturn(false);

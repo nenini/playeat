@@ -24,6 +24,8 @@ public class QuestRow {
     private Integer rewardCoin;
     private String status;
     private String sourceType;
+    private String participantStatus;
+    private LocalDateTime participantLeftAt;
     private Boolean isMe;
     private LocalDateTime createdAt;
     private LocalDateTime completedAt;
@@ -187,6 +189,22 @@ public class QuestRow {
 
     public void setSourceType(String sourceType) {
         this.sourceType = sourceType;
+    }
+
+    public String getParticipantStatus() {
+        return participantStatus;
+    }
+
+    public void setParticipantStatus(String participantStatus) {
+        this.participantStatus = participantStatus;
+    }
+
+    public LocalDateTime getParticipantLeftAt() {
+        return participantLeftAt;
+    }
+
+    public void setParticipantLeftAt(LocalDateTime participantLeftAt) {
+        this.participantLeftAt = participantLeftAt;
     }
 
     public Boolean getIsMe() {

@@ -1,15 +1,18 @@
 package com.nyamnyam.coach.boss.service;
 
 import com.nyamnyam.coach.boss.dto.response.QuestVerifyResponse;
+import com.nyamnyam.coach.boss.entity.BossBattleParticipantStatus;
 import com.nyamnyam.coach.boss.entity.BossBattleStatus;
 import com.nyamnyam.coach.boss.entity.DamageSourceType;
 import com.nyamnyam.coach.boss.entity.Quest;
 import com.nyamnyam.coach.boss.entity.QuestStatus;
 import com.nyamnyam.coach.boss.entity.QuestType;
 import com.nyamnyam.coach.boss.entity.QuestVerification;
+import com.nyamnyam.coach.boss.repository.BossBattleParticipantRepository;
 import com.nyamnyam.coach.boss.repository.QuestRepository;
 import com.nyamnyam.coach.boss.repository.row.BattleConditionStateRow;
 import com.nyamnyam.coach.boss.repository.row.BattleStateRow;
+import com.nyamnyam.coach.boss.repository.row.BossBattleParticipantRow;
 import com.nyamnyam.coach.boss.repository.row.DietVerificationRow;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.BossErrorCode;
@@ -32,15 +35,18 @@ public class QuestVerificationService {
     private static final String SUGAR_UNDER_LIMIT = "SUGAR_UNDER_LIMIT";
 
     private final QuestRepository questRepository;
+    private final BossBattleParticipantRepository bossBattleParticipantRepository;
     private final GuildScoreService guildScoreService;
     private final GuildScoreRepository guildScoreRepository;
 
     public QuestVerificationService(
             QuestRepository questRepository,
+            BossBattleParticipantRepository bossBattleParticipantRepository,
             GuildScoreService guildScoreService,
             GuildScoreRepository guildScoreRepository
     ) {
         this.questRepository = questRepository;
+        this.bossBattleParticipantRepository = bossBattleParticipantRepository;
         this.guildScoreService = guildScoreService;
         this.guildScoreRepository = guildScoreRepository;
     }
@@ -57,7 +63,7 @@ public class QuestVerificationService {
 
         BattleStateRow battle = findBattleForUpdate(quest.getBattleId());
         validateBattleInProgress(battle);
-        validateBattleMember(quest.getGuildId(), userId);
+        validateActiveParticipant(quest.getBattleId(), userId);
 
         LocalDate today = LocalDate.now();
         DietVerificationRow diet = verifyQuestType(quest, userId, today);
@@ -132,9 +138,14 @@ public class QuestVerificationService {
         }
     }
 
-    private void validateBattleMember(Long guildId, Long userId) {
-        if (!questRepository.existsActiveGuildMember(guildId, userId)) {
-            throw new BusinessException(BossErrorCode.BOSS_BATTLE_ACCESS_DENIED);
+    private void validateActiveParticipant(Long battleId, Long userId) {
+        BossBattleParticipantRow participant = bossBattleParticipantRepository.findParticipantByBattleIdAndUserId(
+                        battleId,
+                        userId
+                )
+                .orElseThrow(() -> new BusinessException(BossErrorCode.BOSS_BATTLE_PARTICIPANT_NOT_FOUND));
+        if (!BossBattleParticipantStatus.ACTIVE.name().equals(participant.getStatus())) {
+            throw new BusinessException(BossErrorCode.BOSS_BATTLE_PARTICIPANT_INACTIVE);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.nyamnyam.coach.guild.service;
 
+import com.nyamnyam.coach.boss.repository.BossBattleParticipantRepository;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.GuildErrorCode;
@@ -78,6 +79,7 @@ public class GuildService {
     private static final String ACTIVE_STATUS = "ACTIVE";
 
     private final GuildRepository guildRepository;
+    private final BossBattleParticipantRepository bossBattleParticipantRepository;
     private final UserRepository userRepository;
     private final GuildValidator guildValidator;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -268,6 +270,7 @@ public class GuildService {
         }
 
         guildRepository.leaveGuild(guildId, userId);
+        bossBattleParticipantRepository.markParticipantLeftByGuildAndUser(guildId, userId);
         GuildMemberRow leftMember = guildRepository.findMemberByGuildIdAndUserId(guildId, userId)
                 .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
 
@@ -305,6 +308,7 @@ public class GuildService {
         }
 
         guildRepository.kickGuildMember(guildId, memberId);
+        bossBattleParticipantRepository.markParticipantKickedByGuildAndUser(guildId, targetMember.getUserId());
         GuildMemberRow kickedMember = guildRepository.findMemberByMemberId(guildId, memberId)
                 .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
 

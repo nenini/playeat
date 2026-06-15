@@ -11,12 +11,17 @@ import com.nyamnyam.coach.boss.dto.response.BossBattleSummaryResponse;
 import com.nyamnyam.coach.boss.dto.response.CurrentBossBattleResponse;
 import com.nyamnyam.coach.boss.entity.BossBattle;
 import com.nyamnyam.coach.boss.entity.BossBattleCondition;
+import com.nyamnyam.coach.boss.entity.BossBattleParticipant;
+import com.nyamnyam.coach.boss.entity.BossBattleParticipantStatus;
 import com.nyamnyam.coach.boss.entity.BossBattleStatus;
 import com.nyamnyam.coach.boss.entity.BossDifficulty;
 import com.nyamnyam.coach.boss.entity.BossStatus;
+import com.nyamnyam.coach.boss.repository.BossBattleParticipantRepository;
 import com.nyamnyam.coach.boss.repository.BossBattleRepository;
 import com.nyamnyam.coach.boss.repository.row.BossBattleConditionRow;
 import com.nyamnyam.coach.boss.repository.row.BossBattleDamageLogRow;
+import com.nyamnyam.coach.boss.repository.row.BossBattleParticipantCountRow;
+import com.nyamnyam.coach.boss.repository.row.BossBattleParticipantRow;
 import com.nyamnyam.coach.boss.repository.row.BossBattleRow;
 import com.nyamnyam.coach.boss.repository.row.BossCommonConditionRow;
 import com.nyamnyam.coach.boss.repository.row.BossRow;
@@ -37,13 +42,16 @@ public class BossBattleService {
     private static final int RECENT_DAMAGE_LOG_LIMIT = 10;
 
     private final BossBattleRepository bossBattleRepository;
+    private final BossBattleParticipantRepository bossBattleParticipantRepository;
     private final GuildValidator guildValidator;
 
     public BossBattleService(
             BossBattleRepository bossBattleRepository,
+            BossBattleParticipantRepository bossBattleParticipantRepository,
             GuildValidator guildValidator
     ) {
         this.bossBattleRepository = bossBattleRepository;
+        this.bossBattleParticipantRepository = bossBattleParticipantRepository;
         this.guildValidator = guildValidator;
     }
 
@@ -72,9 +80,13 @@ public class BossBattleService {
             throw new BusinessException(BossErrorCode.BOSS_BATTLE_ALREADY_EXISTS_IN_SEASON);
         }
 
-        int activeMemberCount = bossBattleRepository.countActiveGuildMembers(guildId);
+        List<BossBattleParticipantRow> participantSnapshots =
+                bossBattleParticipantRepository.findActiveGuildMembersForBattleSnapshot(guildId);
+        if (participantSnapshots.isEmpty()) {
+            throw new BusinessException(BossErrorCode.ACTIVE_GUILD_MEMBER_NOT_FOUND);
+        }
         BossDifficulty difficulty = parseDifficulty(boss.getDifficulty());
-        int actualMaxHp = difficulty.calculateMaxHp(activeMemberCount);
+        int actualMaxHp = difficulty.calculateMaxHp(participantSnapshots.size());
 
         BossBattle battle = new BossBattle();
         battle.setGuildId(guildId);
@@ -97,6 +109,12 @@ public class BossBattleService {
                     conditionDamage
             ));
         }
+        participantSnapshots.forEach(snapshot ->
+                bossBattleParticipantRepository.insertBossBattleParticipant(toParticipant(
+                        battle.getBattleId(),
+                        snapshot
+                ))
+        );
 
         BossBattleRow savedBattle = findBattle(battle.getBattleId());
         return new BossBattleCreateResponse(
@@ -137,6 +155,12 @@ public class BossBattleService {
                 .map(this::toDamageLogResponse)
                 .toList();
 
+        BossBattleParticipantCountRow participantCounts =
+                bossBattleParticipantRepository.countParticipantsByBattleId(battleId);
+        if (participantCounts == null) {
+            participantCounts = new BossBattleParticipantCountRow();
+        }
+
         return new BossBattleDetailResponse(
                 battle.getBattleId(),
                 battle.getGuildId(),
@@ -154,7 +178,10 @@ public class BossBattleService {
                 battle.getEndedAt(),
                 battle.getEndsAt(),
                 conditions,
-                damageLogs
+                damageLogs,
+                defaultValue(participantCounts.getParticipantCount()),
+                defaultValue(participantCounts.getActiveParticipantCount()),
+                defaultValue(participantCounts.getLeftParticipantCount())
         );
     }
 
@@ -229,6 +256,22 @@ public class BossBattleService {
         return battleCondition;
     }
 
+    private BossBattleParticipant toParticipant(Long battleId, BossBattleParticipantRow row) {
+        BossBattleParticipant participant = new BossBattleParticipant();
+        participant.setBattleId(battleId);
+        participant.setGuildId(row.getGuildId());
+        participant.setUserId(row.getUserId());
+        participant.setGuildMemberId(row.getGuildMemberId());
+        participant.setRoleAtStart(row.getRoleAtStart());
+        participant.setStatus(BossBattleParticipantStatus.ACTIVE.name());
+        participant.setSnapshotNickname(row.getSnapshotNickname());
+        participant.setSnapshotProfileImageUrl(row.getSnapshotProfileImageUrl());
+        participant.setSnapshotCharacterId(row.getSnapshotCharacterId());
+        participant.setSnapshotCharacterName(row.getSnapshotCharacterName());
+        participant.setSnapshotCharacterLevel(row.getSnapshotCharacterLevel());
+        return participant;
+    }
+
     private BossBattleSummaryResponse toSummaryResponse(BossBattleRow row) {
         return new BossBattleSummaryResponse(
                 row.getBattleId(),
@@ -299,6 +342,10 @@ public class BossBattleService {
         int baseDamage = totalDamage / count;
         int remainder = totalDamage % count;
         return index < remainder ? baseDamage + 1 : baseDamage;
+    }
+
+    private int defaultValue(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private int normalizePage(Integer page) {
