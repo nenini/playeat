@@ -13,6 +13,30 @@ spring:
     multipart:
       max-file-size: 5MB
       max-request-size: 5MB
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+  ai:
+    model:
+      chat: none
+      embedding: openai
+    openai:
+      base-url: ${GMS_OPENAI_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com}
+      api-key: ${GMS_KEY:placeholder-set-gms-key-for-rag}
+      embedding:
+        embeddings-path: /v1/embeddings
+        options:
+          model: ${GMS_EMBEDDING_MODEL:text-embedding-3-small}
+    vectorstore:
+      qdrant:
+        host: ${QDRANT_HOST:localhost}
+        port: ${QDRANT_GRPC_PORT:6334}
+        collection-name: ${QDRANT_COLLECTION:nyamnyam_health_guides}
+        use-tls: ${QDRANT_USE_TLS:false}
+        initialize-schema: ${QDRANT_INITIALIZE_SCHEMA:false}
 
 app:
   upload:
@@ -24,8 +48,16 @@ gms:
   enabled: ${GMS_ENABLED:false}
   base-url: ${GMS_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com/v1}
   model: ${GMS_MODEL:gpt-5-mini}
+  embedding-model: ${GMS_EMBEDDING_MODEL:text-embedding-3-small}
   api-key: ${GMS_KEY:}
   timeout-ms: ${GMS_TIMEOUT_MS:10000}
+
+rag:
+  health-guides:
+    seed-location: ${RAG_HEALTH_GUIDE_SEED:classpath:rag/health-guides/health-guides.jsonl}
+    ingestion-enabled: ${RAG_INGESTION_ENABLED:false}
+    top-k: ${RAG_HEALTH_GUIDE_TOP_K:5}
+    similarity-threshold: ${RAG_HEALTH_GUIDE_SIMILARITY_THRESHOLD:0.5}
 
 # ────────────────────────────────
 # MyBatis

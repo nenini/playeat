@@ -2,6 +2,7 @@ package com.nyamnyam.coach.ai.service;
 
 import com.nyamnyam.coach.ai.client.GmsAiClient;
 import com.nyamnyam.coach.ai.config.GmsProperties;
+import com.nyamnyam.coach.ai.rag.document.RagReference;
 import com.nyamnyam.coach.ai.service.prompt.AiQuestPrompt;
 import com.nyamnyam.coach.ai.service.prompt.CoachFeedbackPrompt;
 import com.nyamnyam.coach.ai.service.prompt.DailyReportPrompt;
@@ -116,12 +117,72 @@ public class GmsAiTextGenerator implements AiTextGenerator {
     @Override
     public String generateWeeklyReport(WeeklyReportPrompt prompt) {
         log.info("AI generator selected provider=gms feature=weekly-report model={}", properties.getModel());
+        String ragReferences = prompt.ragReferences().isEmpty()
+                ? "검색된 공식 건강 자료 없음"
+                : prompt.ragReferences().stream()
+                .map(this::toRagReferenceText)
+                .reduce((left, right) -> left + "\n" + right)
+                .orElse("검색된 공식 건강 자료 없음");
+
         return gmsAiClient.createResponse("""
-                반드시 JSON만 반환하세요.
-                주간 리포트는 이후 구현 범위에서 처리합니다.
+                당신은 공식 건강 자료와 사용자의 실제 식단 기록을 함께 참고해 주간 식습관 리포트를 작성하는 한국어 영양 코치입니다.
+                반드시 JSON만 반환하세요. 마크다운은 사용하지 마세요.
+                질병을 진단하거나 치료를 지시하지 마세요.
+                공식 자료는 일반적인 건강 정보로만 활용하고, 사용자의 기록과 건강 목표에 맞는 실천 가능한 조언을 작성하세요.
+                알레르기나 제한 식품이 있으면 그 식품을 추천하지 마세요.
+
+                출력 규칙:
+                - summary: 2~3문장
+                - strengths: 2개
+                - warnings: 2개
+                - nextAction: 다음 주에 할 수 있는 행동 1~2문장
+
+                출력 형식:
+                {
+                  "summary": "string",
+                  "strengths": ["string", "string"],
+                  "warnings": ["string", "string"],
+                  "nextAction": "string"
+                }
+
+                주간 기간:
                 시작일: %s
                 종료일: %s
-                """.formatted(prompt.startDate(), prompt.endDate()));
+                평균 건강 점수: %d
+
+                사용자 건강 프로필:
+                %s
+
+                일별 식단 요약:
+                %s
+
+                일별 영양 분석 요약:
+                %s
+
+                반복 패턴:
+                %s
+
+                RAG 공식 건강 자료:
+                %s
+                """.formatted(
+                prompt.startDate(),
+                prompt.endDate(),
+                prompt.averageHealthScore(),
+                prompt.healthProfileSummary(),
+                String.join("\n", prompt.dailyMealSummaries()),
+                String.join("\n", prompt.dailyNutritionSummaries()),
+                String.join("\n", prompt.repeatedPatterns()),
+                ragReferences
+        ));
+    }
+
+    private String toRagReferenceText(RagReference reference) {
+        return "- [%s] %s (%s): %s".formatted(
+                reference.sourceName(),
+                reference.documentTitle(),
+                reference.topic(),
+                reference.content()
+        );
     }
 
     @Override

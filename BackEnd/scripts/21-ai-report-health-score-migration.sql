@@ -1,0 +1,2 @@
+ALTER TABLE ai_reports
+    ADD COLUMN health_score TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER next_action;

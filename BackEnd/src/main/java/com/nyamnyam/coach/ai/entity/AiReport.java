@@ -19,5 +19,6 @@ public class AiReport {
     private String strengthsJson;
     private String warningsJson;
     private String nextAction;
+    private int healthScore;
     private LocalDateTime createdAt;
 }

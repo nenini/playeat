@@ -30,6 +30,23 @@ class AiJsonResponseParserTest {
     }
 
     @Test
+    void parseWeeklyReport() {
+        WeeklyReportContent content = parser.parseWeeklyReport("""
+                {
+                  "summary": "weekly summary",
+                  "strengths": ["kept records", "balanced protein"],
+                  "warnings": ["watch sodium", "add vegetables"],
+                  "nextAction": "plan next week"
+                }
+                """);
+
+        assertThat(content.summary()).isEqualTo("weekly summary");
+        assertThat(content.strengths()).containsExactly("kept records", "balanced protein");
+        assertThat(content.warnings()).containsExactly("watch sodium", "add vegetables");
+        assertThat(content.nextAction()).isEqualTo("plan next week");
+    }
+
+    @Test
     void parseQuestFromMarkdownWrappedJson() {
         AiQuestContent content = parser.parseQuest("""
                 ```json
