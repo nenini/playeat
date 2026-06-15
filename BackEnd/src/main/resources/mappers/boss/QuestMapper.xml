@@ -15,9 +15,19 @@
         <result property="characterId" column="character_id"/>
         <result property="characterName" column="character_name"/>
         <result property="characterLevel" column="character_level"/>
+        <result property="questTemplateId" column="quest_template_id"/>
         <result property="title" column="title"/>
         <result property="description" column="description"/>
         <result property="questType" column="quest_type"/>
+        <result property="conditionCategory" column="condition_category"/>
+        <result property="metricType" column="metric_type"/>
+        <result property="comparisonType" column="comparison_type"/>
+        <result property="aggregationType" column="aggregation_type"/>
+        <result property="evaluationScope" column="evaluation_scope"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="thresholdMinValue" column="threshold_min_value"/>
+        <result property="thresholdMaxValue" column="threshold_max_value"/>
+        <result property="thresholdUnit" column="threshold_unit"/>
         <result property="targetValue" column="target_value"/>
         <result property="currentValue" column="current_value"/>
         <result property="unit" column="unit"/>
@@ -39,9 +49,19 @@
         <result property="battleId" column="battle_id"/>
         <result property="guildId" column="guild_id"/>
         <result property="userId" column="user_id"/>
+        <result property="questTemplateId" column="quest_template_id"/>
         <result property="title" column="title"/>
         <result property="description" column="description"/>
         <result property="questType" column="quest_type"/>
+        <result property="conditionCategory" column="condition_category"/>
+        <result property="metricType" column="metric_type"/>
+        <result property="comparisonType" column="comparison_type"/>
+        <result property="aggregationType" column="aggregation_type"/>
+        <result property="evaluationScope" column="evaluation_scope"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="thresholdMinValue" column="threshold_min_value"/>
+        <result property="thresholdMaxValue" column="threshold_max_value"/>
+        <result property="thresholdUnit" column="threshold_unit"/>
         <result property="targetValue" column="target_value"/>
         <result property="currentValue" column="current_value"/>
         <result property="unit" column="unit"/>
@@ -141,9 +161,19 @@
         bp.snapshot_character_id AS character_id,
         bp.snapshot_character_name AS character_name,
         bp.snapshot_character_level AS character_level,
+        q.quest_template_id,
         q.title,
         q.description,
         q.quest_type,
+        q.condition_category,
+        q.metric_type,
+        q.comparison_type,
+        q.aggregation_type,
+        q.evaluation_scope,
+        q.threshold_value,
+        q.threshold_min_value,
+        q.threshold_max_value,
+        q.threshold_unit,
         q.target_value,
         q.current_value,
         q.unit,
@@ -185,6 +215,7 @@
             q.battle_id,
             q.guild_id,
             q.user_id,
+            q.quest_template_id,
             bp.snapshot_nickname AS nickname,
             bp.snapshot_profile_image_url AS profile_image_url,
             bp.snapshot_character_id AS character_id,
@@ -193,6 +224,15 @@
             q.title,
             q.description,
             q.quest_type,
+            q.condition_category,
+            q.metric_type,
+            q.comparison_type,
+            q.aggregation_type,
+            q.evaluation_scope,
+            q.threshold_value,
+            q.threshold_min_value,
+            q.threshold_max_value,
+            q.threshold_unit,
             q.target_value,
             q.current_value,
             q.unit,
@@ -229,9 +269,19 @@
             battle_id,
             guild_id,
             user_id,
+            quest_template_id,
             title,
             description,
             quest_type,
+            condition_category,
+            metric_type,
+            comparison_type,
+            aggregation_type,
+            evaluation_scope,
+            threshold_value,
+            threshold_min_value,
+            threshold_max_value,
+            threshold_unit,
             target_value,
             current_value,
             unit,
@@ -259,9 +309,19 @@
             battle_id,
             guild_id,
             user_id,
+            quest_template_id,
             title,
             description,
             quest_type,
+            condition_category,
+            metric_type,
+            comparison_type,
+            aggregation_type,
+            evaluation_scope,
+            threshold_value,
+            threshold_min_value,
+            threshold_max_value,
+            threshold_unit,
             target_value,
             current_value,
             unit,
@@ -275,9 +335,19 @@
             #{battleId},
             #{guildId},
             #{userId},
+            #{questTemplateId},
             #{title},
             #{description},
             #{questType},
+            #{conditionCategory},
+            #{metricType},
+            #{comparisonType},
+            #{aggregationType},
+            #{evaluationScope},
+            #{thresholdValue},
+            #{thresholdMinValue},
+            #{thresholdMaxValue},
+            #{thresholdUnit},
             #{targetValue},
             COALESCE(#{currentValue}, 0),
             #{unit},
@@ -392,9 +462,19 @@
             battle_id,
             guild_id,
             user_id,
+            quest_template_id,
             title,
             description,
             quest_type,
+            condition_category,
+            metric_type,
+            comparison_type,
+            aggregation_type,
+            evaluation_scope,
+            threshold_value,
+            threshold_min_value,
+            threshold_max_value,
+            threshold_unit,
             target_value,
             current_value,
             unit,
