@@ -6,8 +6,10 @@ import com.nyamnyam.coach.boss.dto.response.QuestContributionListResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestDetailResponse;
 import com.nyamnyam.coach.boss.dto.response.QuestGenerateResponse;
 import com.nyamnyam.coach.boss.entity.Quest;
+import com.nyamnyam.coach.boss.entity.QuestTemplate;
 import com.nyamnyam.coach.boss.repository.BossBattleParticipantRepository;
 import com.nyamnyam.coach.boss.repository.QuestRepository;
+import com.nyamnyam.coach.boss.repository.QuestTemplateRepository;
 import com.nyamnyam.coach.boss.repository.row.BossBattleParticipantRow;
 import com.nyamnyam.coach.boss.repository.row.QuestBattleRow;
 import com.nyamnyam.coach.boss.repository.row.QuestContributionRow;
@@ -25,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -43,6 +46,9 @@ class QuestServiceTest {
     @Mock
     private BossBattleParticipantRepository bossBattleParticipantRepository;
 
+    @Mock
+    private QuestTemplateRepository questTemplateRepository;
+
     private QuestService questService;
 
     @BeforeEach
@@ -50,7 +56,7 @@ class QuestServiceTest {
         questService = new QuestService(
                 questRepository,
                 bossBattleParticipantRepository,
-                new PlaceholderQuestGenerator()
+                new PlaceholderQuestGenerator(questTemplateRepository)
         );
     }
 
@@ -58,6 +64,7 @@ class QuestServiceTest {
     @DisplayName("길드장은 보스전 길드원별 퀘스트를 생성할 수 있다")
     void generateQuests() {
         when(questRepository.findBattleById(500L)).thenReturn(Optional.of(battle("IN_PROGRESS")));
+        when(questTemplateRepository.findDefaultTemplate()).thenReturn(Optional.of(defaultTemplate()));
         when(questRepository.existsActiveGuildMember(100L, 1L)).thenReturn(true);
         when(questRepository.findGuildRole(100L, 1L)).thenReturn(Optional.of("OWNER"));
         when(bossBattleParticipantRepository.findActiveParticipantsByBattleId(500L))
@@ -74,17 +81,17 @@ class QuestServiceTest {
 
         assertThat(response.createdCount()).isEqualTo(2);
         assertThat(response.skippedCount()).isZero();
-        assertThat(response.quests()).extracting("title").containsOnly("오늘 식단 기록하기");
-        assertThat(response.quests()).extracting("damage").containsExactly(400, 400);
+        assertThat(response.quests()).extracting("title").containsOnly("오늘 식단 1회 이상 기록하기");
+        assertThat(response.quests()).extracting("damage").containsExactly(100, 100);
         verify(questRepository, times(2)).insertQuest(any(Quest.class));
     }
 
     @Test
     @DisplayName("난이도별 개인 퀘스트 damage는 personalDamageRatio 기준으로 분배된다")
     void generateQuestsDamageByDifficulty() {
-        assertQuestDamage("EASY", 1000, List.of(267, 267, 266));
-        assertQuestDamage("NORMAL", 1000, List.of(234, 233, 233));
-        assertQuestDamage("HARD", 1000, List.of(200, 200, 200));
+        assertQuestDamage("EASY", 1000, List.of(100, 100, 100));
+        assertQuestDamage("NORMAL", 1000, List.of(100, 100, 100));
+        assertQuestDamage("HARD", 1000, List.of(100, 100, 100));
     }
 
     @Test
@@ -115,6 +122,7 @@ class QuestServiceTest {
     @DisplayName("이미 퀘스트가 있는 회원은 중복 생성하지 않는다")
     void generateQuestsSkipExisting() {
         when(questRepository.findBattleById(500L)).thenReturn(Optional.of(battle("IN_PROGRESS")));
+        when(questTemplateRepository.findDefaultTemplate()).thenReturn(Optional.of(defaultTemplate()));
         when(questRepository.existsActiveGuildMember(100L, 1L)).thenReturn(true);
         when(questRepository.findGuildRole(100L, 1L)).thenReturn(Optional.of("OWNER"));
         when(bossBattleParticipantRepository.findActiveParticipantsByBattleId(500L))
@@ -274,9 +282,10 @@ class QuestServiceTest {
         QuestService localQuestService = new QuestService(
                 questRepository,
                 bossBattleParticipantRepository,
-                new PlaceholderQuestGenerator()
+                new PlaceholderQuestGenerator(questTemplateRepository)
         );
         when(questRepository.findBattleById(500L)).thenReturn(Optional.of(battle("IN_PROGRESS", difficulty, maxHp)));
+        when(questTemplateRepository.findDefaultTemplate()).thenReturn(Optional.of(defaultTemplate()));
         when(questRepository.existsActiveGuildMember(100L, 1L)).thenReturn(true);
         when(questRepository.findGuildRole(100L, 1L)).thenReturn(Optional.of("OWNER"));
         when(bossBattleParticipantRepository.findActiveParticipantsByBattleId(500L)).thenReturn(List.of(
@@ -300,5 +309,26 @@ class QuestServiceTest {
                 .mapToInt(generatedQuest -> generatedQuest.damage())
                 .sum();
         assertThat(totalDamage).isEqualTo(expectedDamages.stream().mapToInt(Integer::intValue).sum());
+    }
+
+    private QuestTemplate defaultTemplate() {
+        QuestTemplate template = new QuestTemplate();
+        template.setTemplateId(1L);
+        template.setTitle("오늘 식단 1회 이상 기록하기");
+        template.setDescription("오늘 하루 식단을 1회 이상 기록하세요.");
+        template.setQuestType("RECORD_DIET");
+        template.setConditionCategory("DIET_RECORD");
+        template.setMetricType("DIET_RECORD_COUNT");
+        template.setComparisonType("GREATER_THAN_OR_EQUAL");
+        template.setAggregationType("DAILY_COUNT");
+        template.setEvaluationScope("USER_DAILY");
+        template.setThresholdValue(BigDecimal.ONE);
+        template.setThresholdUnit("COUNT");
+        template.setTargetValue(1);
+        template.setUnit("DAY");
+        template.setDamage(100);
+        template.setRewardExp(30);
+        template.setRewardCoin(10);
+        return template;
     }
 }
