@@ -1,5 +1,7 @@
 package com.nyamnyam.coach.boss.dto.response;
 
+import java.math.BigDecimal;
+
 public record GeneratedQuestResponse(
         Long questId,
         Long userId,
@@ -11,6 +13,16 @@ public record GeneratedQuestResponse(
         Integer damage,
         Integer rewardExp,
         Integer rewardCoin,
-        String status
+        String status,
+        Long questTemplateId,
+        String conditionCategory,
+        String metricType,
+        String comparisonType,
+        String aggregationType,
+        String evaluationScope,
+        BigDecimal thresholdValue,
+        BigDecimal thresholdMinValue,
+        BigDecimal thresholdMaxValue,
+        String thresholdUnit
 ) {
 }

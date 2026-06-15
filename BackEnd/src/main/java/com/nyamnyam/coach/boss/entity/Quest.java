@@ -1,5 +1,6 @@
 package com.nyamnyam.coach.boss.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class Quest {
@@ -8,9 +9,19 @@ public class Quest {
     private Long battleId;
     private Long guildId;
     private Long userId;
+    private Long questTemplateId;
     private String title;
     private String description;
     private String questType;
+    private String conditionCategory;
+    private String metricType;
+    private String comparisonType;
+    private String aggregationType;
+    private String evaluationScope;
+    private BigDecimal thresholdValue;
+    private BigDecimal thresholdMinValue;
+    private BigDecimal thresholdMaxValue;
+    private String thresholdUnit;
     private Integer targetValue;
     private Integer currentValue;
     private String unit;
@@ -56,6 +67,14 @@ public class Quest {
         this.userId = userId;
     }
 
+    public Long getQuestTemplateId() {
+        return questTemplateId;
+    }
+
+    public void setQuestTemplateId(Long questTemplateId) {
+        this.questTemplateId = questTemplateId;
+    }
+
     public String getTitle() {
         return title;
     }
@@ -78,6 +97,78 @@ public class Quest {
 
     public void setQuestType(String questType) {
         this.questType = questType;
+    }
+
+    public String getConditionCategory() {
+        return conditionCategory;
+    }
+
+    public void setConditionCategory(String conditionCategory) {
+        this.conditionCategory = conditionCategory;
+    }
+
+    public String getMetricType() {
+        return metricType;
+    }
+
+    public void setMetricType(String metricType) {
+        this.metricType = metricType;
+    }
+
+    public String getComparisonType() {
+        return comparisonType;
+    }
+
+    public void setComparisonType(String comparisonType) {
+        this.comparisonType = comparisonType;
+    }
+
+    public String getAggregationType() {
+        return aggregationType;
+    }
+
+    public void setAggregationType(String aggregationType) {
+        this.aggregationType = aggregationType;
+    }
+
+    public String getEvaluationScope() {
+        return evaluationScope;
+    }
+
+    public void setEvaluationScope(String evaluationScope) {
+        this.evaluationScope = evaluationScope;
+    }
+
+    public BigDecimal getThresholdValue() {
+        return thresholdValue;
+    }
+
+    public void setThresholdValue(BigDecimal thresholdValue) {
+        this.thresholdValue = thresholdValue;
+    }
+
+    public BigDecimal getThresholdMinValue() {
+        return thresholdMinValue;
+    }
+
+    public void setThresholdMinValue(BigDecimal thresholdMinValue) {
+        this.thresholdMinValue = thresholdMinValue;
+    }
+
+    public BigDecimal getThresholdMaxValue() {
+        return thresholdMaxValue;
+    }
+
+    public void setThresholdMaxValue(BigDecimal thresholdMaxValue) {
+        this.thresholdMaxValue = thresholdMaxValue;
+    }
+
+    public String getThresholdUnit() {
+        return thresholdUnit;
+    }
+
+    public void setThresholdUnit(String thresholdUnit) {
+        this.thresholdUnit = thresholdUnit;
     }
 
     public Integer getTargetValue() {

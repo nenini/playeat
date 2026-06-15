@@ -1,5 +1,6 @@
 package com.nyamnyam.coach.boss.dto.response;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record QuestDetailResponse(
@@ -23,6 +24,16 @@ public record QuestDetailResponse(
         Integer rewardCoin,
         String status,
         String sourceType,
+        Long questTemplateId,
+        String conditionCategory,
+        String metricType,
+        String comparisonType,
+        String aggregationType,
+        String evaluationScope,
+        BigDecimal thresholdValue,
+        BigDecimal thresholdMinValue,
+        BigDecimal thresholdMaxValue,
+        String thresholdUnit,
         Boolean isMe,
         LocalDateTime createdAt,
         LocalDateTime completedAt,

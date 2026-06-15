@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS guild_score_logs;
 DROP TABLE IF EXISTS reward_claims;
 DROP TABLE IF EXISTS quest_verifications;
 DROP TABLE IF EXISTS quests;
+DROP TABLE IF EXISTS quest_templates;
 DROP TABLE IF EXISTS boss_battle_condition_progress;
 DROP TABLE IF EXISTS boss_battle_damage_logs;
 DROP TABLE IF EXISTS boss_battle_conditions;
@@ -667,14 +668,54 @@ CREATE TABLE boss_battle_condition_progress (
     INDEX idx_condition_progress_condition_status (battle_condition_id, status)
 ) ENGINE=InnoDB;
 
+CREATE TABLE quest_templates (
+    template_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description VARCHAR(500) NOT NULL,
+    quest_type VARCHAR(50) NOT NULL,
+    condition_category VARCHAR(50) NOT NULL,
+    metric_type VARCHAR(50) NOT NULL,
+    comparison_type VARCHAR(50) NOT NULL,
+    aggregation_type VARCHAR(50) NOT NULL,
+    evaluation_scope VARCHAR(50) NOT NULL,
+    threshold_value DECIMAL(10,2),
+    threshold_min_value DECIMAL(10,2),
+    threshold_max_value DECIMAL(10,2),
+    threshold_unit VARCHAR(30),
+    target_value INT NOT NULL DEFAULT 1,
+    unit VARCHAR(30) NOT NULL,
+    damage INT NOT NULL DEFAULT 100,
+    reward_exp INT NOT NULL DEFAULT 30,
+    reward_coin INT NOT NULL DEFAULT 10,
+    difficulty VARCHAR(20) NOT NULL DEFAULT 'EASY',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_quest_templates_active (active),
+    INDEX idx_quest_templates_condition (condition_category, metric_type),
+    INDEX idx_quest_templates_difficulty (difficulty),
+    INDEX idx_quest_templates_sort (sort_order)
+) ENGINE=InnoDB;
+
 CREATE TABLE quests (
     quest_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     battle_id BIGINT NOT NULL,
     guild_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
+    quest_template_id BIGINT,
     title VARCHAR(200) NOT NULL,
     description VARCHAR(500),
     quest_type VARCHAR(50) NOT NULL,
+    condition_category VARCHAR(50),
+    metric_type VARCHAR(50),
+    comparison_type VARCHAR(50),
+    aggregation_type VARCHAR(50),
+    evaluation_scope VARCHAR(50),
+    threshold_value DECIMAL(10,2),
+    threshold_min_value DECIMAL(10,2),
+    threshold_max_value DECIMAL(10,2),
+    threshold_unit VARCHAR(30),
     target_value INT NOT NULL,
     current_value INT NOT NULL DEFAULT 0,
     unit VARCHAR(50),
@@ -700,6 +741,10 @@ CREATE TABLE quests (
         FOREIGN KEY (user_id)
         REFERENCES users(user_id)
         ON DELETE CASCADE,
+    CONSTRAINT fk_quests_template
+        FOREIGN KEY (quest_template_id)
+        REFERENCES quest_templates(template_id)
+        ON DELETE SET NULL,
     INDEX idx_quests_battle_user (battle_id, user_id),
     INDEX idx_quests_battle_status (battle_id, status),
     INDEX idx_quests_user_status (user_id, status),

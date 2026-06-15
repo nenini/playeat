@@ -17,7 +17,8 @@ public enum QuestErrorCode implements ErrorCode {
     QUEST_REWARD_NOT_CLAIMABLE(HttpStatus.CONFLICT, "퀘스트 보상을 수령할 수 없습니다."),
     ACTIVE_GUILD_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "활성 길드원을 찾을 수 없습니다."),
     QUEST_NOT_COMPLETED(HttpStatus.CONFLICT, "아직 완료하지 않은 퀘스트입니다."),
-    QUEST_REWARD_ALREADY_CLAIMED(HttpStatus.CONFLICT, "이미 퀘스트 보상을 수령했습니다.");
+    QUEST_REWARD_ALREADY_CLAIMED(HttpStatus.CONFLICT, "이미 퀘스트 보상을 수령했습니다."),
+    QUEST_TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "사용 가능한 퀘스트 템플릿을 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;
