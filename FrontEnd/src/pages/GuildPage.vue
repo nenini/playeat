@@ -2,7 +2,18 @@
   <section v-if="!joined && joinMode === 'list'">
     <div class="pre-head"><div><div class="title-lg">길드 참여하기</div><p>마음에 드는 길드에 참여하거나, 코드로 직접 입장하세요</p></div><AppButton @click="joinMode = 'create'">+ 길드 생성</AppButton></div>
     <div class="pre-grid">
-      <main class="guild-list"><div class="section-title"><div><div class="section-title-main">길드 목록</div><div class="section-title-sub">총 {{ guildList.length }}개 길드</div></div></div><div v-for="guild in guildList" :key="guild.id" class="guild-row"><div class="guild-logo">{{ guild.emoji }}</div><div class="grow"><h3>{{ guild.name }} <AppPill size="sm">#{{ guild.rank }}위</AppPill></h3><p>👥 {{ guild.members }}/{{ guild.max }}명 · 🏆 {{ guild.score.toLocaleString() }} pt · 🎯 {{ guild.focus }}</p></div><AppButton size="sm" @click="joined = true">참여하기</AppButton></div></main>
+      <main class="guild-list">
+        <div class="section-title"><div><div class="section-title-main">길드 목록</div><div class="section-title-sub">총 {{ guildList.length }}개 길드</div></div></div>
+        <div v-for="guild in visibleGuilds" :key="guild.id" class="guild-row">
+          <div class="guild-logo">{{ guild.emoji }}</div>
+          <div class="grow"><h3>{{ guild.name }} <AppPill size="sm">#{{ guild.rank }}위</AppPill></h3><p>👥 {{ guild.members }}/{{ guild.max }}명 · 🏆 {{ guild.score.toLocaleString() }} pt · 🎯 {{ guild.focus }}</p></div>
+          <AppButton v-if="requestedGuildId === guild.id" size="sm" variant="secondary" @click="cancelJoinRequest">참여 요청 취소</AppButton>
+          <AppButton v-else size="sm" @click="requestJoinGuild(guild.id)">참여하기</AppButton>
+        </div>
+        <div v-if="!requestedGuildId && totalPages > 1" class="pagination">
+          <button v-for="page in pages" :key="page" type="button" :class="{ active: currentPage === page }" @click="currentPage = page">{{ page }}</button>
+        </div>
+      </main>
       <AppCard class="code-card"><div class="section-title-main">코드로 참여</div><p>길드 코드를 알고 있다면 직접 입력해 바로 참여할 수 있어요.</p><div class="mono-label">길드 코드</div><label class="app-input"><input v-model="code" placeholder="예: NYAM-2840"></label><AppButton full class="join-btn" @click="joined = true">코드로 참여하기</AppButton><small>💡 길드 코드는 길드장에게 받을 수 있어요.<br>영문 + 숫자 4~12자리 형식입니다.</small></AppCard>
     </div>
   </section>
@@ -102,6 +113,9 @@ defineProps<{ isLeader?: boolean }>()
 
 const joined = ref(new URLSearchParams(window.location.search).get('guild') !== 'none')
 const joinMode = ref<'list' | 'create'>('list')
+const requestedGuildId = ref<number | null>(null)
+const currentPage = ref(1)
+const pageSize = 10
 const code = ref('')
 const message = ref('')
 const chat = ref<any[]>([])
@@ -114,8 +128,17 @@ const notices = ref([{ id: 1, title: '이번 주 보스 격파 가즈아 🐲', 
 const editingNoticeId = ref<number | 'new' | null>(null)
 const noticeDraft = reactive({ title: '', body: '' })
 const allChat = computed(() => [...seedChat, ...chat.value])
+const visibleGuilds = computed(() => {
+  if (requestedGuildId.value) return guildList.filter((guild) => guild.id === requestedGuildId.value)
+  const start = (currentPage.value - 1) * pageSize
+  return guildList.slice(start, start + pageSize)
+})
+const totalPages = computed(() => Math.ceil(guildList.length / pageSize))
+const pages = computed(() => Array.from({ length: totalPages.value }, (_, index) => index + 1))
 const rankings: Array<[string, string, string, number, boolean]> = [['1', '잘먹잘싸', '우리 길드', 2840, true], ['2', '단백질 부대', '', 2710, false], ['3', '아침 챔피언즈', '', 2620, false], ['4', '채소 사랑', '', 2400, false], ['5', '저염 라이프', '', 2300, false]]
 const joinRequests = [{ name: '김건강', lv: 3, msg: '건강 식단에 관심 많아요!' }, { name: '박야채', lv: 6, msg: '채소 챌린지 중이에요.' }]
+function requestJoinGuild(guildId: number) { requestedGuildId.value = guildId }
+function cancelJoinRequest() { requestedGuildId.value = null; currentPage.value = 1 }
 function send() { if (!message.value.trim()) return; chat.value.push({ id: 'me', name: '지은', time: '방금', text: message.value, mine: true }); message.value = '' }
 function startAddNotice() { editingNoticeId.value = 'new'; noticeDraft.title = ''; noticeDraft.body = '' }
 function startEditNotice(notice: typeof notices.value[number]) { editingNoticeId.value = notice.id; noticeDraft.title = notice.title; noticeDraft.body = notice.body }
@@ -144,6 +167,9 @@ function deleteNotice(id: number) { notices.value = notices.value.filter((notice
 .create-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .guild-list { display: flex; flex-direction: column; gap: 10px; }
 .guild-row { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
+.pagination { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+.pagination button { width: 34px; height: 34px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink-2); font-family: var(--mono); font-weight: 800; cursor: pointer; }
+.pagination button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .guild-logo { width: 50px; height: 50px; border-radius: 12px; background: var(--yolk); border: 1.5px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; } .guild-logo.big { width: 64px; height: 64px; font-size: 28px; }
 .generated-code { padding: 10px 12px; border: 1px dashed var(--accent); border-radius: 10px; background: var(--accent-soft); display: flex; flex-direction: column; gap: 4px; }
 .generated-code small { font-family: var(--mono); color: var(--accent-dark); font-size: 10px; }

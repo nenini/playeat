@@ -116,7 +116,27 @@ export const guildList = [
   { id: 2, name: '단백질 부대', members: 12, max: 20, score: 2710, rank: 2, focus: '단백질 강화', emoji: '단' },
   { id: 3, name: '아침 챔피언즈', members: 8, max: 15, score: 2620, rank: 3, focus: '아침 식단', emoji: '아' },
   { id: 4, name: '채소 사랑', members: 23, max: 30, score: 2400, rank: 4, focus: '채식 위주', emoji: '채' },
-  { id: 5, name: '저염 라이프', members: 5, max: 10, score: 2300, rank: 5, focus: '나트륨 관리', emoji: '저' }
+  { id: 5, name: '저염 라이프', members: 5, max: 10, score: 2300, rank: 5, focus: '나트륨 관리', emoji: '저' },
+  { id: 6, name: '두부단', members: 14, max: 25, score: 2210, rank: 6, focus: '고단백 식단', emoji: '두' },
+  { id: 7, name: '물마시자', members: 9, max: 20, score: 2140, rank: 7, focus: '수분 섭취', emoji: '물' },
+  { id: 8, name: '야식금지단', members: 16, max: 30, score: 2070, rank: 8, focus: '야식 줄이기', emoji: '야' },
+  { id: 9, name: '도시락 연구소', members: 19, max: 30, score: 1990, rank: 9, focus: '도시락 기록', emoji: '도' },
+  { id: 10, name: '샐러드 클럽', members: 11, max: 18, score: 1900, rank: 10, focus: '채소 챙기기', emoji: '샐' },
+  { id: 11, name: '아침밥 수호대', members: 7, max: 15, score: 1840, rank: 11, focus: '아침 먹기', emoji: '밥' },
+  { id: 12, name: '당줄이기', members: 20, max: 30, score: 1760, rank: 12, focus: '당류 관리', emoji: '당' },
+  { id: 13, name: '헬시런치', members: 13, max: 25, score: 1690, rank: 13, focus: '점심 균형', emoji: '런' },
+  { id: 14, name: '단짠조절단', members: 18, max: 30, score: 1620, rank: 14, focus: '나트륨·당 관리', emoji: '단' },
+  { id: 15, name: '집밥 원정대', members: 10, max: 20, score: 1550, rank: 15, focus: '집밥 기록', emoji: '집' },
+  { id: 16, name: '간식개혁팀', members: 8, max: 16, score: 1480, rank: 16, focus: '간식 개선', emoji: '간' },
+  { id: 17, name: '프로틴 길드', members: 21, max: 30, score: 1410, rank: 17, focus: '단백질 보충', emoji: '프' },
+  { id: 18, name: '외식관리반', members: 12, max: 20, score: 1340, rank: 18, focus: '외식 조절', emoji: '외' },
+  { id: 19, name: '야채삼총사', members: 15, max: 24, score: 1270, rank: 19, focus: '채소 3종', emoji: '야' },
+  { id: 20, name: '천천히먹기', members: 6, max: 12, score: 1200, rank: 20, focus: '식사 속도', emoji: '천' },
+  { id: 21, name: '저녁가볍게', members: 17, max: 30, score: 1130, rank: 21, focus: '저녁 관리', emoji: '저' },
+  { id: 22, name: '기록습관단', members: 24, max: 30, score: 1060, rank: 22, focus: '매일 기록', emoji: '기' },
+  { id: 23, name: '균형의 기사단', members: 9, max: 18, score: 990, rank: 23, focus: '영양 균형', emoji: '균' },
+  { id: 24, name: '든든아침단', members: 4, max: 10, score: 920, rank: 24, focus: '아침 루틴', emoji: '든' },
+  { id: 25, name: '건강한 한입', members: 11, max: 20, score: 850, rank: 25, focus: '식습관 개선', emoji: '건' }
 ]
 
 export const shopItems = [
