@@ -84,16 +84,16 @@ class QuestServiceTest {
         assertThat(response.createdCount()).isEqualTo(2);
         assertThat(response.skippedCount()).isZero();
         assertThat(response.quests()).extracting("title").containsOnly("오늘 식단 1회 이상 기록하기");
-        assertThat(response.quests()).extracting("damage").containsExactly(100, 100);
+        assertThat(response.quests()).extracting("damage").containsExactly(400, 400);
         verify(questRepository, times(2)).insertQuest(any(Quest.class));
     }
 
     @Test
     @DisplayName("난이도별 개인 퀘스트 damage는 personalDamageRatio 기준으로 분배된다")
     void generateQuestsDamageByDifficulty() {
-        assertQuestDamage("EASY", 1000, List.of(100, 100, 100));
-        assertQuestDamage("NORMAL", 1000, List.of(100, 100, 100));
-        assertQuestDamage("HARD", 1000, List.of(100, 100, 100));
+        assertQuestDamage("EASY", 1000, List.of(267, 267, 266));
+        assertQuestDamage("NORMAL", 1000, List.of(234, 233, 233));
+        assertQuestDamage("HARD", 1000, List.of(200, 200, 200));
     }
 
     @Test

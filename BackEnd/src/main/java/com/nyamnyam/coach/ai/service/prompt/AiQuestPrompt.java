@@ -7,6 +7,7 @@ public record AiQuestPrompt(
         int activeMemberCount,
         int memberIndex,
         String memberNickname,
+        String recentDietSummary,
         List<QuestTemplatePrompt> availableQuestTemplates
 ) {
 }
