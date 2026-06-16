@@ -50,7 +50,7 @@ class AiQuestGeneratorTest {
 
         Quest quest = generator.generatePersonalQuest(battle("NORMAL", 1000), member(11L, "tester"), 3, 1);
 
-        assertThat(aiTextGenerator.lastPrompt.recentDietSummary()).contains("최근 7일 중 기록일수: 5일");
+        assertThat(aiTextGenerator.lastPrompt.recentDietSummary()).contains("최근 3일 중 기록일수: 5일");
         assertThat(aiTextGenerator.lastPrompt.recentDietSummary()).contains("일평균 단백질: 35 g / 목표 70 g");
         assertThat(quest.getQuestTemplateId()).isEqualTo(2L);
         assertThat(quest.getTitle()).isEqualTo("Protein boost quest");

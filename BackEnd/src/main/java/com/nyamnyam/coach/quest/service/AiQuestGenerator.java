@@ -33,7 +33,7 @@ import java.util.Map;
 public class AiQuestGenerator implements QuestGenerator {
 
     private static final int MAX_CUSTOM_TEXT_LENGTH = 200;
-    private static final int RECENT_DAYS = 7;
+    private static final int RECENT_DAYS = 3;
     private static final BigDecimal DEFAULT_SUGAR_LIMIT = BigDecimal.valueOf(50);
     private static final BigDecimal DEFAULT_SODIUM_LIMIT = BigDecimal.valueOf(2000);
     private static final BigDecimal DEFAULT_FIBER_TARGET = BigDecimal.valueOf(25);
@@ -228,10 +228,10 @@ public class AiQuestGenerator implements QuestGenerator {
 
     private String toPromptSummary(RecentDietSummaryRow summary) {
         if (summary == null || defaultValue(summary.getRecordedDays()) == 0) {
-            return "최근 7일 식단 기록이 없습니다. 식단 기록 습관을 만드는 퀘스트를 우선 고려하세요.";
+            return "최근 3일 식단 기록이 없습니다. 식단 기록 습관을 만드는 퀘스트를 우선 고려하세요.";
         }
         return """
-                최근 7일 중 기록일수: %d일
+                최근 3일 중 기록일수: %d일
                 식사 패턴: 아침 %d일, 점심 %d일, 저녁 %d일, 간식 %d일
                 일평균 칼로리: %s kcal / 목표 %s kcal
                 일평균 단백질: %s g / 목표 %s g
