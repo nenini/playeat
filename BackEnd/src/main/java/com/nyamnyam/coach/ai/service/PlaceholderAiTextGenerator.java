@@ -41,7 +41,27 @@ public class PlaceholderAiTextGenerator implements AiTextGenerator {
     @Override
     public String generateWeeklyReport(WeeklyReportPrompt prompt) {
         log.info("AI generator selected provider=placeholder feature=weekly-report model=placeholder");
-        return "주간 리포트 생성은 현재 일일 AI 작업 범위에 포함되지 않습니다.";
+        String firstPattern = prompt.repeatedPatterns().isEmpty()
+                ? "이번 주 식단 기록을 바탕으로 다음 주 목표를 정해보세요."
+                : prompt.repeatedPatterns().get(0);
+        return """
+                {
+                  "summary": "이번 주 식단 기록과 영양 분석을 바탕으로 주간 리포트를 생성했어요. 평균 건강 점수는 %d점입니다.",
+                  "strengths": ["주간 식단 흐름을 기록해서 식습관을 점검할 수 있어요.", "반복되는 영양 패턴을 확인할 수 있어요."],
+                  "warnings": ["%s", "공식 건강 자료 기반 조언은 개인 질환의 진단이나 치료 지시가 아니에요."],
+                  "nextAction": "다음 주에는 가장 자주 반복된 영양 이슈 한 가지를 정해서 식사 선택을 조정해보세요."
+                }
+                """.formatted(prompt.averageHealthScore(), jsonEscape(firstPattern));
+    }
+
+    private String jsonEscape(String value) {
+        if (value == null) return "";
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     @Override

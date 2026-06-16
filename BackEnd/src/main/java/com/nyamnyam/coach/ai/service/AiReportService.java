@@ -5,10 +5,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nyamnyam.coach.ai.dto.response.AiReportResponse;
 import com.nyamnyam.coach.ai.entity.AiReport;
+import com.nyamnyam.coach.ai.rag.document.RagReference;
+import com.nyamnyam.coach.ai.rag.service.HealthGuideRetrievalService;
 import com.nyamnyam.coach.ai.repository.AiReportRepository;
 import com.nyamnyam.coach.ai.service.parser.AiJsonResponseParser;
 import com.nyamnyam.coach.ai.service.parser.DailyReportContent;
+import com.nyamnyam.coach.ai.service.parser.WeeklyReportContent;
 import com.nyamnyam.coach.ai.service.prompt.DailyReportPrompt;
+import com.nyamnyam.coach.ai.service.prompt.WeeklyReportPrompt;
 import com.nyamnyam.coach.diet.dto.response.DietDayResponse;
 import com.nyamnyam.coach.diet.dto.response.DietItemResponse;
 import com.nyamnyam.coach.diet.dto.response.DietMealResponse;
@@ -20,6 +24,7 @@ import com.nyamnyam.coach.nutrition.service.NutritionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +41,8 @@ public class AiReportService {
     private final DietService dietService;
     private final ObjectMapper objectMapper;
     private final AiJsonResponseParser aiJsonResponseParser;
+    private final WeeklyReportContextService weeklyReportContextService;
+    private final HealthGuideRetrievalService healthGuideRetrievalService;
 
     public AiReportService(
             AiReportRepository aiReportRepository,
@@ -43,7 +50,9 @@ public class AiReportService {
             NutritionService nutritionService,
             DietService dietService,
             ObjectMapper objectMapper,
-            AiJsonResponseParser aiJsonResponseParser
+            AiJsonResponseParser aiJsonResponseParser,
+            WeeklyReportContextService weeklyReportContextService,
+            HealthGuideRetrievalService healthGuideRetrievalService
     ) {
         this.aiReportRepository = aiReportRepository;
         this.aiTextGenerator = aiTextGenerator;
@@ -51,13 +60,14 @@ public class AiReportService {
         this.dietService = dietService;
         this.objectMapper = objectMapper;
         this.aiJsonResponseParser = aiJsonResponseParser;
+        this.weeklyReportContextService = weeklyReportContextService;
+        this.healthGuideRetrievalService = healthGuideRetrievalService;
     }
 
-    @Transactional
     public AiReportResponse createDailyReport(Long userId, LocalDate date) {
         Optional<AiReport> existingReport = aiReportRepository.findByUserIdAndPeriod(userId, DAILY, date, date);
         if (existingReport.isPresent()) {
-            return toResponse(existingReport.get(), dailyScore(userId, date));
+            return toResponse(existingReport.get());
         }
 
         DailyNutritionAnalysisResponse analysis = nutritionService.getDailyAnalysis(userId, date);
@@ -72,47 +82,63 @@ public class AiReportService {
         report.setReportType(DAILY);
         report.setPeriodStart(date);
         report.setPeriodEnd(date);
+        report.setHealthScore(healthScore);
         report.setSummary(nullToDefault(content.summary(), "일일 리포트를 생성했습니다."));
         report.setStrengthsJson(toJson(emptyIfNull(content.strengths())));
         report.setWarningsJson(toJson(emptyIfNull(content.warnings())));
         report.setNextAction(nullToDefault(content.nextAction(), "다음 끼니 선택을 점검해보세요."));
         aiReportRepository.insert(report);
-        return toResponse(report, healthScore);
+        return toResponse(report);
     }
 
     @Transactional(readOnly = true)
     public AiReportResponse getDailyReport(Long userId, LocalDate date) {
         AiReport report = aiReportRepository.findByUserIdAndPeriod(userId, DAILY, date, date)
                 .orElseThrow(() -> new BusinessException(AiErrorCode.AI_REPORT_NOT_FOUND));
-        return toResponse(report, dailyScore(userId, date));
+        return toResponse(report);
     }
 
     @Transactional(readOnly = true)
     public AiReportResponse findDailyReportOrNull(Long userId, LocalDate date) {
         return aiReportRepository.findByUserIdAndPeriod(userId, DAILY, date, date)
-                .map(report -> toResponse(report, dailyScore(userId, date)))
+                .map(this::toResponse)
                 .orElse(null);
     }
 
-    @Transactional
     public AiReportResponse createWeeklyReport(Long userId, LocalDate startDate, LocalDate endDate) {
         validateWeeklyPeriod(startDate, endDate);
         Optional<AiReport> existingReport = aiReportRepository.findByUserIdAndPeriod(userId, WEEKLY, startDate, endDate);
         if (existingReport.isPresent()) {
-            return toResponse(existingReport.get(), 75);
+            return toResponse(existingReport.get());
         }
+
+        WeeklyReportContext context = weeklyReportContextService.collect(userId, startDate, endDate);
+        List<RagReference> ragReferences = healthGuideRetrievalService.retrieve(context.retrievalQuery());
+        WeeklyReportContent content = aiJsonResponseParser.parseWeeklyReport(
+                aiTextGenerator.generateWeeklyReport(new WeeklyReportPrompt(
+                        startDate,
+                        endDate,
+                        context.averageHealthScore(),
+                        context.healthProfileSummary(),
+                        context.dailyMealSummaries(),
+                        context.dailyNutritionSummaries(),
+                        context.repeatedPatterns(),
+                        ragReferences
+                ))
+        );
 
         AiReport report = new AiReport();
         report.setUserId(userId);
         report.setReportType(WEEKLY);
         report.setPeriodStart(startDate);
         report.setPeriodEnd(endDate);
-        report.setSummary("주간 리포트 생성은 현재 AI 구현 범위에 포함되지 않습니다.");
-        report.setStrengthsJson(toJson(List.of("주간 식단 기록 흐름을 확인할 수 있어요.")));
-        report.setWarningsJson(toJson(List.of("주간 RAG 기반 참고 자료는 이후 구현 범위에서 추가할 예정입니다.")));
-        report.setNextAction("이번 주에 반복적으로 부족했던 영양소를 한 가지 정해 다음 주에 보완해보세요.");
+        report.setHealthScore(context.averageHealthScore());
+        report.setSummary(nullToDefault(content.summary(), "주간 리포트를 생성했습니다."));
+        report.setStrengthsJson(toJson(emptyIfNull(content.strengths())));
+        report.setWarningsJson(toJson(emptyIfNull(content.warnings())));
+        report.setNextAction(nullToDefault(content.nextAction(), "다음 주 식단 목표를 한 가지 정해 실천해보세요."));
         aiReportRepository.insert(report);
-        return toResponse(report, 75);
+        return toResponse(report);
     }
 
     @Transactional(readOnly = true)
@@ -120,12 +146,7 @@ public class AiReportService {
         validateWeeklyPeriod(startDate, endDate);
         AiReport report = aiReportRepository.findByUserIdAndPeriod(userId, WEEKLY, startDate, endDate)
                 .orElseThrow(() -> new BusinessException(AiErrorCode.AI_REPORT_NOT_FOUND));
-        return toResponse(report, 75);
-    }
-
-    private int dailyScore(Long userId, LocalDate date) {
-        DailyNutritionAnalysisResponse analysis = nutritionService.getDailyAnalysis(userId, date);
-        return analysis.healthScore();
+        return toResponse(report);
     }
 
     private List<String> dailyMealSummaries(Long userId, LocalDate date) {
@@ -137,7 +158,9 @@ public class AiReportService {
     }
 
     private String toMealSummary(DietMealResponse meal) {
-        String items = meal.items().stream()
+        List<DietItemResponse> mealItems = meal.items() == null ? List.of() : meal.items();
+        String items = mealItems.stream()
+                .filter(java.util.Objects::nonNull)
                 .map(this::toItemSummary)
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("기록된 음식 없음");
@@ -153,18 +176,20 @@ public class AiReportService {
     }
 
     private void validateWeeklyPeriod(LocalDate startDate, LocalDate endDate) {
-        if (endDate.isBefore(startDate)) {
-            throw new BusinessException(AiErrorCode.AI_RESPONSE_FAILED);
+        if (startDate == null || endDate == null
+                || startDate.getDayOfWeek() != DayOfWeek.MONDAY
+                || !endDate.equals(startDate.plusDays(6))) {
+            throw new BusinessException(AiErrorCode.AI_REPORT_PERIOD_INVALID);
         }
     }
 
-    private AiReportResponse toResponse(AiReport report, int healthScore) {
+    private AiReportResponse toResponse(AiReport report) {
         return new AiReportResponse(
                 report.getReportId(),
                 report.getReportType(),
                 report.getPeriodStart(),
                 report.getPeriodEnd(),
-                healthScore,
+                report.getHealthScore(),
                 report.getSummary(),
                 fromJson(report.getStrengthsJson()),
                 fromJson(report.getWarningsJson()),

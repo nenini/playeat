@@ -19,6 +19,10 @@ public class AiJsonResponseParser {
         return parse(rawText, DailyReportContent.class);
     }
 
+    public WeeklyReportContent parseWeeklyReport(String rawText) {
+        return parse(rawText, WeeklyReportContent.class);
+    }
+
     public CoachFeedbackContent parseCoachFeedback(String rawText) {
         return parse(rawText, CoachFeedbackContent.class);
     }

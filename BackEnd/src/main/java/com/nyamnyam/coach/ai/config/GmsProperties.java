@@ -8,6 +8,7 @@ public class GmsProperties {
     private boolean enabled = false;
     private String baseUrl = "https://gms.ssafy.io/gmsapi/api.openai.com/v1";
     private String model = "gpt-4.1";
+    private String embeddingModel = "text-embedding-3-small";
     private String apiKey;
     private int timeoutMs = 10000;
 
@@ -33,6 +34,14 @@ public class GmsProperties {
 
     public void setModel(String model) {
         this.model = model;
+    }
+
+    public String getEmbeddingModel() {
+        return embeddingModel;
+    }
+
+    public void setEmbeddingModel(String embeddingModel) {
+        this.embeddingModel = embeddingModel;
     }
 
     public String getApiKey() {

@@ -339,6 +339,7 @@ CREATE TABLE ai_reports (
     strengths_json JSON,
     warnings_json JSON,
     next_action TEXT,
+    health_score TINYINT UNSIGNED NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_ai_reports_user_period UNIQUE (user_id, report_type, period_start, period_end),
     CONSTRAINT fk_ai_reports_user

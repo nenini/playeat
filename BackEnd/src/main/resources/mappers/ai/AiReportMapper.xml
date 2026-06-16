@@ -15,6 +15,7 @@
         <result property="strengthsJson" column="strengths_json"/>
         <result property="warningsJson" column="warnings_json"/>
         <result property="nextAction" column="next_action"/>
+        <result property="healthScore" column="health_score"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
@@ -28,7 +29,8 @@
             summary,
             strengths_json,
             warnings_json,
-            next_action
+            next_action,
+            health_score
         )
         VALUES (
             #{userId},
@@ -38,7 +40,8 @@
             #{summary},
             #{strengthsJson},
             #{warningsJson},
-            #{nextAction}
+            #{nextAction},
+            #{healthScore}
         )
     </insert>
 
@@ -53,6 +56,7 @@
             strengths_json,
             warnings_json,
             next_action,
+            health_score,
             created_at
         FROM ai_reports
         WHERE user_id = #{userId}
