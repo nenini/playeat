@@ -6,8 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nyamnyam.coach.ai.dto.response.AiReportResponse;
 import com.nyamnyam.coach.ai.entity.AiReport;
 import com.nyamnyam.coach.ai.repository.AiReportRepository;
+import com.nyamnyam.coach.ai.service.parser.AiJsonResponseParser;
+import com.nyamnyam.coach.ai.service.parser.DailyReportContent;
 import com.nyamnyam.coach.ai.service.prompt.DailyReportPrompt;
-import com.nyamnyam.coach.ai.service.prompt.WeeklyReportPrompt;
+import com.nyamnyam.coach.diet.dto.response.DietDayResponse;
+import com.nyamnyam.coach.diet.dto.response.DietItemResponse;
+import com.nyamnyam.coach.diet.dto.response.DietMealResponse;
+import com.nyamnyam.coach.diet.service.DietService;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AiErrorCode;
 import com.nyamnyam.coach.nutrition.dto.response.DailyNutritionAnalysisResponse;
@@ -28,18 +33,24 @@ public class AiReportService {
     private final AiReportRepository aiReportRepository;
     private final AiTextGenerator aiTextGenerator;
     private final NutritionService nutritionService;
+    private final DietService dietService;
     private final ObjectMapper objectMapper;
+    private final AiJsonResponseParser aiJsonResponseParser;
 
     public AiReportService(
             AiReportRepository aiReportRepository,
             AiTextGenerator aiTextGenerator,
             NutritionService nutritionService,
-            ObjectMapper objectMapper
+            DietService dietService,
+            ObjectMapper objectMapper,
+            AiJsonResponseParser aiJsonResponseParser
     ) {
         this.aiReportRepository = aiReportRepository;
         this.aiTextGenerator = aiTextGenerator;
         this.nutritionService = nutritionService;
+        this.dietService = dietService;
         this.objectMapper = objectMapper;
+        this.aiJsonResponseParser = aiJsonResponseParser;
     }
 
     @Transactional
@@ -49,16 +60,22 @@ public class AiReportService {
             return toResponse(existingReport.get(), dailyScore(userId, date));
         }
 
-        int healthScore = dailyScore(userId, date);
+        DailyNutritionAnalysisResponse analysis = nutritionService.getDailyAnalysis(userId, date);
+        int healthScore = analysis.healthScore();
+        List<String> mealSummaries = dailyMealSummaries(userId, date);
+        DailyReportContent content = aiJsonResponseParser.parseDailyReport(
+                aiTextGenerator.generateDailyReport(new DailyReportPrompt(date, healthScore, analysis.nutrients(), mealSummaries))
+        );
+
         AiReport report = new AiReport();
         report.setUserId(userId);
         report.setReportType(DAILY);
         report.setPeriodStart(date);
         report.setPeriodEnd(date);
-        report.setSummary(aiTextGenerator.generateDailyReport(new DailyReportPrompt(date, healthScore)));
-        report.setStrengthsJson(toJson(List.of("식단을 기록해 분석할 수 있는 상태예요.")));
-        report.setWarningsJson(toJson(List.of("부족하거나 과한 영양소를 다음 끼니에서 조정해보세요.")));
-        report.setNextAction("다음 끼니에 단백질 또는 채소를 한 가지 추가해보세요.");
+        report.setSummary(nullToDefault(content.summary(), "일일 리포트를 생성했습니다."));
+        report.setStrengthsJson(toJson(emptyIfNull(content.strengths())));
+        report.setWarningsJson(toJson(emptyIfNull(content.warnings())));
+        report.setNextAction(nullToDefault(content.nextAction(), "다음 끼니 선택을 점검해보세요."));
         aiReportRepository.insert(report);
         return toResponse(report, healthScore);
     }
@@ -90,10 +107,10 @@ public class AiReportService {
         report.setReportType(WEEKLY);
         report.setPeriodStart(startDate);
         report.setPeriodEnd(endDate);
-        report.setSummary(aiTextGenerator.generateWeeklyReport(new WeeklyReportPrompt(startDate, endDate)));
+        report.setSummary("주간 리포트 생성은 현재 AI 구현 범위에 포함되지 않습니다.");
         report.setStrengthsJson(toJson(List.of("주간 식단 기록 흐름을 확인할 수 있어요.")));
-        report.setWarningsJson(toJson(List.of("주간 리포트는 추후 RAG 기반 건강 자료와 함께 보강할 예정이에요.")));
-        report.setNextAction("이번 주에 반복적으로 부족했던 영양소를 한 가지 정해 보완해보세요.");
+        report.setWarningsJson(toJson(List.of("주간 RAG 기반 참고 자료는 이후 구현 범위에서 추가할 예정입니다.")));
+        report.setNextAction("이번 주에 반복적으로 부족했던 영양소를 한 가지 정해 다음 주에 보완해보세요.");
         aiReportRepository.insert(report);
         return toResponse(report, 75);
     }
@@ -109,6 +126,30 @@ public class AiReportService {
     private int dailyScore(Long userId, LocalDate date) {
         DailyNutritionAnalysisResponse analysis = nutritionService.getDailyAnalysis(userId, date);
         return analysis.healthScore();
+    }
+
+    private List<String> dailyMealSummaries(Long userId, LocalDate date) {
+        DietDayResponse dietDay = dietService.getDietsByDate(userId, date);
+        return dietDay.meals().stream()
+                .filter(DietMealResponse::recorded)
+                .map(this::toMealSummary)
+                .toList();
+    }
+
+    private String toMealSummary(DietMealResponse meal) {
+        String items = meal.items().stream()
+                .map(this::toItemSummary)
+                .reduce((left, right) -> left + ", " + right)
+                .orElse("기록된 음식 없음");
+        return "%s: %s".formatted(meal.label(), items);
+    }
+
+    private String toItemSummary(DietItemResponse item) {
+        return "%s %s%s".formatted(
+                item.foodName(),
+                item.inputAmount(),
+                item.inputUnit()
+        );
     }
 
     private void validateWeeklyPeriod(LocalDate startDate, LocalDate endDate) {
@@ -150,5 +191,16 @@ public class AiReportService {
         } catch (JsonProcessingException e) {
             return List.of();
         }
+    }
+
+    private List<String> emptyIfNull(List<String> values) {
+        return values == null ? List.of() : values;
+    }
+
+    private String nullToDefault(String value, String defaultValue) {
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+        return value;
     }
 }

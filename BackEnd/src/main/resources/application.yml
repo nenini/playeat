@@ -20,6 +20,13 @@ app:
     profile-image-dir: ${PROFILE_IMAGE_UPLOAD_DIR:${UPLOAD_ROOT_DIR:uploads}/profile-images}
     profile-image-path-prefix: /uploads/profile-images
 
+gms:
+  enabled: ${GMS_ENABLED:false}
+  base-url: ${GMS_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com/v1}
+  model: ${GMS_MODEL:gpt-5-mini}
+  api-key: ${GMS_KEY:}
+  timeout-ms: ${GMS_TIMEOUT_MS:10000}
+
 # ────────────────────────────────
 # MyBatis
 # ────────────────────────────────

@@ -4,9 +4,12 @@ import org.springframework.http.HttpStatus;
 
 public enum AiErrorCode implements ErrorCode {
 
-    AI_FEEDBACK_NOT_FOUND(HttpStatus.NOT_FOUND, "AI 피드백을 찾을 수 없습니다."),
-    AI_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "AI 리포트를 찾을 수 없습니다."),
-    AI_RESPONSE_FAILED(HttpStatus.BAD_GATEWAY, "AI 응답 생성에 실패했습니다.");
+    AI_FEEDBACK_NOT_FOUND(HttpStatus.NOT_FOUND, "AI feedback was not found."),
+    AI_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "AI report was not found."),
+    AI_RESPONSE_FAILED(HttpStatus.BAD_GATEWAY, "AI response generation failed."),
+    AI_RESPONSE_PARSE_FAILED(HttpStatus.BAD_GATEWAY, "AI response format is invalid."),
+    AI_PROVIDER_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI provider request timed out."),
+    AI_PROVIDER_UNAVAILABLE(HttpStatus.BAD_GATEWAY, "AI provider is unavailable.");
 
     private final HttpStatus status;
     private final String message;

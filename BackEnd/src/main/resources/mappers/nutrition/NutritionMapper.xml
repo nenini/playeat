@@ -32,12 +32,14 @@
             hp.target_carbs_g,
             hp.target_fat_g,
             hp.target_sodium_mg
-        FROM health_profiles hp
+        FROM users u
+        LEFT JOIN health_profiles hp
+          ON hp.user_id = u.user_id
         LEFT JOIN diets d
-          ON d.user_id = hp.user_id
+          ON d.user_id = u.user_id
          AND d.eaten_at &gt;= #{startAt}
          AND d.eaten_at &lt; #{endAt}
-        WHERE hp.user_id = #{userId}
+        WHERE u.user_id = #{userId}
         GROUP BY
             hp.target_calories,
             hp.target_protein_g,

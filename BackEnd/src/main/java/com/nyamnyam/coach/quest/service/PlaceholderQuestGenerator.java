@@ -9,9 +9,11 @@ import com.nyamnyam.coach.quest.repository.row.QuestBattleRow;
 import com.nyamnyam.coach.quest.repository.row.QuestGuildMemberRow;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.QuestErrorCode;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "gms", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class PlaceholderQuestGenerator implements QuestGenerator {
 
     private final QuestTemplateRepository questTemplateRepository;
@@ -49,7 +51,8 @@ public class PlaceholderQuestGenerator implements QuestGenerator {
         quest.setTargetValue(template.getTargetValue());
         quest.setCurrentValue(0);
         quest.setUnit(template.getUnit());
-        quest.setDamage(calculateDamage(battle, activeMemberCount, memberIndex));        quest.setRewardExp(template.getRewardExp());
+        quest.setDamage(calculateDamage(battle, activeMemberCount, memberIndex));
+        quest.setRewardExp(template.getRewardExp());
         quest.setRewardCoin(template.getRewardCoin());
         quest.setStatus(QuestStatus.IN_PROGRESS.name());
         quest.setSourceType(QuestSourceType.PLACEHOLDER.name());

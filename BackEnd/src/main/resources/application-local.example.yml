@@ -21,3 +21,10 @@ jwt:
   secret: your-base64-jwt-secret
   access-token-expiration: 1800000
   refresh-token-expiration: 604800000
+
+gms:
+  enabled: false
+  base-url: https://gms.ssafy.io/gmsapi/api.openai.com/v1
+  model: gpt-5-mini
+  api-key: ${GMS_KEY:}
+  timeout-ms: 60000
