@@ -32,9 +32,10 @@ public class GmsAiTextGenerator implements AiTextGenerator {
     public String generateCoachFeedback(CoachFeedbackPrompt prompt) {
         log.info("AI generator selected provider=gms feature=coach-feedback model={}", properties.getModel());
         return gmsAiClient.createResponse("""
-                당신은 식습관 개선을 돕는 영양 코치입니다.
-                반드시 JSON만 반환하세요. 마크다운은 사용하지 마세요.
-                질병을 진단하지 말고, 지금 식사 기록을 바탕으로 짧고 실천 가능한 조언을 한국어로 작성하세요.
+                당신은 사용자가 선택한 캐릭터형 식단 코치입니다.
+                반드시 JSON만 반환하고 마크다운은 사용하지 마세요.
+                질병을 진단하지 말고, 현재 식단 기록을 바탕으로 실천 가능한 한마디 피드백만 작성하세요.
+                응답은 반드시 선택한 코치의 말투를 반영하세요.
 
                 출력 형식:
                 {"message":"string"}
@@ -44,10 +45,10 @@ public class GmsAiTextGenerator implements AiTextGenerator {
                 말투: %s
 
                 식사 영양 정보:
-                칼로리: %s
-                단백질(g): %s
-                탄수화물(g): %s
-                지방(g): %s
+                칼로리: %s kcal
+                단백질: %s g
+                탄수화물: %s g
+                지방: %s g
                 """.formatted(
                 prompt.coachName(),
                 prompt.coachTone(),
@@ -84,9 +85,9 @@ public class GmsAiTextGenerator implements AiTextGenerator {
 
         return gmsAiClient.createResponse("""
                 당신은 식단 기록 기반 일간 영양 리포트를 작성하는 한국어 코치입니다.
-                반드시 JSON만 반환하세요. 마크다운은 사용하지 마세요.
-                음식명과 섭취량을 반영해서 구체적으로 말하되, 의학적 진단처럼 쓰지 마세요.
-                사용자가 바로 읽을 수 있게 짧고 실행 가능한 문장으로 작성하세요.
+                반드시 JSON만 반환하고 마크다운은 사용하지 마세요.
+                음식명과 섭취량을 반영해서 구체적으로 말하되 의학적 진단처럼 쓰지 마세요.
+                사용자가 바로 읽을 수 있는 짧고 실행 가능한 문장으로 작성하세요.
 
                 출력 규칙:
                 - summary: 2문장 이내
@@ -126,10 +127,10 @@ public class GmsAiTextGenerator implements AiTextGenerator {
 
         return gmsAiClient.createResponse("""
                 당신은 공식 건강 자료와 사용자의 실제 식단 기록을 함께 참고해 주간 식습관 리포트를 작성하는 한국어 영양 코치입니다.
-                반드시 JSON만 반환하세요. 마크다운은 사용하지 마세요.
+                반드시 JSON만 반환하고 마크다운은 사용하지 마세요.
                 질병을 진단하거나 치료를 지시하지 마세요.
-                공식 자료는 일반적인 건강 정보로만 활용하고, 사용자의 기록과 건강 목표에 맞는 실천 가능한 조언을 작성하세요.
-                알레르기나 제한 식품이 있으면 그 식품을 추천하지 마세요.
+                공식 자료는 일반적인 건강 정보로만 사용하고, 사용자의 기록과 건강 목표에 맞는 실천 가능한 조언을 작성하세요.
+                알레르기나 피해야 하는 식품이 있으면 그 식품을 추천하지 마세요.
 
                 출력 규칙:
                 - summary: 2~3문장
@@ -209,17 +210,23 @@ public class GmsAiTextGenerator implements AiTextGenerator {
         }
 
         return gmsAiClient.createResponse("""
-                당신은 보스전 참여자에게 줄 개인 퀘스트 템플릿을 하나 선택하는 보조자입니다.
-                반드시 JSON만 반환하세요. 마크다운은 사용하지 마세요.
-                availableQuestTemplates에 있는 templateId 중 정확히 하나만 선택하세요.
-                새로운 검증 조건을 만들지 마세요.
-                threshold, target, unit, reward, damage 관련 값은 절대 변경하지 마세요.
-                customTitle과 customDescription만 한국어로 자연스럽게 작성할 수 있습니다.
-                적절한 템플릿이 애매하면 가장 안전한 식단 기록 횟수 템플릿을 선택하세요.
+                당신은 보스전 참여자에게 줄 개인 퀘스트 템플릿을 선택하는 한국어 영양 코치입니다.
+                반드시 JSON만 반환하고 마크다운은 사용하지 마세요.
+                새 퀘스트 조건을 만들지 말고 availableQuestTemplates에 있는 templateId 중 정확히 하나만 선택하세요.
+                threshold, target, unit, reward, damage 값은 바꾸지 마세요.
+                customTitle과 customDescription만 선택한 템플릿 조건에 맞게 자연스럽게 작성하세요.
+
+                선택 기준:
+                1. 최근 식단 요약에서 반복적으로 부족하거나 초과된 영양소와 직접 연결된 템플릿을 우선 선택하세요.
+                2. 나트륨/당류 과다는 줄이는 템플릿을 우선 고려하세요.
+                3. 단백질/식이섬유 부족은 보완 템플릿을 고려하세요.
+                4. 식단 기록 일수가 부족하면 기록형 또는 식사 패턴형 템플릿을 고려하세요.
+                5. 판단이 어렵다면 가장 쉬운 템플릿을 선택하세요.
 
                 출력 형식:
                 {
                   "selectedTemplateId": 1,
+                  "selectionReason": "string",
                   "customTitle": "string",
                   "customDescription": "string"
                 }
@@ -230,6 +237,9 @@ public class GmsAiTextGenerator implements AiTextGenerator {
                 현재 참여자 순번: %d
                 현재 참여자 닉네임: %s
 
+                최근 식단 요약:
+                %s
+
                 선택 가능한 퀘스트 템플릿:
                 %s
                 """.formatted(
@@ -237,6 +247,7 @@ public class GmsAiTextGenerator implements AiTextGenerator {
                 prompt.activeMemberCount(),
                 prompt.memberIndex(),
                 prompt.memberNickname(),
+                prompt.recentDietSummary(),
                 templates
         ));
     }

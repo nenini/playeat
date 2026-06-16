@@ -10,6 +10,7 @@ import com.nyamnyam.coach.quest.repository.row.QuestBattleRow;
 import com.nyamnyam.coach.quest.repository.row.QuestContributionRow;
 import com.nyamnyam.coach.quest.repository.row.QuestGuildMemberRow;
 import com.nyamnyam.coach.quest.repository.row.QuestRow;
+import com.nyamnyam.coach.quest.repository.row.RecentDietSummaryRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -46,6 +47,11 @@ public interface QuestRepository {
     boolean existsQuestByBattleIdAndUserId(
             @Param("battleId") Long battleId,
             @Param("userId") Long userId
+    );
+
+    List<Long> findRecentQuestTemplateIds(
+            @Param("userId") Long userId,
+            @Param("startAt") LocalDateTime startAt
     );
 
     int countQuestsByBattleId(@Param("battleId") Long battleId);
@@ -108,6 +114,12 @@ public interface QuestRepository {
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt,
             @Param("metricType") String metricType
+    );
+
+    RecentDietSummaryRow findRecentDietSummary(
+            @Param("userId") Long userId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt
     );
 
     List<BattleStateRow> findInProgressBattlesByActiveParticipant(@Param("userId") Long userId);

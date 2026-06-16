@@ -50,7 +50,7 @@ class QuestRepositoryTest {
 
         List<QuestRow> quests = questRepository.findQuestsByBattleId(fixture.battleId(), fixture.ownerId());
 
-        assertThat(quests).hasSize(1);
+        assertThat(quests).hasSize(2);
         assertThat(quests.get(0).getIsMe()).isTrue();
         assertThat(questRepository.findMyQuestByBattleId(fixture.battleId(), fixture.ownerId())).isPresent();
     }

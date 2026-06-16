@@ -123,6 +123,25 @@
         <result property="totalSugarG" column="total_sugar_g"/>
     </resultMap>
 
+    <resultMap id="RecentDietSummaryRowMap" type="com.nyamnyam.coach.quest.repository.row.RecentDietSummaryRow">
+        <result property="recordedDays" column="recorded_days"/>
+        <result property="breakfastDays" column="breakfast_days"/>
+        <result property="lunchDays" column="lunch_days"/>
+        <result property="dinnerDays" column="dinner_days"/>
+        <result property="snackDays" column="snack_days"/>
+        <result property="avgCalories" column="avg_calories"/>
+        <result property="avgProteinG" column="avg_protein_g"/>
+        <result property="avgCarbsG" column="avg_carbs_g"/>
+        <result property="avgFatG" column="avg_fat_g"/>
+        <result property="avgSugarG" column="avg_sugar_g"/>
+        <result property="avgSodiumMg" column="avg_sodium_mg"/>
+        <result property="avgFiberG" column="avg_fiber_g"/>
+        <result property="targetCalories" column="target_calories"/>
+        <result property="targetProteinG" column="target_protein_g"/>
+        <result property="targetCarbsG" column="target_carbs_g"/>
+        <result property="targetFatG" column="target_fat_g"/>
+    </resultMap>
+
     <resultMap id="BattleStateRowMap" type="com.nyamnyam.coach.boss.repository.row.BattleStateRow">
         <id property="battleId" column="battle_id"/>
         <result property="guildId" column="guild_id"/>
@@ -376,6 +395,14 @@
           AND user_id = #{userId}
     </select>
 
+    <select id="findRecentQuestTemplateIds" resultType="long">
+        SELECT DISTINCT quest_template_id
+        FROM quests
+        WHERE user_id = #{userId}
+          AND quest_template_id IS NOT NULL
+          AND created_at &gt;= #{startAt}
+    </select>
+
     <select id="countQuestsByBattleId" resultType="int">
         SELECT COUNT(1)
         FROM quests
@@ -613,6 +640,62 @@
         WHERE user_id = #{userId}
           AND eaten_at &gt;= #{startAt}
           AND eaten_at &lt; #{endAt}
+    </select>
+
+    <select id="findRecentDietSummary" resultMap="RecentDietSummaryRowMap">
+        SELECT
+            a.recorded_days,
+            a.breakfast_days,
+            a.lunch_days,
+            a.dinner_days,
+            a.snack_days,
+            a.avg_calories,
+            a.avg_protein_g,
+            a.avg_carbs_g,
+            a.avg_fat_g,
+            a.avg_sugar_g,
+            a.avg_sodium_mg,
+            a.avg_fiber_g,
+            hp.target_calories,
+            hp.target_protein_g,
+            hp.target_carbs_g,
+            hp.target_fat_g
+        FROM (
+            SELECT
+                COUNT(1) AS recorded_days,
+                COALESCE(SUM(CASE WHEN daily.breakfast_count > 0 THEN 1 ELSE 0 END), 0) AS breakfast_days,
+                COALESCE(SUM(CASE WHEN daily.lunch_count > 0 THEN 1 ELSE 0 END), 0) AS lunch_days,
+                COALESCE(SUM(CASE WHEN daily.dinner_count > 0 THEN 1 ELSE 0 END), 0) AS dinner_days,
+                COALESCE(SUM(CASE WHEN daily.snack_count > 0 THEN 1 ELSE 0 END), 0) AS snack_days,
+                COALESCE(AVG(daily.total_calories), 0) AS avg_calories,
+                COALESCE(AVG(daily.total_protein_g), 0) AS avg_protein_g,
+                COALESCE(AVG(daily.total_carbs_g), 0) AS avg_carbs_g,
+                COALESCE(AVG(daily.total_fat_g), 0) AS avg_fat_g,
+                COALESCE(AVG(daily.total_sugar_g), 0) AS avg_sugar_g,
+                COALESCE(AVG(daily.total_sodium_mg), 0) AS avg_sodium_mg,
+                COALESCE(AVG(daily.total_fiber_g), 0) AS avg_fiber_g
+            FROM (
+                SELECT
+                    CAST(eaten_at AS DATE) AS eaten_date,
+                    SUM(total_calories) AS total_calories,
+                    SUM(total_protein_g) AS total_protein_g,
+                    SUM(total_carbs_g) AS total_carbs_g,
+                    SUM(total_fat_g) AS total_fat_g,
+                    SUM(total_sugar_g) AS total_sugar_g,
+                    SUM(total_sodium_mg) AS total_sodium_mg,
+                    SUM(total_fiber_g) AS total_fiber_g,
+                    SUM(CASE WHEN meal_type = 'BREAKFAST' THEN 1 ELSE 0 END) AS breakfast_count,
+                    SUM(CASE WHEN meal_type = 'LUNCH' THEN 1 ELSE 0 END) AS lunch_count,
+                    SUM(CASE WHEN meal_type = 'DINNER' THEN 1 ELSE 0 END) AS dinner_count,
+                    SUM(CASE WHEN meal_type = 'SNACK' THEN 1 ELSE 0 END) AS snack_count
+                FROM diets
+                WHERE user_id = #{userId}
+                  AND eaten_at &gt;= #{startAt}
+                  AND eaten_at &lt; #{endAt}
+                GROUP BY CAST(eaten_at AS DATE)
+            ) daily
+        ) a
+        LEFT JOIN health_profiles hp ON hp.user_id = #{userId}
     </select>
 
     <select id="findInProgressBattlesByActiveParticipant" resultMap="BattleStateRowMap">
