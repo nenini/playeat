@@ -147,7 +147,7 @@ h2 { margin: 6px 0; font-size: 22px; } h3 { font-size: 13px; margin: 0 0 10px; }
 .report-sections { display: grid; gap: 8px; margin-top: 10px; }
 .report-section { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,.72); }
 .report-section strong { display: block; margin-bottom: 4px; font-size: 13px; color: var(--ink); }
-.report-section p { color: var(--ink); font-size: 15px; line-height: 1.65; font-weight: 700; word-break: keep-all; }
+.report-section p { color: var(--ink); font-size: 15px; line-height: 1.65; font-weight: 400; word-break: keep-all; }
 .meal-status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .meal-status div { padding: 12px 8px; text-align: center; border: 1.5px dashed var(--border); border-radius: 10px; background: var(--surface-alt); } .meal-status .done { border-style: solid; border-color: var(--border-strong); background: var(--surface); }
 .meal-status span { font-size: 20px; display: block; } .meal-status strong { display: block; font-size: 11px; margin-top: 4px; } .meal-status small { color: var(--ok); }
