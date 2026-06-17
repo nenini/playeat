@@ -1,4 +1,5 @@
-import { apiRequest, tokenStorage } from './api'
+import { apiRequest } from './api'
+import { authApi as baseAuthApi } from './api/authApi'
 import type { MealKindId, MealLog, Stage } from './mock/nyamnyamMock'
 
 export type BackendMealType = 'BREAKFAST' | 'LUNCH' | 'SNACK' | 'DINNER'
@@ -137,31 +138,14 @@ const backendToMealKind: Record<BackendMealType, MealKindId> = {
 }
 
 export const authApi = {
-  async login(email: string, password: string) {
-    const response = await apiRequest<LoginResponse>('/v1/auth/login', {
-      method: 'POST',
-      auth: false,
-      body: { email, password }
-    })
-    tokenStorage.setTokens(response.accessToken, response.refreshToken)
-    return response
+  login(email: string, password: string) {
+    return baseAuthApi.login({ email, password })
   },
   signup(email: string, password: string, nickname: string) {
-    return apiRequest<SignupResponse>('/v1/auth/signup', {
-      method: 'POST',
-      auth: false,
-      body: { email, password, nickname }
-    })
+    return baseAuthApi.signup({ email, password, nickname })
   },
-  logout() {
-    const refreshToken = tokenStorage.getRefreshToken()
-    tokenStorage.clear()
-    if (!refreshToken) return Promise.resolve()
-    return apiRequest('/v1/auth/logout', {
-      method: 'POST',
-      body: { refreshToken }
-    }).catch(() => undefined)
-  }
+  refresh: baseAuthApi.refresh,
+  logout: baseAuthApi.logout
 }
 
 export const foodApi = {
