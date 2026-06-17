@@ -18,16 +18,15 @@
       <div v-if="tab === 'daily'" class="report-body">
         <div class="score-card">
           <ScoreRing :value="score" :size="120" />
-          <div><div class="mono-label">DAILY REPORT · 어제 식단 기반</div><h2>{{ yesterdayLabel }} 리포트</h2><p class="daily-report-text">{{ dailyReport }}</p></div>
+          <div><div class="mono-label">DAILY REPORT · 어제 식단 기반</div><h2>{{ yesterdayLabel }} 리포트</h2><div class="report-sections"><div v-for="section in dailyReportSections" :key="section.title" class="report-section"><strong>{{ section.title }}</strong><p>{{ section.text }}</p></div></div></div>
         </div>
         <div><h3>끼니 기록 · {{ logs.length }}/4</h3><div class="meal-status"><div v-for="kind in mealKinds" :key="kind.id" :class="{ done: byKind[kind.id]?.length }"><span>{{ kind.emoji }}</span><strong>{{ kind.label }}</strong><small>{{ byKind[kind.id]?.length ? '✓' : '—' }}</small></div></div></div>
-        <div class="daily-numbers"><div><small>총 칼로리</small><strong>{{ Math.round(totals.kcal) }} kcal</strong></div><div><small>단백질</small><strong>{{ Math.round(totals.p) }} g</strong></div><div><small>채소</small><strong>{{ veggieCount(logs) }} 종</strong></div></div>
         <div><h3>영양소 그래프 · 어제</h3><div class="goal-list"><GoalRow v-for="goal in goals" :key="goal.name" :goal="goal" /></div></div>
       </div>
       <div v-else class="report-body">
         <div class="week-stats"><div v-for="stat in weekStats" :key="stat[0]"><small>{{ stat[0] }}</small><strong>{{ stat[1] }}</strong><span>{{ stat[2] }}</span></div></div>
         <div><h3>일별 건강 점수 추이</h3><div class="week-chart"><div v-for="(v, i) in week" :key="i"><span>{{ v }}</span><b :style="{ height: `${v}%` }" :class="{ today: i === week.length - 1 }"></b><small>{{ ['월','화','수','목','금','토','일'][i] }}</small></div></div></div>
-        <AppCard :padding="14" class="ai-report"><div class="ai-head"><strong>🤖 주간 AI 리포트</strong><AppPill tone="ok" size="sm"><AppIcon name="sparkle" :size="10" /> RAG</AppPill></div><p>과거 기록과 건강 자료를 함께 보면 이번 주 단백질 평균이 <strong>61g</strong>으로 목표(90g)의 68%에 그쳤어요. 나트륨은 외식이 있었던 날에 높게 튀었고, 채소 섭취는 또래 평균과 비슷한 수준이에요.</p><small>📚 근거: 내 식단 기록 · 식품의약품안전처 영양성분 DB · 질병관리청 2023 국민건강통계</small></AppCard>
+        <AppCard :padding="14" class="ai-report"><div class="ai-head"><strong>🤖 주간 AI 리포트</strong><AppPill tone="ok" size="sm"><AppIcon name="sparkle" :size="10" /> RAG</AppPill></div><div class="report-sections"><div v-for="section in weeklyReportSections" :key="section.title" class="report-section"><strong>{{ section.title }}</strong><p>{{ section.text }}</p></div></div></AppCard>
         <AppCard :padding="14" class="strategy"><div class="section-title-main">다음 주 식단 전략</div><p>다음 주에는 매끼 단백질원을 1가지씩 추가하고, 찌개·라면처럼 나트륨이 높은 메뉴는 주 2회 이하로 줄여보세요. 부족한 날엔 닭가슴살, 두부, 그릭 요거트로 보충하는 전략이 좋아요.</p></AppCard>
       </div>
     </AppCard>
@@ -38,8 +37,8 @@
         <div class="coach-row"><div class="npc" :style="{ background: coach?.color }">{{ coach?.glyph }}</div><div class="speech-bubble"><strong>{{ coach?.name }}</strong><p>{{ coachSpeak(coachId, logs) }}</p></div></div>
         <div class="coach-picker"><div class="mono-label">코치 변경 ↓</div><button v-for="npc in npcCoaches" :key="npc.id" :class="{ active: coachId === npc.id }" @click="coachId = npc.id"><span :style="{ background: npc.color }">{{ npc.glyph }}</span>{{ npc.name }}</button></div>
       </AppCard>
-      <AppCard><div class="section-title"><div><div class="section-title-main">② 오늘의 목표 달성</div><div class="section-title-sub">5개 영양소 · 목표 대비</div></div></div><div class="goal-list"><GoalRow v-for="goal in goals" :key="goal.name" :goal="goal" /></div></AppCard>
-      <AppCard><div class="section-title"><div><div class="section-title-main">③ 또래 비교 인사이트</div><div class="section-title-sub">질병관리청 2023 국민건강통계 기반</div></div></div><div class="peer-list"><PeerRow name="단백질" :mine="`${Math.round(totals.p)}g`" peer="74g" :state="totals.p < 74 ? 'low' : 'ok'" /><PeerRow name="나트륨" mine="2,380mg" peer="2,100mg" state="over" /><PeerRow name="채소" :mine="`${veggieCount(logs)}종`" peer="2.3종" :state="veggieCount(logs) < 2 ? 'low' : 'ok'" /></div></AppCard>
+      <AppCard><div class="section-title"><div><div class="section-title-main">② 오늘의 목표 달성</div><div class="section-title-sub">4개 영양소 · 목표 대비</div></div></div><div class="goal-list"><GoalRow v-for="goal in goals" :key="goal.name" :goal="goal" /></div></AppCard>
+      <AppCard><div class="section-title"><div><div class="section-title-main">③ 또래 비교 인사이트</div><div class="section-title-sub">질병관리청 2023 국민건강통계 기반</div></div></div><div class="peer-list"><PeerRow name="단백질" :mine="`${Math.round(totals.p)}g`" peer="74g" :state="totals.p < 74 ? 'low' : 'ok'" /><PeerRow name="나트륨" mine="2,380mg" peer="2,100mg" state="over" /></div></AppCard>
     </aside>
   </div>
   </section>
@@ -54,7 +53,7 @@ import AppPill from '../components/common/AppPill.vue'
 import GoalRow from './parts/GoalRow.vue'
 import PeerRow from './parts/PeerRow.vue'
 import ScoreRing from './parts/ScoreRing.vue'
-import { coachSpeak, goalDefaults, healthScore, mealKinds, npcCoaches, recordsByKind, totalsFor, veggieCount, type MealLog } from '../services/mock/nyamnyamMock'
+import { coachSpeak, goalDefaults, healthScore, mealKinds, npcCoaches, recordsByKind, totalsFor, type MealLog } from '../services/mock/nyamnyamMock'
 
 const props = defineProps<{ logs: MealLog[] }>()
 const tab = ref<'daily' | 'weekly'>('daily')
@@ -69,8 +68,7 @@ const goals = computed(() => [
   { name: '칼로리', value: totals.value.kcal, max: goalDefaults.kcal, unit: 'kcal' },
   { name: '단백질', value: totals.value.p, max: goalDefaults.p, unit: 'g' },
   { name: '탄수화물', value: totals.value.c, max: goalDefaults.c, unit: 'g' },
-  { name: '지방', value: totals.value.f, max: goalDefaults.f, unit: 'g' },
-  { name: '채소', value: veggieCount(props.logs), max: goalDefaults.veggies, unit: '종' }
+  { name: '지방', value: totals.value.f, max: goalDefaults.f, unit: 'g' }
 ].map((goal) => ({ ...goal, state: goal.value / goal.max > 1.1 ? 'over' : goal.value / goal.max < .7 ? 'low' : 'ok' })))
 const week = [70, 65, 78, 82, 74, 80, 78]
 const weekStats = [['평균 점수', '75', '↑ +6 vs 지난주'], ['기록률', '92%', '6/7일 4끼 완수'], ['격파한 보스', '1', '나트륨 크라켄']]
@@ -94,11 +92,28 @@ const previousWeekRange = computed(() => {
   end.setDate(start.getDate() + 6)
   return `${start.getMonth() + 1}월 ${start.getDate()}일 ~ ${end.getMonth() + 1}월 ${end.getDate()}일`
 })
-const dailyReport = computed(() => {
-  if (totals.value.p < goalDefaults.p * 0.7) return '어제는 단백질이 목표보다 부족했어요. 오늘은 아침이나 간식에 단백질 식품을 먼저 배치하면 균형이 좋아져요.'
-  if (totals.value.kcal > goalDefaults.kcal) return '어제는 총 섭취 열량이 목표를 조금 넘었어요. 오늘은 음료와 간식을 줄이고 포만감 있는 단백질과 채소를 챙겨보세요.'
-  return '어제 식단은 전반적으로 안정적이에요. 오늘도 끼니 기록을 유지하면서 채소와 단백질 균형을 이어가면 좋아요.'
+const dailyReportSections = computed(() => {
+  if (totals.value.p < goalDefaults.p * 0.7) return [
+    { title: '요약', text: '어제는 단백질이 목표보다 부족했어요. 오늘은 첫 끼부터 단백질 식품을 먼저 배치해보세요.' },
+    { title: '강점', text: '끼니 기록 흐름은 유지되고 있어요. 기록을 이어가는 습관 자체가 가장 큰 자산이에요.' },
+    { title: '경고', text: '단백질 부족이 이어지면 포만감이 빨리 떨어질 수 있어요. 간식도 단백질 중심으로 고르면 좋아요.' }
+  ]
+  if (totals.value.kcal > goalDefaults.kcal) return [
+    { title: '요약', text: '어제는 총 섭취 열량이 목표를 조금 넘었어요. 오늘은 음료와 간식 양을 먼저 점검해보세요.' },
+    { title: '강점', text: '기록이 충분히 쌓여 어느 시간대에 섭취가 늘어나는지 파악하기 쉬워졌어요.' },
+    { title: '경고', text: '열량 초과가 반복되면 목표 달성이 늦어질 수 있어요. 한 끼는 가볍게 조절해보세요.' }
+  ]
+  return [
+    { title: '요약', text: '어제 식단은 전반적으로 안정적이에요. 오늘도 끼니 기록을 유지하면 좋아요.' },
+    { title: '강점', text: '칼로리와 주요 영양소 흐름이 큰 폭으로 흔들리지 않았어요.' },
+    { title: '경고', text: '기록이 비는 끼니가 생기면 분석 정확도가 떨어져요. 간단한 메뉴라도 남겨주세요.' }
+  ]
 })
+const weeklyReportSections = [
+  { title: '요약', text: '이번 주 단백질 평균은 61g으로 목표보다 낮았고, 외식이 있던 날에는 나트륨이 높게 나타났어요.' },
+  { title: '강점', text: '기록률이 높아 식사 패턴을 안정적으로 파악할 수 있었어요. 주중 후반으로 갈수록 점수도 회복됐어요.' },
+  { title: '경고', text: '단백질 부족과 나트륨 초과가 반복되면 다음 주 컨디션 관리가 어려워질 수 있어요.' }
+]
 function shiftDay(delta: number) {
   const date = new Date(`${selectedDate.value}T00:00:00`)
   date.setDate(date.getDate() + delta)
@@ -129,14 +144,13 @@ function toDateInputValue(date: Date) {
 .report-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
 .score-card { display: flex; align-items: center; gap: 22px; padding: 20px; border-radius: 14px; background: linear-gradient(135deg,#fff5e6 0%,#fff 100%); border: 1px solid var(--border); }
 h2 { margin: 6px 0; font-size: 22px; } h3 { font-size: 13px; margin: 0 0 10px; } p { margin: 0; color: var(--ink-2); line-height: 1.6; font-size: 12px; }
-.daily-report-text { color: var(--ink); font-size: 17px; line-height: 1.75; font-weight: 700; word-break: keep-all; }
+.report-sections { display: grid; gap: 8px; margin-top: 10px; }
+.report-section { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,.72); }
+.report-section strong { display: block; margin-bottom: 4px; font-size: 13px; color: var(--ink); }
+.report-section p { color: var(--ink); font-size: 15px; line-height: 1.65; font-weight: 400; word-break: keep-all; }
 .meal-status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .meal-status div { padding: 12px 8px; text-align: center; border: 1.5px dashed var(--border); border-radius: 10px; background: var(--surface-alt); } .meal-status .done { border-style: solid; border-color: var(--border-strong); background: var(--surface); }
 .meal-status span { font-size: 20px; display: block; } .meal-status strong { display: block; font-size: 11px; margin-top: 4px; } .meal-status small { color: var(--ok); }
-.daily-numbers { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
-.daily-numbers div { padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
-.daily-numbers small { font-family: var(--mono); color: var(--ink-3); font-size: 10px; }
-.daily-numbers strong { display: block; font-family: var(--mono); margin-top: 4px; font-size: 20px; }
 .right-col { display: flex; flex-direction: column; gap: 16px; }
 .coach-row { display: flex; gap: 14px; align-items: flex-start; }
 .npc { width: 56px; height: 56px; border-radius: 28px; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 28px; flex: 0 0 56px; }
@@ -148,6 +162,5 @@ h2 { margin: 6px 0; font-size: 22px; } h3 { font-size: 13px; margin: 0 0 10px; }
 .goal-list, .peer-list { display: flex; flex-direction: column; gap: 12px; }
 .week-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; } .week-stats div { padding: 14px; border: 1px solid var(--border); border-radius: 10px; } .week-stats small { font-family: var(--mono); color: var(--ink-3); font-size: 10px; } .week-stats strong { display: block; font-family: var(--mono); font-size: 26px; margin-top: 4px; } .week-stats span { font-family: var(--mono); color: var(--ink-3); font-size: 10px; }
 .week-chart { display: flex; align-items: flex-end; gap: 10px; height: 140px; } .week-chart div { flex: 1; align-self: stretch; display: flex; flex-direction: column; align-items: center; gap: 6px; justify-content: flex-end; } .week-chart span, .week-chart small { font-family: var(--mono); font-size: 10px; color: var(--ink-3); } .week-chart b { width: 100%; background: var(--ink); border-radius: 6px 6px 0 0; } .week-chart b.today { background: var(--accent); }
-.ai-report small { display: block; margin-top: 8px; padding: 6px 10px; background: var(--surface-alt); border-radius: 8px; font-family: var(--mono); color: var(--ink-3); }
 .ai-head { display: flex; justify-content: space-between; margin-bottom: 10px; } .strategy { background: var(--accent-soft); border-color: var(--accent); }
 </style>
