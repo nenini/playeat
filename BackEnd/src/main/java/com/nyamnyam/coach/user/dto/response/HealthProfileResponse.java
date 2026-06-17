@@ -57,6 +57,15 @@ public record HealthProfileResponse(
         @Schema(description = "Target sodium in milligrams", example = "2300")
         BigDecimal targetSodiumMg,
 
+        @Schema(description = "Target fiber in grams", example = "25")
+        BigDecimal targetFiberG,
+
+        @Schema(description = "Nutrition standard version", example = "KDRI_2020")
+        String nutritionStandardVersion,
+
+        @Schema(description = "Nutrition target calculated at", example = "2026-06-09T12:00:00")
+        LocalDateTime nutritionTargetCalculatedAt,
+
         @Schema(description = "Updated at", example = "2026-06-09T12:00:00")
         LocalDateTime updatedAt
 ) {

@@ -17,6 +17,7 @@
         <result property="targetCarbsG" column="target_carbs_g"/>
         <result property="targetFatG" column="target_fat_g"/>
         <result property="targetSodiumMg" column="target_sodium_mg"/>
+        <result property="targetFiberG" column="target_fiber_g"/>
     </resultMap>
 
     <select id="findDailyAggregate" resultMap="DailyNutritionAggregateRowResultMap">
@@ -31,7 +32,8 @@
             hp.target_protein_g,
             hp.target_carbs_g,
             hp.target_fat_g,
-            hp.target_sodium_mg
+            hp.target_sodium_mg,
+            hp.target_fiber_g
         FROM users u
         LEFT JOIN health_profiles hp
           ON hp.user_id = u.user_id
@@ -45,6 +47,7 @@
             hp.target_protein_g,
             hp.target_carbs_g,
             hp.target_fat_g,
-            hp.target_sodium_mg
+            hp.target_sodium_mg,
+            hp.target_fiber_g
     </select>
 </mapper>

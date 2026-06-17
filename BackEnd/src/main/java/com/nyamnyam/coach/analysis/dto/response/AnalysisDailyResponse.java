@@ -8,9 +8,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
 
-@Schema(description = "분석 화면 일별 조립 응답")
+@Schema(description = "Analysis daily response")
 public record AnalysisDailyResponse(
         LocalDate date,
+        int healthScore,
         DietDayResponse diet,
         DailyNutritionAnalysisResponse nutrition,
         AiReportResponse dailyReport,

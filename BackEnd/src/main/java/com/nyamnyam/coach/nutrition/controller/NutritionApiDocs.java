@@ -11,10 +11,15 @@ import org.springframework.security.core.Authentication;
 
 import java.time.LocalDate;
 
-@Tag(name = "Nutrition", description = "영양 분석 API")
+@Tag(name = "Nutrition", description = "Internal nutrition calculation API")
 public interface NutritionApiDocs {
 
-    @Operation(summary = "일별 영양 분석 조회", description = "날짜별 식단 기록을 합산해 영양 분석 결과를 조회합니다.")
+    @Deprecated
+    @Operation(
+            summary = "일별 영양 분석 조회(deprecated)",
+            description = "화면에서는 GET /api/v1/analysis/daily 또는 GET /api/v1/diets를 사용합니다.",
+            deprecated = true
+    )
     @SecurityRequirement(name = "BearerAuth")
     ResponseEntity<ApiResponse<DailyNutritionAnalysisResponse>> getDailyAnalysis(
             @Parameter(hidden = true) Authentication authentication,

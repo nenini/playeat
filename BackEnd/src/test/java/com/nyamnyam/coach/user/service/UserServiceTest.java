@@ -6,6 +6,8 @@ import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.CommonErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.UserErrorCode;
+import com.nyamnyam.coach.nutrition.service.NutritionTargetCalculator;
+import com.nyamnyam.coach.nutrition.service.NutritionTargetValues;
 import com.nyamnyam.coach.user.dto.request.ChangePasswordRequest;
 import com.nyamnyam.coach.user.dto.request.DeactivateUserRequest;
 import com.nyamnyam.coach.user.dto.request.HealthProfileRequest;
@@ -40,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,6 +61,9 @@ class UserServiceTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Mock
+    private NutritionTargetCalculator nutritionTargetCalculator;
+
     private PasswordEncoder passwordEncoder;
     private UserService userService;
 
@@ -70,8 +76,11 @@ class UserServiceTest {
                 refreshTokenRepository,
                 passwordEncoder,
                 new ObjectMapper(),
-                profileImageStorageService
+                profileImageStorageService,
+                nutritionTargetCalculator
         );
+        lenient().when(nutritionTargetCalculator.calculate(any(HealthProfileRequest.class)))
+                .thenReturn(targetValues());
     }
 
     @Test
@@ -298,8 +307,24 @@ class UserServiceTest {
                 .targetCarbsG(new BigDecimal("260"))
                 .targetFatG(new BigDecimal("65"))
                 .targetSodiumMg(new BigDecimal("2300"))
+                .targetFiberG(new BigDecimal("25"))
+                .nutritionStandardVersion("KDRI_2020")
+                .nutritionTargetCalculatedAt(LocalDateTime.of(2026, 6, 9, 12, 0))
                 .updatedAt(LocalDateTime.of(2026, 6, 9, 12, 0))
                 .build();
+    }
+
+    private NutritionTargetValues targetValues() {
+        return new NutritionTargetValues(
+                new BigDecimal("2000"),
+                new BigDecimal("90"),
+                new BigDecimal("260"),
+                new BigDecimal("65"),
+                new BigDecimal("2300"),
+                new BigDecimal("25"),
+                "KDRI_2020",
+                LocalDateTime.of(2026, 6, 9, 12, 0)
+        );
     }
 
     private HealthProfileRequest healthProfileRequest() {
@@ -313,12 +338,7 @@ class UserServiceTest {
                 "LIGHT",
                 List.of("BALANCED"),
                 List.of("CAFFEINE"),
-                List.of("PEANUT"),
-                new BigDecimal("2000"),
-                new BigDecimal("90"),
-                new BigDecimal("260"),
-                new BigDecimal("65"),
-                new BigDecimal("2300")
+                List.of("PEANUT")
         );
     }
 }

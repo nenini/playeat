@@ -75,7 +75,7 @@ import ProgressBar from '../components/common/ProgressBar.vue'
 import BossMonster from '../components/nyamnyam/BossMonster.vue'
 import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
 import WeaponIcon from '../components/nyamnyam/WeaponIcon.vue'
-import { boss, dayLabel, foodDb, healthScore, mealKinds, recordsByKind, totalsFor, veggieCount, type MealKindId, type MealLog, type PageId, type Stage } from '../services/mock/nyamnyamMock'
+import { boss, dayLabel, findFoodById, healthScore, mealKinds, recordsByKind, totalsFor, veggieCount, type MealKindId, type MealLog, type PageId, type Stage } from '../services/mock/nyamnyamMock'
 import HeroStat from './parts/HeroStat.vue'
 
 const props = defineProps<{ logs: MealLog[], stage: Stage, equippedWeapon: string }>()
@@ -87,7 +87,7 @@ const xp = computed(() => 840 + props.logs.length * 30)
 const bossHP = computed(() => Math.max(0, boss.baseHP - props.logs.length * 5))
 const byKind = computed(() => recordsByKind(props.logs))
 function mealNames(kindId: MealKindId) {
-  return (byKind.value[kindId] || []).map((entry) => foodDb.find((food) => food.id === entry.foodId)?.name).filter(Boolean).join(' · ')
+  return (byKind.value[kindId] || []).map((entry) => findFoodById(entry.foodId)?.name).filter(Boolean).join(' · ')
 }
 </script>
 

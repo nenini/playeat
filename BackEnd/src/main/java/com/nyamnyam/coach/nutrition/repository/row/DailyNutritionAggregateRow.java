@@ -20,4 +20,5 @@ public class DailyNutritionAggregateRow {
     private BigDecimal targetCarbsG;
     private BigDecimal targetFatG;
     private BigDecimal targetSodiumMg;
+    private BigDecimal targetFiberG;
 }

@@ -103,9 +103,10 @@ class DietRepositoryTest {
                     target_calories,
                     target_protein_g,
                     target_carbs_g,
-                    target_fat_g
+                    target_fat_g,
+                    target_fiber_g
                 )
-                VALUES (?, 2000, 90, 280, 65)
+                VALUES (?, 2000, 90, 280, 65, 25)
                 """,
                 userId
         );
@@ -114,6 +115,7 @@ class DietRepositoryTest {
 
         assertThat(target).isPresent();
         assertThat(target.get().getTargetCalories()).isEqualByComparingTo("2000.00");
+        assertThat(target.get().getTargetFiberG()).isEqualByComparingTo("25.00");
     }
 
     private Long insertUser(String email) {

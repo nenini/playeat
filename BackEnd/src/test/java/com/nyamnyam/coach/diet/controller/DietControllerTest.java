@@ -168,8 +168,8 @@ class DietControllerTest {
                         new BigDecimal("5.60"),
                         new BigDecimal("65.00"),
                         9,
-                        0,
-                        2,
+                        new BigDecimal("3.20"),
+                        new BigDecimal("25.00"),
                         0
                 )
         );

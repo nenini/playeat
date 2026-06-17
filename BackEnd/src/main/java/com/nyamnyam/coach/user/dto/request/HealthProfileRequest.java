@@ -46,26 +46,6 @@ public record HealthProfileRequest(
         List<String> restrictedFoods,
 
         @Schema(description = "Allergies", example = "[\"PEANUT\"]")
-        List<String> allergies,
-
-        @Schema(description = "Target calories", example = "2000")
-        @DecimalMin(value = "0.0", inclusive = false, message = "Target calories must be greater than 0.")
-        BigDecimal targetCalories,
-
-        @Schema(description = "Target protein in grams", example = "90")
-        @DecimalMin(value = "0.0", inclusive = false, message = "Target protein must be greater than 0.")
-        BigDecimal targetProteinG,
-
-        @Schema(description = "Target carbs in grams", example = "260")
-        @DecimalMin(value = "0.0", inclusive = false, message = "Target carbs must be greater than 0.")
-        BigDecimal targetCarbsG,
-
-        @Schema(description = "Target fat in grams", example = "65")
-        @DecimalMin(value = "0.0", inclusive = false, message = "Target fat must be greater than 0.")
-        BigDecimal targetFatG,
-
-        @Schema(description = "Target sodium in milligrams", example = "2300")
-        @DecimalMin(value = "0.0", inclusive = false, message = "Target sodium must be greater than 0.")
-        BigDecimal targetSodiumMg
+        List<String> allergies
 ) {
 }

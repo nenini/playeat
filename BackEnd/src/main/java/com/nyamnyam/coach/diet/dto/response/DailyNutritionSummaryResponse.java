@@ -18,8 +18,8 @@ public record DailyNutritionSummaryResponse(
         BigDecimal totalFat,
         BigDecimal targetFat,
         int fatRate,
-        int vegetableServings,
-        int targetVegetableServings,
-        int vegetableRate
+        BigDecimal totalFiber,
+        BigDecimal targetFiber,
+        int fiberRate
 ) {
 }

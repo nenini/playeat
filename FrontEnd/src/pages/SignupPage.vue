@@ -1,7 +1,7 @@
 <template>
   <section class="auth-page">
     <button class="auth-brand" type="button" @click="$emit('back')"><span>냠</span><strong>냠냠코치</strong></button>
-    <form class="auth-card" @submit.prevent="$emit('onboarding')">
+    <form class="auth-card" @submit.prevent="submit">
       <div class="auth-head"><p>START NYAMNYAM</p><h1>회원가입</h1><span>기본 계정을 만든 뒤 온보딩에서 목표 데이터를 설정해요.</span></div>
       <label>이름<input v-model="name" placeholder="지은"></label>
       <label>이메일<input v-model="email" type="email" placeholder="jieun@example.com"></label>
@@ -14,10 +14,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-defineEmits<{ onboarding: [], login: [], back: [] }>()
+const emit = defineEmits<{ onboarding: [payload: { name: string, email: string, password: string }], login: [], back: [] }>()
 const name = ref('지은')
 const email = ref('')
 const password = ref('')
+function submit() {
+  emit('onboarding', { name: name.value, email: email.value, password: password.value })
+}
 </script>
 
 <style scoped>

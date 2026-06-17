@@ -24,6 +24,7 @@ DROP TABLE IF EXISTS diet_items;
 DROP TABLE IF EXISTS diets;
 DROP TABLE IF EXISTS food_favorites;
 DROP TABLE IF EXISTS foods;
+DROP TABLE IF EXISTS nutrition_reference_standards;
 DROP TABLE IF EXISTS health_profiles;
 DROP TABLE IF EXISTS users;
 
@@ -60,10 +61,36 @@ CREATE TABLE health_profiles (
     target_carbs_g DECIMAL(8,2),
     target_fat_g DECIMAL(8,2),
     target_sodium_mg DECIMAL(8,2),
+    target_fiber_g DECIMAL(8,2),
+    nutrition_standard_version VARCHAR(30),
+    nutrition_target_calculated_at DATETIME,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_health_profiles_user UNIQUE (user_id)
 );
+
+CREATE TABLE nutrition_reference_standards (
+    standard_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    standard_version VARCHAR(30) NOT NULL,
+    source_name VARCHAR(100) NOT NULL,
+    gender VARCHAR(20) NOT NULL,
+    age_min INT NOT NULL,
+    age_max INT NOT NULL,
+    sodium_mg DECIMAL(8,2) NOT NULL,
+    fiber_g DECIMAL(8,2) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO nutrition_reference_standards (
+    standard_version,
+    source_name,
+    gender,
+    age_min,
+    age_max,
+    sodium_mg,
+    fiber_g
+)
+VALUES ('KDRI_2020', '2020 Korean Dietary Reference Intakes', 'ALL', 1, 120, 2000, 25);
 
 CREATE TABLE foods (
     food_id BIGINT AUTO_INCREMENT PRIMARY KEY,
