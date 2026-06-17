@@ -6,6 +6,8 @@ import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AiErrorCode;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class AiFeedbackService {
 
@@ -27,7 +29,11 @@ public class AiFeedbackService {
     }
 
     public AiFeedback getLatest(Long userId, Long dietId) {
-        return aiFeedbackRepository.findLatestByUserIdAndDietId(userId, dietId)
+        return findLatest(userId, dietId)
                 .orElseThrow(() -> new BusinessException(AiErrorCode.AI_FEEDBACK_NOT_FOUND));
+    }
+
+    public Optional<AiFeedback> findLatest(Long userId, Long dietId) {
+        return aiFeedbackRepository.findLatestByUserIdAndDietId(userId, dietId);
     }
 }

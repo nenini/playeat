@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import AppButton from '../components/common/AppButton.vue'
 import AppCard from '../components/common/AppCard.vue'
 import AppIcon from '../components/common/AppIcon.vue'
@@ -107,13 +107,16 @@ import ChatBubble from './parts/ChatBubble.vue'
 import RankRow from './parts/RankRow.vue'
 import StatBlock from './parts/StatBlock.vue'
 import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
-import { guildList, guildMembers, seedChat } from '../services/mock/nyamnyamMock'
+import { guildList as mockGuildList, guildMembers, seedChat } from '../services/mock/nyamnyamMock'
+import { guildApi } from '../services/nyamnyamApi'
 
 defineProps<{ isLeader?: boolean }>()
 
 const joined = ref(new URLSearchParams(window.location.search).get('guild') !== 'none')
 const joinMode = ref<'list' | 'create'>('list')
 const requestedGuildId = ref<number | null>(null)
+const apiGuildList = ref<typeof mockGuildList>([])
+const requestIds = ref<Record<number, number>>({})
 const currentPage = ref(1)
 const pageSize = 10
 const code = ref('')
@@ -128,17 +131,37 @@ const notices = ref([{ id: 1, title: '이번 주 보스 격파 가즈아 🐲', 
 const editingNoticeId = ref<number | 'new' | null>(null)
 const noticeDraft = reactive({ title: '', body: '' })
 const allChat = computed(() => [...seedChat, ...chat.value])
+const guildList = computed(() => apiGuildList.value.length ? apiGuildList.value : mockGuildList)
 const visibleGuilds = computed(() => {
-  if (requestedGuildId.value) return guildList.filter((guild) => guild.id === requestedGuildId.value)
+  if (requestedGuildId.value) return guildList.value.filter((guild) => guild.id === requestedGuildId.value)
   const start = (currentPage.value - 1) * pageSize
-  return guildList.slice(start, start + pageSize)
+  return guildList.value.slice(start, start + pageSize)
 })
-const totalPages = computed(() => Math.ceil(guildList.length / pageSize))
+const totalPages = computed(() => Math.ceil(guildList.value.length / pageSize))
 const pages = computed(() => Array.from({ length: totalPages.value }, (_, index) => index + 1))
 const rankings: Array<[string, string, string, number, boolean]> = [['1', '잘먹잘싸', '우리 길드', 2840, true], ['2', '단백질 부대', '', 2710, false], ['3', '아침 챔피언즈', '', 2620, false], ['4', '채소 사랑', '', 2400, false], ['5', '저염 라이프', '', 2300, false]]
 const joinRequests = [{ name: '김건강', lv: 3, msg: '건강 식단에 관심 많아요!' }, { name: '박야채', lv: 6, msg: '채소 챌린지 중이에요.' }]
-function requestJoinGuild(guildId: number) { requestedGuildId.value = guildId }
-function cancelJoinRequest() { requestedGuildId.value = null; currentPage.value = 1 }
+async function requestJoinGuild(guildId: number) {
+  requestedGuildId.value = guildId
+  try {
+    const response = await guildApi.requestJoin(guildId) as { requestId?: number }
+    if (response.requestId) requestIds.value[guildId] = response.requestId
+  } catch (error) {
+    console.warn('Guild join request API failed', error)
+  }
+}
+async function cancelJoinRequest() {
+  const guildId = requestedGuildId.value
+  requestedGuildId.value = null
+  currentPage.value = 1
+  if (!guildId || !requestIds.value[guildId]) return
+  try {
+    await guildApi.cancelJoinRequest(guildId, requestIds.value[guildId])
+    delete requestIds.value[guildId]
+  } catch (error) {
+    console.warn('Guild join cancel API failed', error)
+  }
+}
 function send() { if (!message.value.trim()) return; chat.value.push({ id: 'me', name: '지은', time: '방금', text: message.value, mine: true }); message.value = '' }
 function startAddNotice() { editingNoticeId.value = 'new'; noticeDraft.title = ''; noticeDraft.body = '' }
 function startEditNotice(notice: typeof notices.value[number]) { editingNoticeId.value = notice.id; noticeDraft.title = notice.title; noticeDraft.body = notice.body }
@@ -153,6 +176,28 @@ function saveNotice() {
   cancelNoticeEdit()
 }
 function deleteNotice(id: number) { notices.value = notices.value.filter((notice) => notice.id !== id) }
+async function loadGuilds() {
+  try {
+    const response = await guildApi.list(0, 50)
+    apiGuildList.value = response.guilds.map((guild, index) => ({
+      id: guild.guildId,
+      name: guild.name,
+      members: guild.memberCount,
+      max: guild.maxMembers,
+      score: guild.guildPoint,
+      rank: index + 1,
+      focus: guild.description || guild.ownerNickname || '',
+      emoji: '길'
+    }))
+    requestIds.value = response.guilds.reduce((acc, guild) => {
+      if (guild.joinRequestId) acc[guild.guildId] = guild.joinRequestId
+      return acc
+    }, {} as Record<number, number>)
+  } catch (error) {
+    console.warn('Guild list API failed', error)
+  }
+}
+onMounted(() => { void loadGuilds() })
 </script>
 
 <style scoped>

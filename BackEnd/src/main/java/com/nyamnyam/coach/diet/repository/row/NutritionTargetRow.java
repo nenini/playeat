@@ -19,4 +19,5 @@ public class NutritionTargetRow {
     private BigDecimal targetProteinG;
     private BigDecimal targetCarbsG;
     private BigDecimal targetFatG;
+    private BigDecimal targetFiberG;
 }

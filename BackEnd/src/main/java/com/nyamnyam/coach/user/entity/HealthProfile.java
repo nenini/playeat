@@ -34,6 +34,9 @@ public class HealthProfile {
     private BigDecimal targetCarbsG;
     private BigDecimal targetFatG;
     private BigDecimal targetSodiumMg;
+    private BigDecimal targetFiberG;
+    private String nutritionStandardVersion;
+    private LocalDateTime nutritionTargetCalculatedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

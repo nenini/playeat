@@ -38,7 +38,7 @@ import java.util.Map;
 public class DietService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-    private static final int TARGET_VEGETABLE_SERVINGS = 2;
+    private static final BigDecimal DEFAULT_FIBER_TARGET = BigDecimal.valueOf(25).setScale(2, RoundingMode.HALF_UP);
 
     private final DietRepository dietRepository;
     private final FoodRepository foodRepository;
@@ -291,10 +291,12 @@ public class DietService {
         BigDecimal totalProtein = sumDiets(diets, Diet::getTotalProteinG);
         BigDecimal totalCarbs = sumDiets(diets, Diet::getTotalCarbsG);
         BigDecimal totalFat = sumDiets(diets, Diet::getTotalFatG);
+        BigDecimal totalFiber = sumDiets(diets, Diet::getTotalFiberG);
         BigDecimal targetCalories = zeroIfNull(target.getTargetCalories());
         BigDecimal targetProtein = zeroIfNull(target.getTargetProteinG());
         BigDecimal targetCarbs = zeroIfNull(target.getTargetCarbsG());
         BigDecimal targetFat = zeroIfNull(target.getTargetFatG());
+        BigDecimal targetFiber = defaultIfEmpty(target.getTargetFiberG(), DEFAULT_FIBER_TARGET);
 
         return new DailyNutritionSummaryResponse(
                 totalCalories,
@@ -309,10 +311,18 @@ public class DietService {
                 totalFat,
                 targetFat,
                 rate(totalFat, targetFat),
-                0,
-                TARGET_VEGETABLE_SERVINGS,
-                0
+                totalFiber,
+                targetFiber,
+                rate(totalFiber, targetFiber)
         );
+    }
+
+    private BigDecimal defaultIfEmpty(BigDecimal value, BigDecimal defaultValue) {
+        BigDecimal safeValue = zeroIfNull(value);
+        if (safeValue.compareTo(BigDecimal.ZERO) <= 0) {
+            return defaultValue;
+        }
+        return safeValue;
     }
 
     private BigDecimal sumDiets(List<Diet> diets, DietNutrientGetter getter) {

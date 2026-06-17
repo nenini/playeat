@@ -18,52 +18,24 @@
 4. `POST /api/v1/auth/logout`
    - `Authorization: Bearer {accessToken}` 헤더와 body의 `refreshToken`을 함께 보내 현재 refresh token을 폐기한다.
 
-## Boss Seed 실행
+## DB 초기화 스크립트
+
+`docker-compose up`으로 MySQL 볼륨이 처음 생성될 때 `scripts/` 루트의 SQL 파일이 알파벳 순서대로 실행된다.
+
+실행 대상:
+
+- `scripts/init.sql`: 최종 스키마 생성
+- `scripts/seed-data.sql`: 코치, 공식 영양 기준, 아이템, 보스/퀘스트, 음식 샘플 seed
+
+이미 볼륨이 존재하는 경우에는 MySQL `docker-entrypoint-initdb.d`가 재실행되지 않는다. 이때 기존 데이터를 유지한 채 seed만 다시 넣어야 한다면 아래처럼 실행한다.
 
 한글 seed 데이터가 깨지지 않도록 `utf8mb4` 문자셋으로 실행한다.
 
 ```bash
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p nyamnyam < scripts/08-boss-sugar-dragon-seed.sql
+docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/seed-data.sql
 ```
 
-비밀번호를 바로 붙여 실행하는 경우:
-
-```bash
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/08-boss-sugar-dragon-seed.sql
-```
-
-## Migration 실행 순서
-
-기존 볼륨을 유지한 상태에서 현재 브랜치까지 DB를 갱신하려면 아래 순서로 실행한다.
-
-```bash
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/07-boss-pr4-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/08-boss-sugar-dragon-seed.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/09-boss-battle-pr5-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/10-food-domain-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/11-foods-seed.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/12-quest-pr6-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/13-boss-battle-balance-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/14-guild-chat-pr9-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/15-coin-shop-item-pr10-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/16-ranking-dashboard-pr8-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/17-quest-verification-reward-pr7-migration.sql
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/18-boss-battle-participants-pr11-migration.sql
-```
-
-## 음식 데이터 초기 적재 (Food Seed)
-
-`scripts/11-foods-seed.sql`이 저장소에 포함되어 있다.
-`docker-compose up` 시 `docker-entrypoint-initdb.d`가 숫자 순서로 SQL을 자동 실행하므로 **별도 작업 없이 자동 적재**된다.
-
-이미 볼륨이 존재하는 경우(컨테이너를 재시작하는 경우) initdb.d는 실행되지 않는다.
-그럴 때는 아래 명령으로 수동 적재한다.
-
-```bash
-docker exec -i nyamnyam-mysql mysql --default-character-set=utf8mb4 -u root -p비밀번호 nyamnyam < scripts/11-foods-seed.sql
-```
-
-seed SQL은 `ON DUPLICATE KEY UPDATE`로 작성되어 있으므로 중복 실행해도 안전하다.
+스키마까지 새로 맞춰야 하는 경우에는 기존 DB 볼륨 삭제가 필요할 수 있다. `docker compose down -v`는 DB 데이터를 삭제하므로, 기존 데이터가 필요 없는 경우에만 사용한다.
 
 ## Verification
 

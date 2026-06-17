@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
+@Deprecated
 @RestController
 @RequestMapping("/v1/nutrition")
 public class NutritionController implements NutritionApiDocs {

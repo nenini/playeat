@@ -51,6 +51,7 @@
         <result property="targetProteinG" column="target_protein_g"/>
         <result property="targetCarbsG" column="target_carbs_g"/>
         <result property="targetFatG" column="target_fat_g"/>
+        <result property="targetFiberG" column="target_fiber_g"/>
     </resultMap>
 
     <sql id="DietColumns">
@@ -133,7 +134,8 @@
             target_calories,
             target_protein_g,
             target_carbs_g,
-            target_fat_g
+            target_fat_g,
+            target_fiber_g
         FROM health_profiles
         WHERE user_id = #{userId}
     </select>

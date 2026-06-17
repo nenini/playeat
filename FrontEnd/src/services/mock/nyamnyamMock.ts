@@ -59,6 +59,16 @@ export const foodDb: Food[] = [
   { id: 'nuts', name: '견과류 믹스', emoji: '🥜', src: '식약처', per: '30g', kcal: 180, p: 6, c: 6, f: 16, unit: 'g', presets: [15, 30] }
 ]
 
+const apiFoodDb = new Map<string, Food>()
+
+export function registerApiFoods(foods: Food[]) {
+  foods.forEach((food) => apiFoodDb.set(String(food.id), food))
+}
+
+export function findFoodById(id: string | number) {
+  return foodDb.find((food) => String(food.id) === String(id)) || apiFoodDb.get(String(id))
+}
+
 export const favoriteIds = ['oatmeal', 'kimchi-stew', 'cu-salad', 'banana', 'protein-shake', 'salad']
 
 export const mealKinds: Array<{ id: MealKindId, label: string, emoji: string, window: string }> = [
@@ -252,7 +262,7 @@ export const seedLogs: MealLog[] = [
   { id: 'l5', foodId: 'protein-shake', mealKind: 'snack', qty: 1 }
 ]
 
-const findFood = (id: string) => foodDb.find((f) => f.id === id)
+const findFood = (id: string | number) => findFoodById(id)
 const perBase = (food: Food) => Number(String(food.per).match(/(\d+)/)?.[1] ?? 1)
 
 export function totalsFor(logs: MealLog[]) {

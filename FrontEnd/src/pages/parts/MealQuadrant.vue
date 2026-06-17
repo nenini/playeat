@@ -18,12 +18,12 @@
 import { computed } from 'vue'
 import AppCard from '../../components/common/AppCard.vue'
 import AppPill from '../../components/common/AppPill.vue'
-import { foodDb, totalsFor, type MealLog } from '../../services/mock/nyamnyamMock'
+import { findFoodById, totalsFor, type MealLog } from '../../services/mock/nyamnyamMock'
 
 const props = defineProps<{ kind: { id: string, label: string, emoji: string, window: string }, entries: MealLog[], active: boolean }>()
 defineEmits<{ activate: [], remove: [id: string] }>()
 const total = computed(() => totalsFor(props.entries))
-const food = (id: string) => foodDb.find((item) => item.id === id)
+const food = (id: string) => findFoodById(id)
 function kcal(entry: MealLog) {
   const f = food(entry.foodId)
   const per = Number(String(f?.per || '').match(/(\d+)/)?.[1] || 1)

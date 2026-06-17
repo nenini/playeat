@@ -1,7 +1,7 @@
 <template>
   <section class="auth-page">
     <button class="auth-brand" type="button" @click="$emit('back')"><span>냠</span><strong>냠냠코치</strong></button>
-    <form class="auth-card" @submit.prevent="$emit('done')">
+    <form class="auth-card" @submit.prevent="submit">
       <div class="auth-head"><p>WELCOME BACK</p><h1>로그인</h1><span>식단 기록과 냠냠이 성장을 이어가세요.</span></div>
       <label>이메일<input v-model="email" type="email" placeholder="jieun@example.com"></label>
       <label>비밀번호<input v-model="password" type="password" placeholder="비밀번호"></label>
@@ -13,9 +13,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-defineEmits<{ done: [], signup: [], back: [] }>()
+const emit = defineEmits<{ done: [payload: { email: string, password: string }], signup: [], back: [] }>()
 const email = ref('jieun@example.com')
 const password = ref('')
+function submit() {
+  emit('done', { email: email.value, password: password.value })
+}
 </script>
 
 <style scoped>

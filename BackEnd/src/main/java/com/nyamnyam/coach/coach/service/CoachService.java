@@ -18,6 +18,8 @@ import com.nyamnyam.coach.global.exception.errorcode.DietErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 public class CoachService {
 
@@ -89,8 +91,22 @@ public class CoachService {
         AiFeedback feedback = aiFeedbackService.getLatest(userId, dietId);
         Coach coach = feedback.getCoachId() == null
                 ? resolveCoach(userId)
-                : coachRepository.findById(feedback.getCoachId()).orElse(resolveCoach(userId));
+                : coachRepository.findById(feedback.getCoachId()).orElseGet(() -> resolveCoach(userId));
         return toFeedbackResponse(feedback, coach);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<CoachFeedbackResponse> findDietFeedback(Long userId, Long dietId) {
+        if (dietRepository.findByIdAndUserId(dietId, userId).isEmpty()) {
+            return Optional.empty();
+        }
+        return aiFeedbackService.findLatest(userId, dietId)
+                .map(feedback -> {
+                    Coach coach = feedback.getCoachId() == null
+                            ? resolveCoach(userId)
+                            : coachRepository.findById(feedback.getCoachId()).orElseGet(() -> resolveCoach(userId));
+                    return toFeedbackResponse(feedback, coach);
+                });
     }
 
     private Coach resolveCoach(Long userId) {

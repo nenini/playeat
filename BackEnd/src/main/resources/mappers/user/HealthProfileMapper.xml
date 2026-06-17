@@ -23,6 +23,9 @@
         <result property="targetCarbsG" column="target_carbs_g"/>
         <result property="targetFatG" column="target_fat_g"/>
         <result property="targetSodiumMg" column="target_sodium_mg"/>
+        <result property="targetFiberG" column="target_fiber_g"/>
+        <result property="nutritionStandardVersion" column="nutrition_standard_version"/>
+        <result property="nutritionTargetCalculatedAt" column="nutrition_target_calculated_at"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
@@ -48,7 +51,10 @@
             target_protein_g,
             target_carbs_g,
             target_fat_g,
-            target_sodium_mg
+            target_sodium_mg,
+            target_fiber_g,
+            nutrition_standard_version,
+            nutrition_target_calculated_at
         )
         VALUES (
             #{userId},
@@ -66,7 +72,10 @@
             #{targetProteinG},
             #{targetCarbsG},
             #{targetFatG},
-            #{targetSodiumMg}
+            #{targetSodiumMg},
+            #{targetFiberG},
+            #{nutritionStandardVersion},
+            #{nutritionTargetCalculatedAt}
         )
     </insert>
 
@@ -89,6 +98,9 @@
             target_carbs_g,
             target_fat_g,
             target_sodium_mg,
+            target_fiber_g,
+            nutrition_standard_version,
+            nutrition_target_calculated_at,
             created_at,
             updated_at
         FROM health_profiles
@@ -119,6 +131,9 @@
             target_carbs_g = #{targetCarbsG},
             target_fat_g = #{targetFatG},
             target_sodium_mg = #{targetSodiumMg},
+            target_fiber_g = #{targetFiberG},
+            nutrition_standard_version = #{nutritionStandardVersion},
+            nutrition_target_calculated_at = #{nutritionTargetCalculatedAt},
             updated_at = CURRENT_TIMESTAMP
         WHERE user_id = #{userId}
     </update>

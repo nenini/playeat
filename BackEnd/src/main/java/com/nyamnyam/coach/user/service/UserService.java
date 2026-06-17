@@ -8,6 +8,8 @@ import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.CommonErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.UserErrorCode;
+import com.nyamnyam.coach.nutrition.service.NutritionTargetCalculator;
+import com.nyamnyam.coach.nutrition.service.NutritionTargetValues;
 import com.nyamnyam.coach.user.dto.request.ChangePasswordRequest;
 import com.nyamnyam.coach.user.dto.request.DeactivateUserRequest;
 import com.nyamnyam.coach.user.dto.request.HealthProfileRequest;
@@ -46,6 +48,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
     private final ProfileImageStorageService profileImageStorageService;
+    private final NutritionTargetCalculator nutritionTargetCalculator;
 
     @Transactional(readOnly = true)
     public UserMeResponse getMe(Long userId) {
@@ -201,6 +204,7 @@ public class UserService {
     }
 
     private HealthProfile toHealthProfile(Long userId, HealthProfileRequest request) {
+        NutritionTargetValues targets = nutritionTargetCalculator.calculate(request);
         return HealthProfile.builder()
                 .userId(userId)
                 .heightCm(request.heightCm())
@@ -213,11 +217,14 @@ public class UserService {
                 .dietStylesJson(toJson(request.dietStyles()))
                 .restrictedFoodsJson(toJson(request.restrictedFoods()))
                 .allergiesJson(toJson(request.allergies()))
-                .targetCalories(request.targetCalories())
-                .targetProteinG(request.targetProteinG())
-                .targetCarbsG(request.targetCarbsG())
-                .targetFatG(request.targetFatG())
-                .targetSodiumMg(request.targetSodiumMg())
+                .targetCalories(targets.calories())
+                .targetProteinG(targets.proteinG())
+                .targetCarbsG(targets.carbsG())
+                .targetFatG(targets.fatG())
+                .targetSodiumMg(targets.sodiumMg())
+                .targetFiberG(targets.fiberG())
+                .nutritionStandardVersion(targets.standardVersion())
+                .nutritionTargetCalculatedAt(targets.calculatedAt())
                 .build();
     }
 
@@ -252,6 +259,9 @@ public class UserService {
                 healthProfile.getTargetCarbsG(),
                 healthProfile.getTargetFatG(),
                 healthProfile.getTargetSodiumMg(),
+                healthProfile.getTargetFiberG(),
+                healthProfile.getNutritionStandardVersion(),
+                healthProfile.getNutritionTargetCalculatedAt(),
                 healthProfile.getUpdatedAt()
         );
     }

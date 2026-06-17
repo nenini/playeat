@@ -8,6 +8,11 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS guild_rankings;
 DROP TABLE IF EXISTS guild_score_logs;
+DROP TABLE IF EXISTS character_equipments;
+DROP TABLE IF EXISTS user_items;
+DROP TABLE IF EXISTS items;
+DROP TABLE IF EXISTS coin_transactions;
+DROP TABLE IF EXISTS user_coin_balances;
 DROP TABLE IF EXISTS reward_claims;
 DROP TABLE IF EXISTS quest_verifications;
 DROP TABLE IF EXISTS quests;
@@ -38,6 +43,8 @@ DROP TABLE IF EXISTS diets;
 DROP TABLE IF EXISTS food_favorites;
 DROP TABLE IF EXISTS foods;
 DROP TABLE IF EXISTS health_profiles;
+DROP TABLE IF EXISTS peer_nutrition_statistics;
+DROP TABLE IF EXISTS nutrition_reference_standards;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS coaches;
 
@@ -90,6 +97,9 @@ CREATE TABLE health_profiles (
     target_carbs_g DECIMAL(8,2),
     target_fat_g DECIMAL(8,2),
     target_sodium_mg DECIMAL(8,2),
+    target_fiber_g DECIMAL(8,2),
+    nutrition_standard_version VARCHAR(30),
+    nutrition_target_calculated_at DATETIME,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_health_profiles_user UNIQUE (user_id),
@@ -98,6 +108,38 @@ CREATE TABLE health_profiles (
         REFERENCES users(user_id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+CREATE TABLE nutrition_reference_standards (
+    standard_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    standard_version VARCHAR(30) NOT NULL,
+    source_name VARCHAR(100) NOT NULL,
+    gender VARCHAR(20) NOT NULL,
+    age_min INT NOT NULL,
+    age_max INT NOT NULL,
+    sodium_mg DECIMAL(8,2) NOT NULL,
+    fiber_g DECIMAL(8,2) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_nutrition_reference_standard UNIQUE (standard_version, gender, age_min, age_max),
+    INDEX idx_nutrition_reference_lookup (gender, age_min, age_max)
+) ENGINE=InnoDB;
+
+CREATE TABLE peer_nutrition_statistics (
+    stat_id        BIGINT AUTO_INCREMENT PRIMARY KEY,
+    standard_version VARCHAR(30)    NOT NULL,
+    source_name    VARCHAR(100)   NOT NULL,
+    gender         VARCHAR(20)    NOT NULL,
+    age_min        INT            NOT NULL,
+    age_max        INT            NOT NULL,
+    avg_calories   DECIMAL(8, 2)  NOT NULL,
+    avg_protein_g  DECIMAL(8, 2)  NOT NULL,
+    avg_carbs_g    DECIMAL(8, 2)  NOT NULL,
+    avg_fat_g      DECIMAL(8, 2)  NOT NULL,
+    avg_sodium_mg  DECIMAL(8, 2)  NOT NULL,
+    avg_fiber_g    DECIMAL(8, 2)  NOT NULL,
+    created_at     DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_peer_nutrition_stat UNIQUE (standard_version, gender, age_min, age_max),
+    INDEX idx_peer_nutrition_lookup (gender, age_min, age_max)
+) ENGINE = InnoDB;
 
 CREATE TABLE foods (
     food_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -276,6 +318,93 @@ CREATE TABLE xp_histories (
         ON DELETE CASCADE,
     CONSTRAINT uq_xp_source UNIQUE (character_id, source_type, source_id),
     INDEX idx_xp_histories_user_created (user_id, created_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE user_coin_balances (
+    user_id BIGINT PRIMARY KEY,
+    balance INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_coin_balances_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE coin_transactions (
+    transaction_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    transaction_type VARCHAR(30) NOT NULL,
+    amount INT NOT NULL,
+    balance_after INT NOT NULL,
+    source_type VARCHAR(30) NOT NULL,
+    source_id BIGINT,
+    description VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_coin_transactions_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+    INDEX idx_coin_transactions_user_created (user_id, created_at),
+    INDEX idx_coin_transactions_source (source_type, source_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE items (
+    item_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500),
+    item_type VARCHAR(30) NOT NULL DEFAULT 'EQUIPMENT',
+    slot_type VARCHAR(30) NOT NULL,
+    price INT NOT NULL DEFAULT 0,
+    image_url VARCHAR(500),
+    default_item BOOLEAN NOT NULL DEFAULT FALSE,
+    purchasable BOOLEAN NOT NULL DEFAULT TRUE,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_items_active_sort (active, sort_order),
+    INDEX idx_items_slot_type (slot_type)
+) ENGINE=InnoDB;
+
+CREATE TABLE user_items (
+    user_item_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    item_id BIGINT NOT NULL,
+    acquired_type VARCHAR(30) NOT NULL,
+    acquired_source_id BIGINT,
+    acquired_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_user_items_user_item UNIQUE (user_id, item_id),
+    CONSTRAINT fk_user_items_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_user_items_item
+        FOREIGN KEY (item_id)
+        REFERENCES items(item_id)
+        ON DELETE RESTRICT,
+    INDEX idx_user_items_user (user_id),
+    INDEX idx_user_items_item (item_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE character_equipments (
+    equipment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    character_id BIGINT NOT NULL,
+    slot_type VARCHAR(30) NOT NULL,
+    user_item_id BIGINT NOT NULL,
+    equipped_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_character_equipments_character_slot UNIQUE (character_id, slot_type),
+    CONSTRAINT fk_character_equipments_character
+        FOREIGN KEY (character_id)
+        REFERENCES characters(character_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_character_equipments_user_item
+        FOREIGN KEY (user_item_id)
+        REFERENCES user_items(user_item_id)
+        ON DELETE CASCADE,
+    INDEX idx_character_equipments_character (character_id),
+    INDEX idx_character_equipments_user_item (user_item_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE badges (

@@ -21,7 +21,7 @@
         </AppCard>
         <AppCard :padding="14">
           <div class="mono-label block-label">② 음식 검색 <span>· 식약처 DB</span></div>
-          <label class="app-input"><AppIcon name="search" color="var(--ink-3)" /><input v-model="query" placeholder="음식 이름 (예: 계란, 닭가슴살)" @input="pending = null"></label>
+          <label class="app-input"><AppIcon name="search" color="var(--ink-3)" /><input v-model="query" placeholder="음식 이름 (예: 계란, 닭가슴살)" @input="onQueryInput"></label>
           <div class="search-list">
             <button v-for="food in filtered" :key="food.id" class="food-row" :class="{ active: pending?.food.id === food.id }" @click="selectFood(food)">
               <span class="food-emoji">{{ food.emoji }}</span>
@@ -63,24 +63,29 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AppButton from '../components/common/AppButton.vue'
 import AppCard from '../components/common/AppCard.vue'
 import AppIcon from '../components/common/AppIcon.vue'
 import MealQuadrant from './parts/MealQuadrant.vue'
 import NutrientSummary from './parts/NutrientSummary.vue'
-import { favoriteIds, foodDb, goalDefaults, mealKinds, recordsByKind, totalsFor, veggieCount, type Food, type MealKindId, type MealLog } from '../services/mock/nyamnyamMock'
+import { favoriteIds, foodDb, goalDefaults, mealKinds, recordsByKind, totalsFor, veggieCount, registerApiFoods, type Food, type MealKindId, type MealLog } from '../services/mock/nyamnyamMock'
+import { foodApi, type FoodSearchItem } from '../services/nyamnyamApi'
 
 const props = defineProps<{ logs: MealLog[] }>()
-const emit = defineEmits<{ addLog: [payload: { foodId: string, mealKind: MealKindId, qty: number }], removeLog: [id: string] }>()
+const emit = defineEmits<{ addLog: [payload: { foodId: string, mealKind: MealKindId, qty: number, inputUnit?: string, date: string }], removeLog: [id: string] }>()
 const activeKind = ref<MealKindId>('breakfast')
 const query = ref('')
 const selectedDate = ref('2026-05-15')
 const showCalendar = ref(false)
 const pending = ref<{ food: Food, qty: number, unitMode: 'serving' | 'gram' } | null>(null)
+const apiFoods = ref<Food[]>([])
 const totals = computed(() => totalsFor(props.logs))
 const byKind = computed(() => recordsByKind(props.logs))
-const filtered = computed(() => query.value.trim() ? foodDb.filter((food) => food.name.includes(query.value.trim())) : foodDb.slice(0, 6))
+const filtered = computed(() => {
+  if (apiFoods.value.length) return apiFoods.value
+  return query.value.trim() ? foodDb.filter((food) => food.name.includes(query.value.trim())) : foodDb.slice(0, 6)
+})
 const favorites = computed(() => favoriteIds.map((id) => foodDb.find((food) => food.id === id)).filter(Boolean) as Food[])
 const selectedDateLabel = computed(() => {
   const date = new Date(`${selectedDate.value}T00:00:00`)
@@ -115,7 +120,39 @@ function selectFood(food: Food) { pending.value = { food, qty: food.unit === 'g'
 function setMode(unitMode: 'serving' | 'gram') { if (!pending.value) return; pending.value.unitMode = unitMode; pending.value.qty = unitMode === 'gram' ? 100 : 1 }
 function adjustQty(delta: number) { if (!pending.value) return; pending.value.qty = Math.max(1, Number(pending.value.qty || 1) + delta) }
 function selectFavorite(food: Food) { query.value = food.name; selectFood(food) }
-function commit() { if (!pending.value) return; emit('addLog', { foodId: pending.value.food.id, mealKind: activeKind.value, qty: pending.value.qty }); pending.value = null; query.value = '' }
+function commit() { if (!pending.value) return; emit('addLog', { foodId: pending.value.food.id, mealKind: activeKind.value, qty: pending.value.qty, inputUnit: unitLabel.value, date: selectedDate.value }); pending.value = null; query.value = '' }
+function onQueryInput() {
+  pending.value = null
+}
+async function loadFoods() {
+  try {
+    const result = await foodApi.search(query.value, 0, 20)
+    apiFoods.value = result.foods.map(toFood)
+    registerApiFoods(apiFoods.value)
+  } catch (error) {
+    console.warn('Food search API failed', error)
+    apiFoods.value = []
+  }
+}
+function toFood(food: FoodSearchItem): Food {
+  const amount = Number(food.nutritionBasisAmount || food.servingAmount || 100)
+  const unit = food.nutritionBasisUnit || food.servingUnit || 'g'
+  return {
+    id: String(food.foodId),
+    name: food.name,
+    emoji: '🍽️',
+    src: food.brand || food.category || 'DB',
+    per: `${amount}${unit}`,
+    kcal: Number(food.calories || 0),
+    p: Number(food.protein || 0),
+    c: Number(food.carbs || 0),
+    f: Number(food.fat || 0),
+    unit,
+    presets: unit === 'g' ? [50, 100, 150] : [1, 2, 3]
+  }
+}
+watch(query, () => { void loadFoods() })
+onMounted(() => { void loadFoods() })
 </script>
 
 <style scoped>

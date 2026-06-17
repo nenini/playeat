@@ -149,6 +149,14 @@ public class AiReportService {
         return toResponse(report);
     }
 
+    @Transactional(readOnly = true)
+    public AiReportResponse findWeeklyReportOrNull(Long userId, LocalDate startDate, LocalDate endDate) {
+        validateWeeklyPeriod(startDate, endDate);
+        return aiReportRepository.findByUserIdAndPeriod(userId, WEEKLY, startDate, endDate)
+                .map(this::toResponse)
+                .orElse(null);
+    }
+
     private List<String> dailyMealSummaries(Long userId, LocalDate date) {
         DietDayResponse dietDay = dietService.getDietsByDate(userId, date);
         return dietDay.meals().stream()

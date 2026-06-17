@@ -315,12 +315,7 @@ class UserControllerTest {
                 "LIGHT",
                 List.of("BALANCED"),
                 List.of("CAFFEINE"),
-                List.of("PEANUT"),
-                new BigDecimal("2000"),
-                new BigDecimal("90"),
-                new BigDecimal("260"),
-                new BigDecimal("65"),
-                new BigDecimal("2300")
+                List.of("PEANUT")
         );
     }
 
@@ -342,6 +337,9 @@ class UserControllerTest {
                 new BigDecimal("260"),
                 new BigDecimal("65"),
                 new BigDecimal("2300"),
+                new BigDecimal("25"),
+                "KDRI_2020",
+                LocalDateTime.of(2026, 6, 9, 12, 0),
                 LocalDateTime.of(2026, 6, 9, 12, 0)
         );
     }

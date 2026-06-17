@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.nutrition.repository.PeerNutritionStatRepository">
+
+    <resultMap id="PeerNutritionStatRowResultMap" type="com.nyamnyam.coach.nutrition.repository.row.PeerNutritionStatRow">
+        <result property="standardVersion" column="standard_version"/>
+        <result property="sourceName"      column="source_name"/>
+        <result property="avgCalories"     column="avg_calories"/>
+        <result property="avgProteinG"     column="avg_protein_g"/>
+        <result property="avgCarbsG"       column="avg_carbs_g"/>
+        <result property="avgFatG"         column="avg_fat_g"/>
+        <result property="avgSodiumMg"     column="avg_sodium_mg"/>
+        <result property="avgFiberG"       column="avg_fiber_g"/>
+    </resultMap>
+
+    <select id="findStat" resultMap="PeerNutritionStatRowResultMap">
+        SELECT
+            standard_version,
+            source_name,
+            avg_calories,
+            avg_protein_g,
+            avg_carbs_g,
+            avg_fat_g,
+            avg_sodium_mg,
+            avg_fiber_g
+        FROM peer_nutrition_statistics
+        WHERE (gender = #{gender} OR gender = 'ALL')
+          AND #{age} BETWEEN age_min AND age_max
+        ORDER BY CASE WHEN gender = #{gender} THEN 0 ELSE 1 END
+        LIMIT 1
+    </select>
+
+</mapper>
