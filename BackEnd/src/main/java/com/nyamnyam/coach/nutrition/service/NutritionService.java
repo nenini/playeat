@@ -2,7 +2,7 @@ package com.nyamnyam.coach.nutrition.service;
 
 import com.nyamnyam.coach.nutrition.dto.response.DailyNutritionAnalysisResponse;
 import com.nyamnyam.coach.nutrition.dto.response.NutrientAnalysisResponse;
-import com.nyamnyam.coach.nutrition.dto.response.PeerComparisonResponse;
+import com.nyamnyam.coach.nutrition.dto.response.StandardInsightResponse;
 import com.nyamnyam.coach.nutrition.repository.NutritionRepository;
 import com.nyamnyam.coach.nutrition.repository.row.DailyNutritionAggregateRow;
 import org.springframework.stereotype.Service;
@@ -40,14 +40,14 @@ public class NutritionService {
                 nutrient("carbs", "탄수화물", "g", row.getTotalCarbsG(), row.getTargetCarbsG(), false),
                 nutrient("fat", "지방", "g", row.getTotalFatG(), row.getTargetFatG(), false),
                 nutrient("sodium", "나트륨", "mg", row.getTotalSodiumMg(), defaultIfEmpty(row.getTargetSodiumMg(), DEFAULT_SODIUM_TARGET), true),
-                nutrient("fiber", "식이섬유", "g", row.getTotalFiberG(), DEFAULT_FIBER_TARGET, false)
+                nutrient("fiber", "식이섬유", "g", row.getTotalFiberG(), defaultIfEmpty(row.getTargetFiberG(), DEFAULT_FIBER_TARGET), false)
         );
 
         return new DailyNutritionAnalysisResponse(
                 date,
                 healthScore(nutrients),
                 nutrients,
-                peerComparison(nutrients)
+                standardInsights(nutrients)
         );
     }
 
@@ -70,38 +70,67 @@ public class NutritionService {
                 safeCurrent,
                 safeTarget,
                 rate,
-                status,
-                message(name, status, lowerIsBetter)
+                status
         );
     }
 
     private int healthScore(List<NutrientAnalysisResponse> nutrients) {
-        int penalty = 0;
-        for (NutrientAnalysisResponse nutrient : nutrients) {
-            if ("LOW".equals(nutrient.status())) {
-                penalty += 10;
-            }
-            if ("HIGH".equals(nutrient.status())) {
-                penalty += 8;
-            }
-        }
-        return Math.max(0, 100 - penalty);
+        return nutrients.stream()
+                .mapToInt(nutrient -> weightedScore(nutrient, weight(nutrient.code())))
+                .sum();
     }
 
-    private List<PeerComparisonResponse> peerComparison(List<NutrientAnalysisResponse> nutrients) {
-        int userAverage = (int) nutrients.stream()
-                .mapToInt(NutrientAnalysisResponse::achievementRate)
-                .average()
-                .orElse(0);
-        int peerAverage = 78;
-        return List.of(
-                new PeerComparisonResponse(
-                        "목표 달성률",
-                        userAverage,
-                        peerAverage,
-                        userAverage >= peerAverage ? "또래 평균보다 목표 달성률이 높아요." : "또래 평균보다 조금 낮아요. 다음 끼니에서 부족한 영양소를 보완해보세요."
-                )
-        );
+    private int weightedScore(NutrientAnalysisResponse nutrient, int weight) {
+        int rate = nutrient.achievementRate();
+        if ("sodium".equals(nutrient.code())) {
+            if (rate <= 100) {
+                return weight;
+            }
+            if (rate <= 120) {
+                return (int) Math.round(weight * 0.7);
+            }
+            if (rate <= 150) {
+                return (int) Math.round(weight * 0.4);
+            }
+            return 0;
+        }
+        if (rate >= 80 && rate <= 120) {
+            return weight;
+        }
+        if (rate >= 60 && rate < 80) {
+            return (int) Math.round(weight * 0.7);
+        }
+        if (rate > 120 && rate <= 150) {
+            return (int) Math.round(weight * 0.6);
+        }
+        if (rate > 0) {
+            return (int) Math.round(weight * 0.3);
+        }
+        return 0;
+    }
+
+    private int weight(String code) {
+        return switch (code) {
+            case "calories" -> 25;
+            case "protein" -> 20;
+            case "carbs", "fat", "sodium" -> 15;
+            case "fiber" -> 10;
+            default -> 0;
+        };
+    }
+
+    private List<StandardInsightResponse> standardInsights(List<NutrientAnalysisResponse> nutrients) {
+        return nutrients.stream()
+                .filter(nutrient -> !"OK".equals(nutrient.status()))
+                .map(nutrient -> new StandardInsightResponse(
+                        nutrient.code(),
+                        nutrient.name(),
+                        nutrient.unit(),
+                        nutrient.current(),
+                        nutrient.target(),
+                        nutrient.status()
+                ))
+                .toList();
     }
 
     private String status(int rate, boolean lowerIsBetter) {
@@ -115,16 +144,6 @@ public class NutritionService {
             return "HIGH";
         }
         return "OK";
-    }
-
-    private String message(String name, String status, boolean lowerIsBetter) {
-        if ("LOW".equals(status)) {
-            return name + " 섭취가 부족해요.";
-        }
-        if ("HIGH".equals(status)) {
-            return lowerIsBetter ? name + " 섭취가 많아요." : name + " 섭취가 목표보다 높아요.";
-        }
-        return name + " 섭취가 적정 범위예요.";
     }
 
     private int rate(BigDecimal value, BigDecimal target) {

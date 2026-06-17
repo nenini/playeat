@@ -12,7 +12,18 @@ public record NutrientAnalysisResponse(
         BigDecimal current,
         BigDecimal target,
         int achievementRate,
-        String status,
-        String message
+        String status
 ) {
+    public NutrientAnalysisResponse(
+            String code,
+            String name,
+            String unit,
+            BigDecimal current,
+            BigDecimal target,
+            int achievementRate,
+            String status,
+            String ignoredMessage
+    ) {
+        this(code, name, unit, current, target, achievementRate, status);
+    }
 }
