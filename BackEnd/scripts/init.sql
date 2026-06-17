@@ -43,6 +43,7 @@ DROP TABLE IF EXISTS diets;
 DROP TABLE IF EXISTS food_favorites;
 DROP TABLE IF EXISTS foods;
 DROP TABLE IF EXISTS health_profiles;
+DROP TABLE IF EXISTS peer_nutrition_statistics;
 DROP TABLE IF EXISTS nutrition_reference_standards;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS coaches;
@@ -121,6 +122,24 @@ CREATE TABLE nutrition_reference_standards (
     CONSTRAINT uk_nutrition_reference_standard UNIQUE (standard_version, gender, age_min, age_max),
     INDEX idx_nutrition_reference_lookup (gender, age_min, age_max)
 ) ENGINE=InnoDB;
+
+CREATE TABLE peer_nutrition_statistics (
+    stat_id        BIGINT AUTO_INCREMENT PRIMARY KEY,
+    standard_version VARCHAR(30)    NOT NULL,
+    source_name    VARCHAR(100)   NOT NULL,
+    gender         VARCHAR(20)    NOT NULL,
+    age_min        INT            NOT NULL,
+    age_max        INT            NOT NULL,
+    avg_calories   DECIMAL(8, 2)  NOT NULL,
+    avg_protein_g  DECIMAL(8, 2)  NOT NULL,
+    avg_carbs_g    DECIMAL(8, 2)  NOT NULL,
+    avg_fat_g      DECIMAL(8, 2)  NOT NULL,
+    avg_sodium_mg  DECIMAL(8, 2)  NOT NULL,
+    avg_fiber_g    DECIMAL(8, 2)  NOT NULL,
+    created_at     DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_peer_nutrition_stat UNIQUE (standard_version, gender, age_min, age_max),
+    INDEX idx_peer_nutrition_lookup (gender, age_min, age_max)
+) ENGINE = InnoDB;
 
 CREATE TABLE foods (
     food_id BIGINT AUTO_INCREMENT PRIMARY KEY,

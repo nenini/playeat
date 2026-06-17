@@ -43,6 +43,35 @@ ON DUPLICATE KEY UPDATE
     source_name = VALUES(source_name),
     sodium_mg = VALUES(sodium_mg),
     fiber_g = VALUES(fiber_g);
+INSERT INTO peer_nutrition_statistics (
+    standard_version,
+    source_name,
+    gender,
+    age_min,
+    age_max,
+    avg_calories,
+    avg_protein_g,
+    avg_carbs_g,
+    avg_fat_g,
+    avg_sodium_mg,
+    avg_fiber_g
+) VALUES
+    ('KNHANES_2022', '2022 국민건강영양조사 (질병관리청)', 'ALL',    1,   5,  1320, 47,  190, 44,  1410, 10),
+    ('KNHANES_2022', '2022 국민건강영양조사 (질병관리청)', 'ALL',    6,  11,  1740, 66,  258, 57,  2350, 15),
+    ('KNHANES_2022', '2022 국민건강영양조사 (질병관리청)', 'MALE',  12,  18,  2340, 90,  348, 81,  3820, 19),
+    ('KNHANES_2022', '2022 국민건강영양조사 (질병관리청)', 'FEMALE',12,  18,  1760, 65,  261, 59,  2930, 15),
+    ('KNHANES_2022', '2022 국민건강영양조사 (질병관리청)', 'MALE',  19,  64,  2080, 88,  308, 74,  3720, 22),
+    ('KNHANES_2022', '2022 국민건강영양조사 (질병관리청)', 'FEMALE',19,  64,  1600, 65,  242, 54,  2760, 18),
+    ('KNHANES_2022', '2022 국민건강영양조사 (질병관리청)', 'MALE',  65, 120,  1840, 72,  291, 52,  2750, 21),
+    ('KNHANES_2022', '2022 국민건강영양조사 (질병관리청)', 'FEMALE',65, 120,  1470, 55,  235, 39,  2090, 17)
+ON DUPLICATE KEY UPDATE
+    source_name   = VALUES(source_name),
+    avg_calories  = VALUES(avg_calories),
+    avg_protein_g = VALUES(avg_protein_g),
+    avg_carbs_g   = VALUES(avg_carbs_g),
+    avg_fat_g     = VALUES(avg_fat_g),
+    avg_sodium_mg = VALUES(avg_sodium_mg),
+    avg_fiber_g   = VALUES(avg_fiber_g);
 INSERT INTO items (
     name,
     description,
