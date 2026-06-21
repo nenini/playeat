@@ -33,7 +33,16 @@ public class AiFeedbackService {
                 .orElseThrow(() -> new BusinessException(AiErrorCode.AI_FEEDBACK_NOT_FOUND));
     }
 
+    public AiFeedback getLatest(Long userId, Long dietId, Long coachId) {
+        return findLatest(userId, dietId, coachId)
+                .orElseThrow(() -> new BusinessException(AiErrorCode.AI_FEEDBACK_NOT_FOUND));
+    }
+
     public Optional<AiFeedback> findLatest(Long userId, Long dietId) {
         return aiFeedbackRepository.findLatestByUserIdAndDietId(userId, dietId);
+    }
+
+    public Optional<AiFeedback> findLatest(Long userId, Long dietId, Long coachId) {
+        return aiFeedbackRepository.findLatestByUserIdAndDietIdAndCoachId(userId, dietId, coachId);
     }
 }

@@ -1,5 +1,5 @@
 <template>
-  <button class="app-button" :class="[variant, size, { full }]" :disabled="disabled" type="button">
+  <button class="app-button" :class="[variant, size, { full }]" :disabled="disabled" :type="type">
     <slot />
   </button>
 </template>
@@ -10,11 +10,13 @@ withDefaults(defineProps<{
   size?: 'sm' | 'md' | 'lg'
   full?: boolean
   disabled?: boolean
+  type?: 'button' | 'submit' | 'reset'
 }>(), {
   variant: 'primary',
   size: 'md',
   full: false,
-  disabled: false
+  disabled: false,
+  type: 'button'
 })
 </script>
 

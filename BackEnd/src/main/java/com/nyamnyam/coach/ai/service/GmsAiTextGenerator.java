@@ -32,30 +32,26 @@ public class GmsAiTextGenerator implements AiTextGenerator {
     public String generateCoachFeedback(CoachFeedbackPrompt prompt) {
         log.info("AI generator selected provider=gms feature=coach-feedback model={}", properties.getModel());
         return gmsAiClient.createResponse("""
-                당신은 사용자가 선택한 캐릭터형 식단 코치입니다.
+                당신은 캐릭터형 식단 코치입니다.
                 반드시 JSON만 반환하고 마크다운은 사용하지 마세요.
-                질병을 진단하지 말고, 현재 식단 기록을 바탕으로 실천 가능한 한마디 피드백만 작성하세요.
-                응답은 반드시 선택한 코치의 말투를 반영하세요.
+                코치의 말투로 짧은 한 문장만 작성하세요.
+                음식 이름과 영양소 이름만 언급하고, 칼로리·그램 수 등 구체적인 수치는 절대 언급하지 마세요.
+                의학적 진단 없이 가볍고 자연스러운 한마디면 충분합니다.
 
                 출력 형식:
                 {"message":"string"}
 
-                코치 정보:
-                이름: %s
-                말투: %s
-
-                식사 영양 정보:
-                칼로리: %s kcal
-                단백질: %s g
-                탄수화물: %s g
-                지방: %s g
+                코치 이름: %s
+                코치 말투: %s
+                끼니: %s
+                먹은 음식: %s
+                주의할 영양소: %s
                 """.formatted(
                 prompt.coachName(),
                 prompt.coachTone(),
-                prompt.calories(),
-                prompt.proteinG(),
-                prompt.carbsG(),
-                prompt.fatG()
+                prompt.mealType(),
+                prompt.mealItems(),
+                prompt.caution()
         ));
     }
 
@@ -129,14 +125,14 @@ public class GmsAiTextGenerator implements AiTextGenerator {
                 당신은 공식 건강 자료와 사용자의 실제 식단 기록을 함께 참고해 주간 식습관 리포트를 작성하는 한국어 영양 코치입니다.
                 반드시 JSON만 반환하고 마크다운은 사용하지 마세요.
                 질병을 진단하거나 치료를 지시하지 마세요.
-                공식 자료는 일반적인 건강 정보로만 사용하고, 사용자의 기록과 건강 목표에 맞는 실천 가능한 조언을 작성하세요.
-                알레르기나 피해야 하는 식품이 있으면 그 식품을 추천하지 마세요.
+                공식 자료는 일반 건강 정보로만 사용하고, 사용자 기록과 건강 목표에 맞는 실행 가능한 조언을 작성하세요.
+                알레르기 위해가 있는 식품이 있으면 그 식품을 추천하지 마세요.
 
                 출력 규칙:
                 - summary: 2~3문장
                 - strengths: 2개
                 - warnings: 2개
-                - nextAction: 다음 주에 할 수 있는 행동 1~2문장
+                - nextAction: 다음 주에 해볼 수 있는 행동 1~2문장
 
                 출력 형식:
                 {
@@ -217,10 +213,10 @@ public class GmsAiTextGenerator implements AiTextGenerator {
                 customTitle과 customDescription만 선택한 템플릿 조건에 맞게 자연스럽게 작성하세요.
 
                 선택 기준:
-                1. 최근 식단 요약에서 반복적으로 부족하거나 초과된 영양소와 직접 연결된 템플릿을 우선 선택하세요.
-                2. 나트륨/당류 과다는 줄이는 템플릿을 우선 고려하세요.
-                3. 단백질/식이섬유 부족은 보완 템플릿을 고려하세요.
-                4. 식단 기록 일수가 부족하면 기록형 또는 식사 패턴형 템플릿을 고려하세요.
+                1. 최근 식단 요약에서 반복적으로 부족하거나 초과한 영양소와 직접 연결된 템플릿을 우선 선택하세요.
+                2. 나트륨 과다를 줄이는 템플릿을 우선 고려하세요.
+                3. 단백질과 식이섬유 부족을 보완하는 템플릿을 고려하세요.
+                4. 식단 기록 일수가 부족하면 기록을 돕는 식사 패턴 템플릿을 고려하세요.
                 5. 판단이 어렵다면 가장 쉬운 템플릿을 선택하세요.
 
                 출력 형식:

@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class AnalysisService {
@@ -51,6 +52,7 @@ public class AnalysisService {
         DietDayResponse diet = dietService.getDietsByDate(userId, date);
         DailyNutritionAnalysisResponse nutrition = nutritionService.getDailyAnalysis(userId, date);
         AiReportResponse dailyReport = aiReportService.findDailyReportOrNull(userId, date);
+        List<CoachFeedbackResponse> mealFeedbacks = findLatestMealFeedbacks(userId, diet);
         CoachFeedbackResponse latestMealFeedback = findLatestMealFeedback(userId, diet);
 
         return new AnalysisDailyResponse(
@@ -59,6 +61,7 @@ public class AnalysisService {
                 diet,
                 nutrition,
                 dailyReport,
+                mealFeedbacks,
                 latestMealFeedback
         );
     }
@@ -161,14 +164,26 @@ public class AnalysisService {
     }
 
     private CoachFeedbackResponse findLatestMealFeedback(Long userId, DietDayResponse diet) {
+        return findLatestRecordedMeal(diet)
+                .flatMap(meal -> coachService.findDietFeedback(userId, meal.dietId()))
+                .orElse(null);
+    }
+
+    private List<CoachFeedbackResponse> findLatestMealFeedbacks(Long userId, DietDayResponse diet) {
+        return findLatestRecordedMeal(diet)
+                .map(meal -> coachService.findDietFeedbacks(userId, meal.dietId()))
+                .orElseGet(List::of);
+    }
+
+    private Optional<DietMealResponse> findLatestRecordedMeal(DietDayResponse diet) {
         if (diet == null || diet.meals() == null) {
-            return null;
+            return Optional.empty();
         }
         return diet.meals().stream()
                 .filter(DietMealResponse::recorded)
                 .filter(meal -> meal.dietId() != null)
-                .max(Comparator.comparing(DietMealResponse::eatenAt))
-                .flatMap(meal -> coachService.findDietFeedback(userId, meal.dietId()))
-                .orElse(null);
+                .max(Comparator
+                        .comparing(DietMealResponse::eatenAt, Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparing(DietMealResponse::dietId));
     }
 }

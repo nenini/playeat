@@ -44,6 +44,7 @@
         <result property="fatG" column="fat_g"/>
         <result property="sugarG" column="sugar_g"/>
         <result property="sodiumMg" column="sodium_mg"/>
+        <result property="fiberG" column="fiber_g"/>
     </resultMap>
 
     <resultMap id="NutritionTargetRowResultMap" type="com.nyamnyam.coach.diet.repository.row.NutritionTargetRow">
@@ -122,7 +123,8 @@
             di.carbs_g,
             di.fat_g,
             di.sugar_g,
-            di.sodium_mg
+            di.sodium_mg,
+            di.fiber_g
         FROM diet_items di
         JOIN foods f ON f.food_id = di.food_id
         WHERE di.diet_id = #{dietId}

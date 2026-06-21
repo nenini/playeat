@@ -14,6 +14,8 @@ export interface Food {
   f: number
   unit: string
   presets: number[]
+  gramPerServing?: number
+  pieceUnitAvailable?: boolean
 }
 
 export interface MealLog {
@@ -21,6 +23,8 @@ export interface MealLog {
   foodId: string
   mealKind: MealKindId
   qty: number
+  dietId?: string
+  inputUnit?: string
 }
 
 export const pages: Array<{ id: PageId, label: string, icon: string, path: string }> = [
@@ -97,11 +101,11 @@ export const bossDiffs = [
 
 export const npcCoaches = [
   { id: 'knight', name: '기사단장', color: '#d6c6a8', tagline: '정중·도도한 기사 말투', glyph: '⚔️' },
-  { id: 'trainer', name: '접령좌', color: '#cfe2d2', tagline: '직설적 피트니스 코치', glyph: '💪' },
+  { id: 'warrior', name: '전사', color: '#cfe2d2', tagline: '직설적 피트니스 코치', glyph: '💪' },
   { id: 'healer', name: '힐러', color: '#f4d4d4', tagline: '따뜻하고 위로적', glyph: '🌷' },
   { id: 'wizard', name: '마법사', color: '#cfd5ec', tagline: '데이터·과학 중심', glyph: '🔮' },
-  { id: 'jester', name: '장난꾼이', color: '#f6e3b8', tagline: '장난꾼 친구 톤', glyph: '🎭' },
-  { id: 'elder', name: '앤아이 어른', color: '#e5dccc', tagline: '구수·친근한 동네 어른', glyph: '🍵' }
+  { id: 'rogue', name: '도적', color: '#f6e3b8', tagline: '장난꾼 친구 톤', glyph: '🎭' },
+  { id: 'village-npc', name: '마을 NPC', color: '#e5dccc', tagline: '구수·친근한 동네 어른', glyph: '🍵' }
 ]
 
 export const guildMembers = [
@@ -308,10 +312,10 @@ export function coachSpeak(coachId: string, logs: MealLog[]) {
   const lowProtein = totals.p < 60
   const overSodium = true
   const veggies = veggieCount(logs)
-  if (coachId === 'trainer') return lowProtein ? `"P ${Math.round(totals.p)}g. 부족. ${Math.max(0, 60 - Math.round(totals.p))}g 더. 닭가슴살 1팩 ㄱ.💪"` : '"오늘 평균. 더 가즈아. 단백질 우선."'
+  if (coachId === 'warrior') return lowProtein ? `"P ${Math.round(totals.p)}g. 부족. ${Math.max(0, 60 - Math.round(totals.p))}g 더. 닭가슴살 1팩 ㄱ.💪"` : '"오늘 평균. 더 가즈아. 단백질 우선."'
   if (coachId === 'healer') return recordsToday >= 2 ? '"이미 두 끼나 챙기셨네요. 정말 잘하셨어요 🌷 무리하지 마세요."' : '"천천히, 한 입씩만 챙겨보세요."'
   if (coachId === 'wizard') return `"오늘 ${Math.round(totals.kcal)}kcal · P${Math.round(totals.p)} C${Math.round(totals.c)} F${Math.round(totals.f)}. 목표 대비 ${Math.round(totals.kcal / 2000 * 100)}%. ${overSodium ? '나트륨 초과.' : '균형 양호.'}"`
-  if (coachId === 'jester') return recordsToday === 0 ? '"오~ 아직도 기록 안 했지? 냠냠이가 다 봤다 ㅋㅋ"' : '"오케이! 잘하고 있네 ㅎㅎ 저녁엔 뭐 먹을 거임? 궁금~"'
-  if (coachId === 'elder') return veggies < 1 ? '"채소도 좀 챙겨야 혀. 시금치 무침이라도 한 술 어떠?"' : '"우리 지은이 오늘 잘 챙겨먹었네~ 저녁도 푸짐하게 한 상 차려봐~"'
+  if (coachId === 'rogue') return recordsToday === 0 ? '"오~ 아직도 기록 안 했지? 냠냠이가 다 봤다 ㅋㅋ"' : '"오케이! 잘하고 있네 ㅎㅎ 저녁엔 뭐 먹을 거임? 궁금~"'
+  if (coachId === 'village-npc') return veggies < 1 ? '"채소도 좀 챙겨야 혀. 시금치 무침이라도 한 술 어떠?"' : '"우리 지은이 오늘 잘 챙겨먹었네~ 저녁도 푸짐하게 한 상 차려봐~"'
   return lowProtein ? '"그대, 단백질이 부족하구나. 저녁엔 닭가슴살을 곁들이는 게 어떠한가?"' : '"훌륭하도다. 오늘도 정진하라."'
 }

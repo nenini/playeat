@@ -78,6 +78,13 @@
         WHERE email = #{email}
     </select>
 
+    <select id="findActiveUserIds" resultType="long">
+        SELECT user_id
+        FROM users
+        WHERE status = 'ACTIVE'
+        ORDER BY user_id ASC
+    </select>
+
     <select id="existsByEmail" resultType="boolean">
         SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
         FROM users

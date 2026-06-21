@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
+import java.util.List;
+
 @Tag(name = "Coach", description = "AI 코치 API")
 public interface CoachApiDocs {
 
@@ -29,6 +31,13 @@ public interface CoachApiDocs {
     @Operation(summary = "끼니 피드백 생성", description = "선택된 코치 스타일로 식단 기록에 대한 피드백을 생성합니다.")
     @SecurityRequirement(name = "BearerAuth")
     ResponseEntity<ApiResponse<CoachFeedbackResponse>> createDietFeedback(
+            @Parameter(hidden = true) Authentication authentication,
+            Long dietId
+    );
+
+    @Operation(summary = "코치별 끼니 피드백 생성", description = "활성화된 모든 코치 스타일로 식단 기록에 대한 피드백을 생성합니다.")
+    @SecurityRequirement(name = "BearerAuth")
+    ResponseEntity<ApiResponse<List<CoachFeedbackResponse>>> createDietFeedbacksForAllCoaches(
             @Parameter(hidden = true) Authentication authentication,
             Long dietId
     );

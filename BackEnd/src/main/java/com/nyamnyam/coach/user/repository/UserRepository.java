@@ -4,6 +4,7 @@ import com.nyamnyam.coach.user.entity.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 @Mapper
@@ -14,6 +15,8 @@ public interface UserRepository {
     Optional<User> findById(@Param("userId") Long userId);
 
     Optional<User> findByEmail(@Param("email") String email);
+
+    List<Long> findActiveUserIds();
 
     void reactivate(User user);
 

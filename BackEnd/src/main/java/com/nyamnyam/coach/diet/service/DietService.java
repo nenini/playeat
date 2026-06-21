@@ -280,7 +280,8 @@ public class DietService {
                 zeroIfNull(row.getCarbsG()),
                 zeroIfNull(row.getFatG()),
                 zeroIfNull(row.getSugarG()),
-                zeroIfNull(row.getSodiumMg())
+                zeroIfNull(row.getSodiumMg()),
+                zeroIfNull(row.getFiberG())
         );
     }
 

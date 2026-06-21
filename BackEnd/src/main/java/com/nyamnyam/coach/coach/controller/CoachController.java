@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/v1/coaches")
 public class CoachController implements CoachApiDocs {
@@ -52,6 +54,16 @@ public class CoachController implements CoachApiDocs {
     ) {
         CoachFeedbackResponse response = coachService.createDietFeedback(authenticatedUserId(authentication), dietId);
         return ResponseEntity.ok(ApiResponse.success(response, "끼니 피드백 생성에 성공했습니다."));
+    }
+
+    @Override
+    @PostMapping("/me/diets/{dietId}/feedbacks")
+    public ResponseEntity<ApiResponse<List<CoachFeedbackResponse>>> createDietFeedbacksForAllCoaches(
+            Authentication authentication,
+            @PathVariable Long dietId
+    ) {
+        List<CoachFeedbackResponse> response = coachService.createDietFeedbacksForAllCoaches(authenticatedUserId(authentication), dietId);
+        return ResponseEntity.ok(ApiResponse.success(response, "코치별 끼니 피드백 생성에 성공했습니다."));
     }
 
     @Override

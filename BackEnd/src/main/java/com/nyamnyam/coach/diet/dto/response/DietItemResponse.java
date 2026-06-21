@@ -19,6 +19,7 @@ public record DietItemResponse(
         BigDecimal carbs,
         BigDecimal fat,
         BigDecimal sugar,
-        BigDecimal sodium
+        BigDecimal sodium,
+        BigDecimal fiber
 ) {
 }

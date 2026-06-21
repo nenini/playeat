@@ -48,4 +48,21 @@
         ORDER BY created_at DESC, feedback_id DESC
         LIMIT 1
     </select>
+
+    <select id="findLatestByUserIdAndDietIdAndCoachId" resultMap="AiFeedbackResultMap">
+        SELECT
+            feedback_id,
+            user_id,
+            diet_id,
+            coach_id,
+            message,
+            model_name,
+            created_at
+        FROM ai_feedbacks
+        WHERE user_id = #{userId}
+          AND diet_id = #{dietId}
+          AND coach_id = #{coachId}
+        ORDER BY created_at DESC, feedback_id DESC
+        LIMIT 1
+    </select>
 </mapper>
