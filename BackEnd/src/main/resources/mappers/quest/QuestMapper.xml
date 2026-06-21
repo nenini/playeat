@@ -549,6 +549,99 @@
           AND rewarded_at IS NULL
     </update>
 
+    <select id="findCompletedUnrewardedQuestsByBattleId" resultMap="QuestMap">
+        SELECT
+            quest_id,
+            battle_id,
+            guild_id,
+            user_id,
+            quest_template_id,
+            title,
+            description,
+            quest_type,
+            condition_category,
+            metric_type,
+            comparison_type,
+            aggregation_type,
+            evaluation_scope,
+            threshold_value,
+            threshold_min_value,
+            threshold_max_value,
+            threshold_unit,
+            target_value,
+            current_value,
+            unit,
+            damage,
+            reward_exp,
+            reward_coin,
+            status,
+            source_type,
+            created_at,
+            completed_at,
+            rewarded_at,
+            updated_at
+        FROM quests
+        WHERE battle_id = #{battleId}
+          AND status = 'COMPLETED'
+          AND rewarded_at IS NULL
+        ORDER BY quest_id ASC
+    </select>
+
+    <select id="findBattleParticipantUserIds" resultType="long">
+        SELECT user_id
+        FROM boss_battle_participants
+        WHERE battle_id = #{battleId}
+        ORDER BY participant_id ASC
+    </select>
+
+    <update id="expireEndedBattles">
+        UPDATE boss_battles
+        SET status = 'EXPIRED',
+            ended_at = COALESCE(ended_at, #{now}),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE status = 'IN_PROGRESS'
+          AND EXISTS (
+              SELECT 1
+              FROM bosses b
+              JOIN boss_seasons s ON s.season_id = b.season_id
+              WHERE b.boss_id = boss_battles.boss_id
+                AND CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME) &lt; #{now}
+          )
+    </update>
+
+    <select id="findEndedBattleIdsPendingAutoRewards" resultType="long">
+        SELECT DISTINCT bb.battle_id
+        FROM boss_battles bb
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        JOIN boss_seasons s ON s.season_id = bb.season_id
+        WHERE CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME) &lt; #{now}
+          AND (
+              (
+                  bb.status = 'DEFEATED'
+                  AND EXISTS (
+                      SELECT 1
+                      FROM boss_battle_participants bp
+                      WHERE bp.battle_id = bb.battle_id
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM reward_claims rc
+                            WHERE rc.user_id = bp.user_id
+                              AND rc.source_type = 'BOSS_BATTLE'
+                              AND rc.source_id = bb.battle_id
+                        )
+                  )
+              )
+              OR EXISTS (
+                  SELECT 1
+                  FROM quests q
+                  WHERE q.battle_id = bb.battle_id
+                    AND q.status = 'COMPLETED'
+                    AND q.rewarded_at IS NULL
+              )
+          )
+        ORDER BY bb.battle_id ASC
+    </select>
+
     <insert id="insertQuestVerification"
             parameterType="com.nyamnyam.coach.quest.entity.QuestVerification"
             useGeneratedKeys="true"
@@ -898,6 +991,54 @@
                 </otherwise>
             </choose>
         ) counted
+    </select>
+
+    <select id="countGuildBattleSatisfiedDiets" resultType="int">
+        SELECT COUNT(1)
+        FROM boss_battle_participants bp
+        JOIN diets d ON d.user_id = bp.user_id
+        WHERE bp.battle_id = #{battleId}
+          AND d.eaten_at &gt;= #{startAt}
+          AND d.eaten_at &lt; #{endAt}
+          AND d.eaten_at &gt;= bp.joined_at
+          AND (bp.left_at IS NULL OR d.eaten_at &lt; bp.left_at)
+          AND
+          CASE #{metricType}
+              WHEN 'CALORIE' THEN d.total_calories
+              WHEN 'PROTEIN' THEN d.total_protein_g
+              WHEN 'CARBOHYDRATE' THEN d.total_carbs_g
+              WHEN 'FAT' THEN d.total_fat_g
+              WHEN 'SUGAR' THEN d.total_sugar_g
+              WHEN 'SODIUM' THEN d.total_sodium_mg
+              WHEN 'FIBER' THEN d.total_fiber_g
+              WHEN 'IRON' THEN d.total_iron_mg
+              WHEN 'PHOSPHORUS' THEN d.total_phosphorus_mg
+              WHEN 'POTASSIUM' THEN d.total_potassium_mg
+              WHEN 'VITAMIN_A' THEN d.total_vitamin_a_ug_rae
+              WHEN 'BETA_CAROTENE' THEN d.total_beta_carotene_ug
+              WHEN 'RETINOL' THEN d.total_retinol_ug
+              ELSE NULL
+          END
+          <choose>
+              <when test="comparisonType == 'GREATER_THAN_OR_EQUAL'">
+                  &gt;= #{thresholdValue}
+              </when>
+              <when test="comparisonType == 'LESS_THAN_OR_EQUAL'">
+                  &lt;= #{thresholdValue}
+              </when>
+              <when test="comparisonType == 'BETWEEN'">
+                  BETWEEN #{thresholdMinValue} AND #{thresholdMaxValue}
+              </when>
+              <when test="comparisonType == 'EXISTS'">
+                  &gt; 0
+              </when>
+              <when test="comparisonType == 'NOT_EXISTS'">
+                  &lt;= 0
+              </when>
+              <otherwise>
+                  IS NULL AND 1 = 0
+              </otherwise>
+          </choose>
     </select>
 
     <update id="updateBattleConditionProgressValue">

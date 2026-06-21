@@ -23,6 +23,7 @@ public record BossBattleDetailResponse(
         List<BossBattleDamageLogResponse> recentDamageLogs,
         Integer participantCount,
         Integer activeParticipantCount,
-        Integer leftParticipantCount
+        Integer leftParticipantCount,
+        Boolean rewardClaimed
 ) {
 }

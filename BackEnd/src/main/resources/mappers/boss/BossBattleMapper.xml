@@ -109,7 +109,7 @@
         bb.total_damage,
         bb.started_at,
         bb.ended_at,
-        COALESCE(b.ends_at, CAST(CONCAT(s.end_date, ' 23:59:59') AS DATETIME)) AS ends_at
+        CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME) AS ends_at
     </sql>
 
     <select id="findActiveBossById" resultMap="BossRowMap">
@@ -126,7 +126,7 @@
             b.reward_coin,
             b.status,
             COALESCE(b.starts_at, CAST(CONCAT(s.start_date, ' 00:00:00') AS DATETIME)) AS starts_at,
-            COALESCE(b.ends_at, CAST(CONCAT(s.end_date, ' 23:59:59') AS DATETIME)) AS ends_at
+            CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME) AS ends_at
         FROM bosses b
         JOIN boss_seasons s ON s.season_id = b.season_id
         WHERE b.boss_id = #{bossId}
@@ -284,9 +284,20 @@
         JOIN bosses b ON b.boss_id = bb.boss_id
         JOIN boss_seasons s ON s.season_id = bb.season_id
         WHERE bb.guild_id = #{guildId}
-          AND bb.status = 'IN_PROGRESS'
+          AND bb.status IN ('IN_PROGRESS', 'DEFEATED')
+          AND CURRENT_TIMESTAMP BETWEEN
+              COALESCE(b.starts_at, CAST(CONCAT(s.start_date, ' 00:00:00') AS DATETIME))
+              AND CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME)
         ORDER BY bb.started_at DESC, bb.battle_id DESC
         LIMIT 1
+    </select>
+
+    <select id="existsBossBattleRewardClaim" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM reward_claims
+        WHERE user_id = #{userId}
+          AND source_type = 'BOSS_BATTLE'
+          AND source_id = #{battleId}
     </select>
 
     <select id="findBattleDetailById" resultMap="BossBattleRowMap">

@@ -1,6 +1,5 @@
 import type {
   BattleQuestListResponse,
-  MyQuestResponse,
   QuestContributionListResponse,
   QuestDetail,
   QuestGenerateResponse,
@@ -19,9 +18,9 @@ export const questApi = {
   generateBattleQuests(battleId: number): Promise<QuestGenerateResponse> {
     return apiRequest(`/v1/boss-battles/${battleId}/quests/generate`, { method: 'POST' })
   },
-  async getMyBattleQuests(battleId: number): Promise<MyQuestResponse[]> {
-    const response = await apiRequest<{ quests: MyQuestResponse[] }>(`/v1/boss-battles/${battleId}/quests/me`)
-    return response.quests
+  async getMyBattleQuests(battleId: number): Promise<QuestDetail | null> {
+    const response = await apiRequest<{ quest: QuestDetail | null }>(`/v1/boss-battles/${battleId}/quests/me`)
+    return response.quest
   },
   getQuest(questId: number): Promise<QuestDetail> {
     return apiRequest(`/v1/quests/${questId}`)

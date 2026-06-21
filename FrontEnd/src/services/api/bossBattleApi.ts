@@ -1,19 +1,21 @@
 import type {
   BossBattleDashboard,
+  BossBattleCreateResponse,
   BossBattleDetail,
   BossBattleHp,
   BossBattleRewardResponse,
   BossBattleSummary,
   CommonConditionVerifyResponse,
-  CreateBossBattleRequest
+  CreateBossBattleRequest,
+  CurrentBossBattleResponse
 } from '../../types/bossBattle'
 import { apiRequest } from './client'
 
 export const bossBattleApi = {
-  createBossBattle(guildId: number, payload: CreateBossBattleRequest): Promise<BossBattleDetail> {
+  createBossBattle(guildId: number, payload: CreateBossBattleRequest): Promise<BossBattleCreateResponse> {
     return apiRequest(`/v1/guilds/${guildId}/boss-battles`, { method: 'POST', body: payload })
   },
-  getCurrentGuildBossBattle(guildId: number): Promise<BossBattleDetail> {
+  getCurrentGuildBossBattle(guildId: number): Promise<CurrentBossBattleResponse> {
     return apiRequest(`/v1/guilds/${guildId}/boss-battles/current`)
   },
   async getGuildBossBattleHistory(guildId: number): Promise<BossBattleSummary[]> {

@@ -136,7 +136,7 @@ public class BossBattleService {
         guildValidator.validateGuildMember(guildId, userId);
         return new CurrentBossBattleResponse(
                 bossBattleRepository.findCurrentBattleByGuildId(guildId)
-                        .map(this::toSummaryResponse)
+                        .map(row -> toSummaryResponse(row, userId))
                         .orElse(null)
         );
     }
@@ -181,7 +181,8 @@ public class BossBattleService {
                 damageLogs,
                 defaultValue(participantCounts.getParticipantCount()),
                 defaultValue(participantCounts.getActiveParticipantCount()),
-                defaultValue(participantCounts.getLeftParticipantCount())
+                defaultValue(participantCounts.getLeftParticipantCount()),
+                bossBattleRepository.existsBossBattleRewardClaim(battleId, userId)
         );
     }
 
@@ -217,7 +218,7 @@ public class BossBattleService {
         List<BossBattleSummaryResponse> battles = rows
                 .stream()
                 .limit(normalizedSize)
-                .map(this::toSummaryResponse)
+                .map(row -> toSummaryResponse(row, userId))
                 .toList();
 
         return new BossBattleHistoryResponse(
@@ -282,7 +283,7 @@ public class BossBattleService {
         return participant;
     }
 
-    private BossBattleSummaryResponse toSummaryResponse(BossBattleRow row) {
+    private BossBattleSummaryResponse toSummaryResponse(BossBattleRow row, Long userId) {
         return new BossBattleSummaryResponse(
                 row.getBattleId(),
                 row.getGuildId(),
@@ -296,7 +297,8 @@ public class BossBattleService {
                 row.getTotalDamage(),
                 row.getStartedAt(),
                 row.getEndedAt(),
-                row.getEndsAt()
+                row.getEndsAt(),
+                bossBattleRepository.existsBossBattleRewardClaim(row.getBattleId(), userId)
         );
     }
 

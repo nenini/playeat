@@ -55,6 +55,63 @@ class BossBattleRepositoryTest {
     }
 
     @Test
+    @DisplayName("기간 안에 격파된 보스전도 현재 보스전으로 조회한다")
+    void findDefeatedBattleDuringBossPeriod() {
+        Fixture fixture = fixture();
+        BossBattle battle = battle(fixture.guildId(), fixture.bossId(), fixture.seasonId());
+        bossBattleRepository.insertBossBattle(battle);
+        jdbcTemplate.update(
+                "UPDATE boss_battles SET status = 'DEFEATED', current_hp = 0, ended_at = CURRENT_TIMESTAMP WHERE battle_id = ?",
+                battle.getBattleId()
+        );
+
+        assertThat(bossBattleRepository.findCurrentBattleByGuildId(fixture.guildId()))
+                .get()
+                .extracting(BossBattleRow::getStatus)
+                .isEqualTo("DEFEATED");
+    }
+
+    @Test
+    @DisplayName("종료일의 endsAt이 자정이어도 당일 23시 59분까지 현재 보스전으로 조회한다")
+    void keepDefeatedBattleUntilEndOfLastDay() {
+        Fixture fixture = fixture();
+        BossBattle battle = battle(fixture.guildId(), fixture.bossId(), fixture.seasonId());
+        bossBattleRepository.insertBossBattle(battle);
+        jdbcTemplate.update(
+                "UPDATE boss_battles SET status = 'DEFEATED', current_hp = 0, ended_at = CURRENT_TIMESTAMP WHERE battle_id = ?",
+                battle.getBattleId()
+        );
+        jdbcTemplate.update(
+                "UPDATE bosses SET ends_at = CAST(CURRENT_DATE AS TIMESTAMP) WHERE boss_id = ?",
+                fixture.bossId()
+        );
+
+        BossBattleRow current = bossBattleRepository.findCurrentBattleByGuildId(fixture.guildId()).orElseThrow();
+
+        assertThat(current.getStatus()).isEqualTo("DEFEATED");
+        assertThat(current.getEndsAt().toLocalTime().toString()).isEqualTo("23:59:59");
+    }
+
+    @Test
+    @DisplayName("기간이 종료된 격파 보스전은 현재 보스전에서 제외한다")
+    void excludeDefeatedBattleAfterBossPeriod() {
+        Fixture fixture = fixture();
+        BossBattle battle = battle(fixture.guildId(), fixture.bossId(), fixture.seasonId());
+        bossBattleRepository.insertBossBattle(battle);
+
+        jdbcTemplate.update(
+                "UPDATE boss_battles SET status = 'DEFEATED', current_hp = 0, ended_at = CURRENT_TIMESTAMP WHERE battle_id = ?",
+                battle.getBattleId()
+        );
+        jdbcTemplate.update(
+                "UPDATE bosses SET ends_at = DATEADD('DAY', -1, CAST(CURRENT_DATE AS TIMESTAMP)) WHERE boss_id = ?",
+                fixture.bossId()
+        );
+
+        assertThat(bossBattleRepository.findCurrentBattleByGuildId(fixture.guildId())).isEmpty();
+    }
+
+    @Test
     @DisplayName("보스전 생성 시 공통 조건을 복사해 조회할 수 있다")
     void copyBattleConditions() {
         Fixture fixture = fixture();

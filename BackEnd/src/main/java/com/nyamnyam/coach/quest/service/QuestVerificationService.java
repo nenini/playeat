@@ -252,10 +252,6 @@ public class QuestVerificationService {
         List<BattleConditionStateRow> conditions = questRepository.findBattleConditionsForUpdate(battle.getBattleId());
         List<CommonConditionVerifyItemResponse> responses = new ArrayList<>();
         for (BattleConditionStateRow condition : conditions) {
-            if (Boolean.TRUE.equals(condition.getCompleted())) {
-                responses.add(toConditionResponse(condition, false));
-                continue;
-            }
             if (!Boolean.TRUE.equals(condition.getVerificationSupported())) {
                 responses.add(toConditionResponse(condition, false));
                 continue;
