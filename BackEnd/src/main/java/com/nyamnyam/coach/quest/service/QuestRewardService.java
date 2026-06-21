@@ -53,8 +53,74 @@ public class QuestRewardService {
             throw new BusinessException(QuestErrorCode.QUEST_REWARD_NOT_CLAIMABLE);
         }
 
+        validateRewardNotClaimed(
+                userId,
+                RewardClaimSourceType.QUEST,
+                questId,
+                QuestErrorCode.QUEST_REWARD_ALREADY_CLAIMED
+        );
+        return grantQuestReward(quest);
+    }
+
+    @Transactional
+    public RewardClaimResponse claimBossBattleReward(Long battleId, Long userId) {
+        BattleStateRow battle = questRepository.findBattleRewardInfo(battleId)
+                .orElseThrow(() -> new BusinessException(BossErrorCode.BOSS_BATTLE_NOT_FOUND));
+        if (!questRepository.existsActiveGuildMember(battle.getGuildId(), userId)) {
+            throw new BusinessException(BossErrorCode.BOSS_BATTLE_ACCESS_DENIED);
+        }
+        if (!BossBattleStatus.DEFEATED.name().equals(battle.getStatus())) {
+            throw new BusinessException(BossErrorCode.BOSS_BATTLE_NOT_DEFEATED);
+        }
+
+        validateRewardNotClaimed(
+                userId,
+                RewardClaimSourceType.BOSS_BATTLE,
+                battleId,
+                BossErrorCode.BOSS_BATTLE_REWARD_ALREADY_CLAIMED
+        );
+        return grantBossBattleReward(battle, userId);
+    }
+
+    @Transactional
+    public int autoGrantExpiredBattleRewards(Long battleId) {
+        BattleStateRow battle = questRepository.findBattleStateForUpdate(battleId)
+                .orElseThrow(() -> new BusinessException(BossErrorCode.BOSS_BATTLE_NOT_FOUND));
+        int grantedCount = 0;
+
+        for (Quest quest : questRepository.findCompletedUnrewardedQuestsByBattleId(battleId)) {
+            if (questRepository.existsRewardClaim(
+                    quest.getUserId(),
+                    RewardClaimSourceType.QUEST.name(),
+                    quest.getQuestId()
+            )) {
+                questRepository.updateQuestRewarded(quest.getQuestId());
+                continue;
+            }
+            grantQuestReward(quest);
+            grantedCount += 1;
+        }
+
+        if (BossBattleStatus.DEFEATED.name().equals(battle.getStatus())) {
+            for (Long userId : questRepository.findBattleParticipantUserIds(battleId)) {
+                if (questRepository.existsRewardClaim(
+                        userId,
+                        RewardClaimSourceType.BOSS_BATTLE.name(),
+                        battleId
+                )) {
+                    continue;
+                }
+                grantBossBattleReward(battle, userId);
+                grantedCount += 1;
+            }
+        }
+        return grantedCount;
+    }
+
+    private RewardClaimResponse grantQuestReward(Quest quest) {
+        Long questId = quest.getQuestId();
+        Long userId = quest.getUserId();
         RewardClaimSourceType sourceType = RewardClaimSourceType.QUEST;
-        validateRewardNotClaimed(userId, sourceType, questId, QuestErrorCode.QUEST_REWARD_ALREADY_CLAIMED);
         insertRewardClaim(
                 userId,
                 sourceType,
@@ -95,19 +161,9 @@ public class QuestRewardService {
         );
     }
 
-    @Transactional
-    public RewardClaimResponse claimBossBattleReward(Long battleId, Long userId) {
-        BattleStateRow battle = questRepository.findBattleRewardInfo(battleId)
-                .orElseThrow(() -> new BusinessException(BossErrorCode.BOSS_BATTLE_NOT_FOUND));
-        if (!questRepository.existsActiveGuildMember(battle.getGuildId(), userId)) {
-            throw new BusinessException(BossErrorCode.BOSS_BATTLE_ACCESS_DENIED);
-        }
-        if (!BossBattleStatus.DEFEATED.name().equals(battle.getStatus())) {
-            throw new BusinessException(BossErrorCode.BOSS_BATTLE_NOT_DEFEATED);
-        }
-
+    private RewardClaimResponse grantBossBattleReward(BattleStateRow battle, Long userId) {
+        Long battleId = battle.getBattleId();
         RewardClaimSourceType sourceType = RewardClaimSourceType.BOSS_BATTLE;
-        validateRewardNotClaimed(userId, sourceType, battleId, BossErrorCode.BOSS_BATTLE_REWARD_ALREADY_CLAIMED);
         insertRewardClaim(
                 userId,
                 sourceType,

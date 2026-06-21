@@ -52,7 +52,7 @@
         b.reward_coin,
         b.status,
         COALESCE(b.starts_at, CAST(CONCAT(s.start_date, ' 00:00:00') AS DATETIME)) AS starts_at,
-        COALESCE(b.ends_at, CAST(CONCAT(s.end_date, ' 23:59:59') AS DATETIME)) AS ends_at,
+        CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME) AS ends_at,
         b.created_at,
         b.updated_at
     </sql>
@@ -73,7 +73,7 @@
               LIMIT 1
           )
           AND NOW() BETWEEN COALESCE(b.starts_at, CAST(CONCAT(s.start_date, ' 00:00:00') AS DATETIME))
-                      AND COALESCE(b.ends_at, CAST(CONCAT(s.end_date, ' 23:59:59') AS DATETIME))
+                      AND CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME)
         ORDER BY
             CASE b.difficulty
                 WHEN 'EASY' THEN 1

@@ -1,0 +1,9 @@
+export type QuestStatus = 'IN_PROGRESS' | 'COMPLETED' | 'REWARDED' | 'EXPIRED'
+export interface QuestSummary { questId: number; userId: number; nickname: string; profileImageUrl?: string; characterId?: number; characterName?: string; characterLevel?: number; title: string; description?: string; questType?: string; targetValue: number; currentValue: number; unit?: string; damage: number; rewardExp: number; rewardCoin: number; status: QuestStatus; isMe?: boolean; participantStatus?: string; createdAt?: string; completedAt?: string; rewardedAt?: string }
+export interface BattleQuestListResponse { battleId: number; guildId: number; quests: QuestSummary[] }
+export interface QuestContribution { userId: number; nickname: string; profileImageUrl?: string; characterName?: string; characterLevel?: number; totalQuestCount: number; completedQuestCount: number; totalDamage: number; expectedDamage: number; participantStatus?: string; leftAt?: string; isMe?: boolean }
+export interface QuestContributionListResponse { battleId: number; guildId: number; contributions: QuestContribution[] }
+export interface QuestGenerateResponse { battleId: number; guildId: number; createdCount: number; skippedCount: number; quests: QuestSummary[] }
+export interface QuestDetail extends QuestSummary { battleId: number; guildId: number; sourceType?: string; conditionCategory?: string; metricType?: string; comparisonType?: string; aggregationType?: string; evaluationScope?: string; thresholdValue?: number; thresholdMinValue?: number; thresholdMaxValue?: number; thresholdUnit?: string }
+export interface QuestRewardResponse { sourceType: string; sourceId: number; xpAmount: number; coinAmount: number; claimedAt: string }
+export interface QuestVerifyResponse { questId: number; battleId: number; guildId: number; status: QuestStatus; verified: boolean; damage: number; currentHp: number; totalDamage: number; bossBattleStatus: string; message: string }

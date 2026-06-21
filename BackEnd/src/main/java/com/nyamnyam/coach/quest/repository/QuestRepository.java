@@ -86,6 +86,14 @@ public interface QuestRepository {
 
     int updateQuestRewarded(@Param("questId") Long questId);
 
+    List<Quest> findCompletedUnrewardedQuestsByBattleId(@Param("battleId") Long battleId);
+
+    List<Long> findBattleParticipantUserIds(@Param("battleId") Long battleId);
+
+    int expireEndedBattles(@Param("now") LocalDateTime now);
+
+    List<Long> findEndedBattleIdsPendingAutoRewards(@Param("now") LocalDateTime now);
+
     void insertQuestVerification(QuestVerification verification);
 
     boolean existsQuestVerificationByQuestId(@Param("questId") Long questId);
@@ -157,6 +165,17 @@ public interface QuestRepository {
             @Param("battleId") Long battleId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
+            @Param("metricType") String metricType,
+            @Param("comparisonType") String comparisonType,
+            @Param("thresholdValue") java.math.BigDecimal thresholdValue,
+            @Param("thresholdMinValue") java.math.BigDecimal thresholdMinValue,
+            @Param("thresholdMaxValue") java.math.BigDecimal thresholdMaxValue
+    );
+
+    int countGuildBattleSatisfiedDiets(
+            @Param("battleId") Long battleId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt,
             @Param("metricType") String metricType,
             @Param("comparisonType") String comparisonType,
             @Param("thresholdValue") java.math.BigDecimal thresholdValue,
