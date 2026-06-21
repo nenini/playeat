@@ -37,6 +37,11 @@ public interface BossBattleRepository {
 
     Optional<BossBattleRow> findCurrentBattleByGuildId(@Param("guildId") Long guildId);
 
+    boolean existsBossBattleRewardClaim(
+            @Param("battleId") Long battleId,
+            @Param("userId") Long userId
+    );
+
     Optional<BossBattleRow> findBattleDetailById(@Param("battleId") Long battleId);
 
     List<BossBattleConditionRow> findBattleConditionsByBattleId(@Param("battleId") Long battleId);

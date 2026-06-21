@@ -69,11 +69,13 @@
         ) m ON m.guild_id = g.guild_id
         LEFT JOIN (
             SELECT gm.guild_id,
-                   COUNT(DISTINCT CONCAT(dns.user_id, '-', dns.summary_date)) AS recorded_member_date_count
+                   COUNT(DISTINCT CONCAT(d.user_id, '-', CAST(d.eaten_at AS DATE))) AS recorded_member_date_count
             FROM guild_members gm
-            JOIN daily_nutrition_summaries dns ON dns.user_id = gm.user_id
+            JOIN users u ON u.user_id = gm.user_id
+            JOIN diets d ON d.user_id = gm.user_id
             WHERE gm.left_at IS NULL
-              AND dns.summary_date BETWEEN #{weekStartDate} AND #{weekEndDate}
+              AND u.status = 'ACTIVE'
+              AND CAST(d.eaten_at AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
             GROUP BY gm.guild_id
         ) r ON r.guild_id = g.guild_id
         LEFT JOIN (

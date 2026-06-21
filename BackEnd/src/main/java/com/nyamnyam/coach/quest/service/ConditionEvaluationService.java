@@ -58,7 +58,28 @@ public class ConditionEvaluationService {
     public int evaluateGuildBattleCondition(BattleStateRow battle, BattleConditionStateRow condition, LocalDate today) {
         QuestEvaluationScope scope = parse(QuestEvaluationScope.class, condition.getEvaluationScope());
         QuestAggregationType aggregationType = parse(QuestAggregationType.class, condition.getAggregationType());
-        if (scope != QuestEvaluationScope.GUILD_BATTLE_PERIOD || aggregationType != QuestAggregationType.DAYS_SATISFIED) {
+        if (scope != QuestEvaluationScope.GUILD_BATTLE_PERIOD) {
+            throw new BusinessException(QuestErrorCode.QUEST_UNSUPPORTED_TYPE);
+        }
+
+        if (aggregationType == QuestAggregationType.TOTAL_COUNT) {
+            LocalDateTime startAt = battle.getStartedAt() == null
+                    ? today.atStartOfDay()
+                    : battle.getStartedAt();
+            LocalDateTime endAt = today.plusDays(1).atStartOfDay();
+            return questRepository.countGuildBattleSatisfiedDiets(
+                    battle.getBattleId(),
+                    startAt,
+                    endAt,
+                    condition.getMetricType(),
+                    condition.getComparisonType(),
+                    condition.getThresholdValue(),
+                    condition.getThresholdMinValue(),
+                    condition.getThresholdMaxValue()
+            );
+        }
+
+        if (aggregationType != QuestAggregationType.DAYS_SATISFIED) {
             throw new BusinessException(QuestErrorCode.QUEST_UNSUPPORTED_TYPE);
         }
         LocalDate startDate = battle.getStartedAt() == null ? today : battle.getStartedAt().toLocalDate();

@@ -15,6 +15,7 @@ public record BossBattleSummaryResponse(
         Integer totalDamage,
         LocalDateTime startedAt,
         LocalDateTime endedAt,
-        LocalDateTime endsAt
+        LocalDateTime endsAt,
+        Boolean rewardClaimed
 ) {
 }
