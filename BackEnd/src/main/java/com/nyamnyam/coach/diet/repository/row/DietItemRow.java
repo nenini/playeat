@@ -30,4 +30,5 @@ public class DietItemRow {
     private BigDecimal fatG;
     private BigDecimal sugarG;
     private BigDecimal sodiumMg;
+    private BigDecimal fiberG;
 }

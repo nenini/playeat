@@ -15,4 +15,10 @@ public interface AiFeedbackRepository {
             @Param("userId") Long userId,
             @Param("dietId") Long dietId
     );
+
+    Optional<AiFeedback> findLatestByUserIdAndDietIdAndCoachId(
+            @Param("userId") Long userId,
+            @Param("dietId") Long dietId,
+            @Param("coachId") Long coachId
+    );
 }

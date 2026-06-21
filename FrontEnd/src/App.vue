@@ -3,14 +3,14 @@
   <LoginPage v-else-if="view === 'login'" @done="login" @signup="showSignup" @back="showStart" />
   <SignupPage v-else-if="view === 'signup'" @onboarding="signup" @login="showLogin" @back="showStart" />
   <OnboardingPage v-else-if="view === 'onboarding'" @done="completeOnboarding" @cancel="enterApp" />
-  <AppShell v-else :active-page="activePage" :logs-count="logs.length" :streak="streak" @navigate="go">
-    <HomePage v-if="activePage === 'home'" :logs="logs" :stage="stage" :equipped-weapon="equippedWeapon" @navigate="go" />
-    <MealsPage v-else-if="activePage === 'meals'" :logs="logs" @add-log="addLog" @remove-log="removeLog" />
+  <AppShell v-else :active-page="activePage" :logs-count="0" :streak="streak" @navigate="go">
+    <HomePage v-if="activePage === 'home'" :stage="stage" :equipped-weapon="equippedWeapon" @navigate="go" />
+    <MealsPage v-else-if="activePage === 'meals'" :logs="[]" />
     <AnalyzePage v-else-if="activePage === 'analyze'" :logs="logs" />
     <BossPage v-else-if="activePage === 'boss'" :logs="logs" :is-leader="isGuildLeader" @navigate="go" />
     <GuildPage v-else-if="activePage === 'guild'" :is-leader="isGuildLeader" />
     <ShopPage v-else-if="activePage === 'shop'" :stage="stage" :equipped-weapon="equippedWeapon" :equipped-hat="equippedHat" @equip="equip" @unequip="unequip" />
-    <MyPage v-else :stage="stage" @restart-onboarding="showOnboarding" />
+    <MyPage v-else :stage="stage" @restart-onboarding="showOnboarding" @logout="handleLogout" />
   </AppShell>
 </template>
 
@@ -29,8 +29,10 @@ import GuildPage from './pages/GuildPage.vue'
 import ShopPage from './pages/ShopPage.vue'
 import MyPage from './pages/MyPage.vue'
 import { pageFromPath, pathFromPage } from './router/routes'
-import { seedLogs, type MealKindId, type MealLog, type PageId, type Stage } from './services/mock/nyamnyamMock'
-import { authApi, characterApi, dietApi, logsFromDietDay, stageFromBackend, userApi } from './services/nyamnyamApi'
+import { type MealLog, type PageId, type Stage } from './services/mock/nyamnyamMock'
+import { authApi } from './services/api/authApi'
+import { characterApi, stageFromBackend } from './services/characterApi'
+import { userApi } from './services/userApi'
 import { tokenStorage } from './services/api'
 
 type ViewMode = 'start' | 'login' | 'signup' | 'onboarding' | 'app'
@@ -45,7 +47,7 @@ function initialView(): ViewMode {
 
 const view = ref<ViewMode>(initialView())
 const activePage = ref<PageId>(pageFromPath(window.location.pathname))
-const logs = ref<MealLog[]>([...seedLogs])
+const logs = ref<MealLog[]>([])
 const stage = ref<Stage>('chick')
 const equippedWeapon = ref('stick')
 const equippedHat = ref<string | null>(null)
@@ -53,7 +55,7 @@ const onboardingData = ref<Record<string, string | string[]> | null>(null)
 const isGuildLeader = ref(new URLSearchParams(window.location.search).get('role') === 'leader')
 const currentDate = ref(toDateInputValue(new Date()))
 
-const streak = computed(() => Math.max(12, logs.value.length + 10))
+const streak = computed(() => 0)
 
 function go(page: PageId) {
   view.value = 'app'
@@ -88,21 +90,23 @@ function enterApp() {
   void hydrateApp()
 }
 
-function completeOnboarding(payload: Record<string, string | string[]>) {
+async function completeOnboarding(payload: Record<string, string | string[]>) {
   onboardingData.value = payload
-  userApi.completeOnboarding(payload).catch((error) => console.warn('Onboarding API failed', error))
+  try {
+    await userApi.completeOnboarding(payload)
+  } catch (error) {
+    console.warn('Onboarding API failed', error)
+  }
   enterApp()
 }
 
-function addLog(payload: { foodId: string, mealKind: MealKindId, qty: number, inputUnit?: string, date?: string }) {
-  logs.value.push({ id: `log-${Date.now()}`, ...payload })
-  if (payload.date) currentDate.value = payload.date
-  dietApi.create({ ...payload, date: payload.date || currentDate.value }).then(() => hydrateMeals()).catch((error) => console.warn('Diet create API failed', error))
-}
-
-function removeLog(id: string) {
-  logs.value = logs.value.filter((log) => log.id !== id)
-  if (/^\d+$/.test(id)) dietApi.remove(id).then(() => hydrateMeals()).catch((error) => console.warn('Diet delete API failed', error))
+async function handleLogout() {
+  try {
+    await authApi.logout()
+  } catch (error) {
+    console.warn('Logout API failed', error)
+  }
+  showStart()
 }
 
 function equip(item: { id: string, slot: string }) {
@@ -121,29 +125,23 @@ window.addEventListener('popstate', () => {
 })
 
 async function login(payload: { email: string, password: string }) {
-  await authApi.login(payload.email, payload.password)
+  await authApi.login({ email: payload.email, password: payload.password })
   enterApp()
 }
 
 async function signup(payload: { name: string, email: string, password: string }) {
-  await authApi.signup(payload.email, payload.password, payload.name)
-  await authApi.login(payload.email, payload.password)
+  await authApi.signup({ email: payload.email, password: payload.password, nickname: payload.name })
+  await authApi.login({ email: payload.email, password: payload.password })
   showOnboarding()
 }
 
 async function hydrateApp() {
   if (!tokenStorage.getAccessToken()) return
-  await Promise.allSettled([hydrateMeals(), hydrateCharacter(), userApi.me()])
-}
-
-async function hydrateMeals() {
-  const day = await dietApi.getDay(currentDate.value)
-  const nextLogs = logsFromDietDay(day)
-  if (nextLogs.length) logs.value = nextLogs
+  await Promise.allSettled([hydrateCharacter(), userApi.getMe()])
 }
 
 async function hydrateCharacter() {
-  const character = await characterApi.me()
+  const character = await characterApi.getMe()
   stage.value = stageFromBackend(character.stage)
 }
 

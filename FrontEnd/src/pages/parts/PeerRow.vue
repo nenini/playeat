@@ -1,5 +1,5 @@
 <template>
-  <div class="peer-row"><strong>{{ name }}</strong><span><b>내 {{ mine }}</b><b class="peer">또래 {{ peer }}</b><AppPill :tone="tone" size="sm">{{ text }}</AppPill></span></div>
+  <div class="peer-row"><strong>{{ name }}</strong><span><b>내 {{ mine }}</b><b class="peer">기준 {{ peer }}</b><AppPill :tone="tone" size="sm">{{ text }}</AppPill></span></div>
 </template>
 
 <script setup lang="ts">

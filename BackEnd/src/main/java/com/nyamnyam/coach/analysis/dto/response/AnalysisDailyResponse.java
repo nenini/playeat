@@ -7,6 +7,7 @@ import com.nyamnyam.coach.nutrition.dto.response.DailyNutritionAnalysisResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Schema(description = "Analysis daily response")
 public record AnalysisDailyResponse(
@@ -15,6 +16,7 @@ public record AnalysisDailyResponse(
         DietDayResponse diet,
         DailyNutritionAnalysisResponse nutrition,
         AiReportResponse dailyReport,
+        List<CoachFeedbackResponse> mealFeedbacks,
         CoachFeedbackResponse latestMealFeedback
 ) {
 }

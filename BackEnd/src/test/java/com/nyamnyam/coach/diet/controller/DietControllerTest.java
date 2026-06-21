@@ -208,7 +208,8 @@ class DietControllerTest {
                 new BigDecimal("52.80"),
                 new BigDecimal("5.60"),
                 new BigDecimal("0.20"),
-                new BigDecimal("62.00")
+                new BigDecimal("62.00"),
+                BigDecimal.ZERO
         );
     }
 

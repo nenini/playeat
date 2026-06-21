@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div class="head"><span :class="{ warn }">{{ label }}</span><small>{{ pct }}%</small></div>
-    <div class="value">{{ Math.round(value) }}<span>/{{ max }}{{ unit }}</span></div>
-    <ProgressBar :value="value" :max="max" :tone="warn ? 'accent' : 'neutral'" :height="5" />
+    <div class="head"><span :class="{ warn }">{{ label }}</span><small>{{ pctText }}</small></div>
+    <div class="value">{{ Math.round(value) }}<span>/{{ targetText }}</span></div>
+    <ProgressBar :value="value" :max="safeMax" :tone="warn ? 'accent' : 'neutral'" :height="5" />
   </div>
 </template>
 
@@ -10,7 +10,10 @@
 import { computed } from 'vue'
 import ProgressBar from '../../components/common/ProgressBar.vue'
 const props = defineProps<{ label: string, value: number, max: number, unit: string, warn?: boolean }>()
-const pct = computed(() => Math.round(props.value / props.max * 100))
+const hasTarget = computed(() => props.max > 0)
+const safeMax = computed(() => hasTarget.value ? props.max : 1)
+const pctText = computed(() => hasTarget.value ? `${Math.round(props.value / props.max * 100)}%` : '-')
+const targetText = computed(() => hasTarget.value ? `${props.max}${props.unit}` : `-${props.unit}`)
 </script>
 
 <script lang="ts">
