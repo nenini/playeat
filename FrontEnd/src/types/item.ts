@@ -1,4 +1,15 @@
-export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'BACKGROUND' | string
-export interface UserItem { userItemId: number; itemId: number; itemName: string; itemType: ItemType; imageUrl?: string; equipped?: boolean; acquiredAt?: string }
-export interface UserItemDetail extends UserItem { description?: string; price?: number; slotType?: string; metadata?: Record<string, unknown> }
+export type ItemType = 'EQUIPMENT' | 'CONSUMABLE' | string
+export interface UserItem {
+  userItemId: number
+  itemId: number
+  name: string
+  description: string | null
+  itemType: ItemType
+  slotType: string | null
+  imageUrl: string | null
+  acquiredType: string
+  acquiredAt: string
+  equipped: boolean
+}
+export type UserItemDetail = UserItem
 export interface UserItemListResponse { items: UserItem[] }

@@ -10,6 +10,7 @@ export { questApi } from './questApi'
 export { coinApi } from './coinApi'
 export { itemApi } from './itemApi'
 export { shopApi } from './shopApi'
+export { characterEquipmentApi } from './characterEquipmentApi'
 export type { ApiResponse, ApiFieldError } from '../../types/api'
 export type {
   AuthUser,
