@@ -44,24 +44,28 @@
     </select>
 
     <select id="countRecordedMemberDates" resultType="int">
-        SELECT COUNT(DISTINCT CONCAT(dns.user_id, '-', dns.summary_date))
-        FROM daily_nutrition_summaries dns
-        JOIN guild_members gm ON gm.user_id = dns.user_id
+        SELECT COUNT(DISTINCT CONCAT(d.user_id, '-', CAST(d.eaten_at AS DATE)))
+        FROM diets d
+        JOIN guild_members gm ON gm.user_id = d.user_id
+        JOIN users u ON u.user_id = gm.user_id
         WHERE gm.guild_id = #{guildId}
           AND gm.left_at IS NULL
-          AND dns.summary_date BETWEEN #{weekStartDate} AND #{weekEndDate}
+          AND u.status = 'ACTIVE'
+          AND CAST(d.eaten_at AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
     </select>
 
     <select id="findDailyRecordedMembers" resultMap="DailyCountRowMap">
-        SELECT dns.summary_date AS stat_date,
-               COUNT(DISTINCT dns.user_id) AS count_value
-        FROM daily_nutrition_summaries dns
-        JOIN guild_members gm ON gm.user_id = dns.user_id
+        SELECT CAST(d.eaten_at AS DATE) AS stat_date,
+               COUNT(DISTINCT d.user_id) AS count_value
+        FROM diets d
+        JOIN guild_members gm ON gm.user_id = d.user_id
+        JOIN users u ON u.user_id = gm.user_id
         WHERE gm.guild_id = #{guildId}
           AND gm.left_at IS NULL
-          AND dns.summary_date BETWEEN #{weekStartDate} AND #{weekEndDate}
-        GROUP BY dns.summary_date
-        ORDER BY dns.summary_date ASC
+          AND u.status = 'ACTIVE'
+          AND CAST(d.eaten_at AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
+        GROUP BY CAST(d.eaten_at AS DATE)
+        ORDER BY stat_date ASC
     </select>
 
     <select id="findCurrentOrLatestBattleByGuildId" resultMap="BattleDashboardRowMap">

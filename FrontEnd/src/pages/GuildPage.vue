@@ -123,7 +123,7 @@
       <AppCard :padding="0" class="chat-card">
         <div class="chat-head"><span></span><strong>길드 채팅</strong></div>
         <div ref="chatMessagesRef" class="feed"><div v-if="displayChats.length === 0" class="empty-state">아직 채팅이 없습니다.</div><ChatBubble v-for="chatItem in displayChats" :key="chatItem.id" :msg="chatItem" /></div>
-        <form class="chat-input" @submit.prevent="sendChatMessage"><label><AppIcon name="plus" color="var(--ink-3)" /><input v-model="message" placeholder="메시지 보내기…" @keydown.enter="guardComposingEnter"><AppPill size="sm">😀</AppPill><AppPill size="sm">🍱</AppPill><button class="chat-submit" type="submit" :disabled="!message.trim() || sendingChat"><AppIcon name="send" color="#fff" />보내기</button></label></form>
+        <form class="chat-input" @submit.prevent="sendChatMessage"><label><AppIcon name="plus" color="var(--ink-3)" /><input v-model="message" placeholder="메시지 보내기…" @keydown.enter="guardComposingEnter"><button class="chat-submit" type="submit" :disabled="!message.trim() || sendingChat"><AppIcon name="send" color="#fff" />보내기</button></label></form>
       </AppCard>
 
       <AppCard class="notice">
@@ -140,7 +140,7 @@
 
       <AppCard class="members"><div class="section-title-main">👥 길드원</div><div v-if="members.length === 0" class="empty-state">길드원 정보가 없습니다.</div><div class="member-grid"><button v-for="member in members" :key="member.memberId" @click="openMember(member)"><span>{{ member.nickname[0] || '?' }}</span><strong>{{ member.nickname }} <small>LV.{{ member.characterLevel ?? '-' }}</small></strong><em>{{ roleLabel(member.role) }}</em></button></div></AppCard>
 
-      <AppCard class="stats"><div class="section-title-main">📊 길드 통계</div><div class="stat-grid"><StatBlock label="기록률" :value="dashboard ? `${dashboard.recordRate}%` : '-'" /><StatBlock label="보스 데미지" :value="dashboard ? `${dashboard.bossDamage} HP` : '-'" /><StatBlock label="주간 점수" :value="dashboard ? `${dashboard.weeklyScore.toLocaleString()} pt` : '-'" accent /><StatBlock label="퀘스트 완료" :value="dashboard ? `${dashboard.questCompletedCount}/${dashboard.questTotalCount}` : '-'" /></div><div v-if="weeklyReport?.dailyStats?.length" class="guild-chart"><div v-for="(stat, index) in weeklyReport.dailyStats" :key="stat.date"><b :style="{ height: stat.recordRate ? `${stat.recordRate}%` : '6px' }" :class="{ zero: stat.recordRate === 0, today: index === weeklyReport.dailyStats.length - 1 }"></b><small>{{ dayLabel(stat.dayOfWeek) }}</small></div></div><p v-else>아직 주간 리포트가 없습니다.</p></AppCard>
+      <AppCard class="stats"><div class="section-title-main">📊 길드 통계</div><div class="stat-grid"><StatBlock label="기록률" :value="dashboard ? `${dashboard.recordRate}%` : '-'" /><StatBlock label="보스 데미지" :value="dashboard ? `${dashboard.bossDamage} HP` : '-'" /><StatBlock label="주간 점수" :value="dashboard ? `${dashboard.weeklyScore.toLocaleString()} pt` : '-'" accent /><StatBlock label="퀘스트 완료" :value="dashboard ? `${dashboard.questCompletedCount}/${dashboard.questTotalCount}` : '-'" /></div><div v-if="chartStats.length" class="guild-chart"><div v-for="(stat, index) in chartStats" :key="stat.date"><b :style="{ height: stat.heightPercent > 0 ? `${stat.heightPercent}%` : '6px' }" :class="{ zero: stat.value === 0, today: index === chartStats.length - 1 }"></b><small>{{ dayLabel(stat.dayOfWeek) }}</small></div></div><p v-else>아직 주간 리포트가 없습니다.</p></AppCard>
     </div>
   </section>
 </template>
@@ -156,7 +156,7 @@ import { ApiError } from '../services/api/client'
 import { guildApi } from '../services/api/guildApi'
 import { guildChatApi } from '../services/api/guildChatApi'
 import { rankingApi } from '../services/api/rankingApi'
-import type { GuildDashboard, GuildDetail, GuildJoinRequest, GuildMember, GuildMemberDetail, GuildNotice, GuildSummary, GuildWeeklyReport } from '../types/guild'
+import type { GuildDailyStat, GuildDashboard, GuildDetail, GuildJoinRequest, GuildMember, GuildMemberDetail, GuildNotice, GuildSummary, GuildWeeklyReport } from '../types/guild'
 import type { GuildChatMessage } from '../types/guildChat'
 import type { GuildRanking } from '../types/ranking'
 import ChatBubble from './parts/ChatBubble.vue'
@@ -201,6 +201,36 @@ const pages = computed(() => Array.from({ length: Math.max(lastKnownPage.value, 
 const kickableMembers = computed(() => members.value.filter((member) => !member.isMe && member.role !== 'OWNER'))
 const displayChats = computed(() => chats.value.map((chatItem) => ({ id: chatItem.chatId, name: chatItem.nickname, time: formatDate(chatItem.createdAt), text: chatItem.message, mine: Boolean(chatItem.isMe), system: chatItem.messageType === 'SYSTEM' })))
 const displayRankings = computed<Array<[number, string, string, number, boolean]>>(() => rankings.value.map((rank) => [rank.rank, rank.guildName, rank.myGuild ? '우리 길드' : '', rank.weeklyScore, rank.myGuild]))
+const chartStats = computed(() => {
+  const dayOrder = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+  const dayAliases: Record<string, string> = {
+    MONDAY: 'MON', TUESDAY: 'TUE', WEDNESDAY: 'WED', THURSDAY: 'THU',
+    FRIDAY: 'FRI', SATURDAY: 'SAT', SUNDAY: 'SUN'
+  }
+  const statsByDay = new Map<string, GuildDailyStat>()
+
+  for (const stat of weeklyReport.value?.dailyStats ?? []) {
+    const day = String(stat.dayOfWeek ?? '').toUpperCase()
+    statsByDay.set(dayAliases[day] ?? day, stat)
+  }
+
+  const orderedStats = dayOrder.flatMap((day) => {
+    const stat = statsByDay.get(day)
+    if (!stat) return []
+
+    const score = Number(stat.score)
+    const damage = Number(stat.damage)
+    const hasScore = stat.score !== null && stat.score !== undefined && Number.isFinite(score)
+    const value = Math.max(0, hasScore ? score : Number.isFinite(damage) ? damage : 0)
+    return [{ ...stat, value }]
+  })
+  const maxValue = Math.max(0, ...orderedStats.map((stat) => stat.value))
+
+  return orderedStats.map((stat) => ({
+    ...stat,
+    heightPercent: maxValue > 0 ? (stat.value / maxValue) * 100 : 0
+  }))
+})
 
 function requestForGuild(id: number) {
   return myJoinRequests.value.find((request) => request.guildId === id && request.status === 'PENDING')
@@ -460,7 +490,7 @@ function formatDate(value?: string) {
 function valueOrDash(value: number | undefined, suffix: string) { return value === undefined ? '-' : `${value}${suffix}` }
 function roleLabel(role: string) { return role === 'OWNER' ? '길드장' : '길드원' }
 function characterStage(level?: number): 'egg' | 'chick' | 'adult' { return !level || level < 5 ? 'egg' : level < 15 ? 'chick' : 'adult' }
-function dayLabel(day: string) { return ({ MONDAY: '월', TUESDAY: '화', WEDNESDAY: '수', THURSDAY: '목', FRIDAY: '금', SATURDAY: '토', SUNDAY: '일' } as Record<string, string>)[day] ?? day.slice(0, 1) }
+function dayLabel(day: string) { return ({ MON: '월', MONDAY: '월', TUE: '화', TUESDAY: '화', WED: '수', WEDNESDAY: '수', THU: '목', THURSDAY: '목', FRI: '금', FRIDAY: '금', SAT: '토', SATURDAY: '토', SUN: '일', SUNDAY: '일' } as Record<string, string>)[day.toUpperCase()] ?? day.slice(0, 1) }
 
 onMounted(() => { void loadPage() })
 </script>
