@@ -56,7 +56,7 @@ function initialView(): ViewMode {
 const view = ref<ViewMode>(initialView())
 const activePage = ref<PageId>(pageFromPath(window.location.pathname))
 const logs = ref<MealLog[]>([])
-const stage = ref<Stage>('chick')
+const stage = ref<Stage>('baby')
 const equippedWeapon = ref('stick')
 const equippedHat = ref<string | null>(null)
 const streakDays = ref(0)

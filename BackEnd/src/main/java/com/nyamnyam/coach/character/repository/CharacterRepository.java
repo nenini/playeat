@@ -30,10 +30,15 @@ public interface CharacterRepository {
             @Param("level") int level,
             @Param("xp") int xp,
             @Param("stage") String stage,
-            @Param("mood") String mood,
             @Param("appearanceType") String appearanceType,
             @Param("streakDays") int streakDays,
             @Param("bestStreakDays") int bestStreakDays
+    );
+
+    int updateMood(
+            @Param("userId") Long userId,
+            @Param("mood") String mood,
+            @Param("moodMessage") String moodMessage
     );
 
     boolean existsByUserId(@Param("userId") Long userId);

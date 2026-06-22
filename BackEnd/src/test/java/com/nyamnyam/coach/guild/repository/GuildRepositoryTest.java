@@ -343,7 +343,7 @@ class GuildRepositoryTest {
                     mood,
                     appearance_type
                 )
-                VALUES (?, '냠냠이', 7, 'BABY', 'HAPPY', 'NORMAL')
+                VALUES (?, '냠냠이', 7, 'BABY', 'NORMAL', 'NORMAL')
                 """,
                 userId
         );

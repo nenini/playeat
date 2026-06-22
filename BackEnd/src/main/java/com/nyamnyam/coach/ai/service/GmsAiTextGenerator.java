@@ -4,6 +4,7 @@ import com.nyamnyam.coach.ai.client.GmsAiClient;
 import com.nyamnyam.coach.ai.config.GmsProperties;
 import com.nyamnyam.coach.ai.rag.document.RagReference;
 import com.nyamnyam.coach.ai.service.prompt.AiQuestPrompt;
+import com.nyamnyam.coach.ai.service.prompt.CharacterMoodPrompt;
 import com.nyamnyam.coach.ai.service.prompt.CoachFeedbackPrompt;
 import com.nyamnyam.coach.ai.service.prompt.DailyReportPrompt;
 import com.nyamnyam.coach.ai.service.prompt.QuestTemplatePrompt;
@@ -246,6 +247,47 @@ public class GmsAiTextGenerator implements AiTextGenerator {
                 prompt.recentDietSummary(),
                 templates
         ));
+    }
+
+    @Override
+    public String selectCharacterMood(CharacterMoodPrompt prompt) {
+        log.info("AI generator selected provider=gms feature=character-mood model={}", properties.getModel());
+        return gmsAiClient.createResponse("""
+                당신은 사용자의 일간 영양 리포트를 바탕으로 냠냠이 캐릭터의 상태값을 고르는 코치입니다.
+                반드시 JSON만 반환하고, 마크다운은 사용하지 마세요.
+                mood는 반드시 NORMAL, HUNGRY, CHUBBY, MUSCLE 중 하나만 사용하세요.
+                reason은 짧게 작성하세요.
+
+                선택 기준:
+                - MUSCLE: 균형 잡힌 하루, 단백질 충분, 건강 점수 높음, 긍정적인 리포트
+                - CHUBBY: 과식, 탄수화물/지방/칼로리 과다, 강한 주의 문구
+                - HUNGRY: 기록된 식사가 적음, 에너지 섭취 부족, 주요 영양소 부족
+                - NORMAL: 위 조건이 뚜렷하지 않은 보통 상태
+
+                출력 형식:
+                {"mood":"NORMAL","reason":"문자열"}
+
+                일간 리포트:
+                사용자 ID: %d
+                날짜: %s
+                건강 점수: %d
+                요약: %s
+                잘한 점: %s
+                주의할 점: %s
+                다음 행동: %s
+                """.formatted(
+                prompt.userId(),
+                prompt.date(),
+                prompt.healthScore() == null ? 0 : prompt.healthScore(),
+                prompt.summary(),
+                String.join(", ", emptyIfNull(prompt.strengths())),
+                String.join(", ", emptyIfNull(prompt.warnings())),
+                prompt.nextAction()
+        ));
+    }
+
+    private java.util.List<String> emptyIfNull(java.util.List<String> values) {
+        return values == null ? java.util.List.of() : values;
     }
 
     @Override

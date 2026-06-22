@@ -260,7 +260,7 @@ class GuildControllerTest {
                                 "냠냠이",
                                 7,
                                 "BABY",
-                                "HAPPY",
+                                "NORMAL",
                                 "NORMAL",
                                 "OWNER",
                                 LocalDateTime.of(2026, 6, 9, 10, 30),

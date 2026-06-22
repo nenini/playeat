@@ -293,6 +293,7 @@ CREATE TABLE characters (
     xp INT NOT NULL DEFAULT 0,
     stage VARCHAR(30) NOT NULL DEFAULT 'EGG',
     mood VARCHAR(30) NOT NULL DEFAULT 'NORMAL',
+    mood_message VARCHAR(255) NOT NULL DEFAULT '냠냠이가 식단 기록과 함께 자랄 준비를 마쳤어요.',
     appearance_type VARCHAR(30) NOT NULL DEFAULT 'NORMAL',
     streak_days INT NOT NULL DEFAULT 0,
     best_streak_days INT NOT NULL DEFAULT 0,

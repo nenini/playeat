@@ -23,7 +23,7 @@
         </div>
         <div class="hero-pet">
           <div class="pet-orbit">
-            <NyamnyamCharacter stage="chick" :size="190" />
+            <NyamnyamCharacter stage="baby" :size="190" />
           </div>
         </div>
       </section>

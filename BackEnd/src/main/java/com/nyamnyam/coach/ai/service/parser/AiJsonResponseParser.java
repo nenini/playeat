@@ -31,6 +31,14 @@ public class AiJsonResponseParser {
         return parse(rawText, AiQuestContent.class);
     }
 
+    public CharacterMoodContent parseCharacterMood(String rawText) {
+        CharacterMoodContent content = parse(rawText, CharacterMoodContent.class);
+        if (content.mood() == null || content.mood().isBlank()) {
+            return new CharacterMoodContent("NORMAL", content.reason());
+        }
+        return content;
+    }
+
     private <T> T parse(String rawText, Class<T> type) {
         try {
             return objectMapper.readValue(extractJsonObject(rawText), type);

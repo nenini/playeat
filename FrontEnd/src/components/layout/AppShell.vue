@@ -2,7 +2,7 @@
   <div class="app-shell">
     <header class="topbar">
       <button class="brand" type="button" @click="$emit('navigate', 'home')">
-        <NyamnyamCharacter stage="chick" :size="36" />
+        <NyamnyamCharacter stage="baby" :size="36" />
         <span>NYAMNYAM</span>
       </button>
       <nav class="topnav">
