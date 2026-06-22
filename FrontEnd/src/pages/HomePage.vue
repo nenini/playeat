@@ -177,11 +177,13 @@ const equippedHandImage = computed(() => equipmentImageUrl(equippedHand.value))
 const guildId = computed(() => guildStatus.value?.guild?.guildId ?? guildStatus.value?.guildId ?? null)
 const inGuild = computed(() => guildId.value !== null)
 const activeBattle = computed(() => battleDetail.value ?? currentBattle.value)
-const bossImageUrl = computed(() => resolveApiAssetUrl(
-  activeBattle.value?.bossImageUrl
-  ?? activeBattle.value?.imageUrl
-  ?? activeBattle.value?.boss?.imageUrl
-))
+const bossImageUrl = computed(() => {
+  const imagePath = battleDetail.value?.bossImageUrl
+    ?? currentBattle.value?.bossImageUrl
+    ?? activeBattle.value?.imageUrl
+    ?? activeBattle.value?.boss?.imageUrl
+  return resolveApiAssetUrl(imagePath)
+})
 const bossCurrentHp = computed(() => Math.max(0, safeNumber(battleHp.value?.currentHp ?? activeBattle.value?.currentHp)))
 const bossMaxHp = computed(() => Math.max(1, safeNumber(battleHp.value?.maxHp ?? activeBattle.value?.maxHp, 1)))
 const questStatusLabel = computed(() => {

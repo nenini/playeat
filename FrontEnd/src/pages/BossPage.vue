@@ -43,9 +43,9 @@
         </div>
       </main>
       <aside class="members">
-        <div class="member-head"><strong>길드원 개인 퀘스트 · {{ quests.length }}명</strong><span>{{ dashboard ? `완료 ${dashboard.questCompletedCount} · 전체 ${dashboard.questTotalCount}` : '-' }}</span></div>
-        <div v-if="quests.length === 0" class="quest-empty"><p>생성된 퀘스트가 없습니다.</p><AppButton v-if="isLeader" size="sm" :disabled="pendingActionId === 'generate-quests'" @click="generateQuests">퀘스트 생성</AppButton></div>
-        <div v-for="quest in quests" :key="quest.questId" class="quest-entry">
+        <div class="member-head"><strong>길드원 개인 퀘스트 · {{ displayQuests.length }}명</strong><span>{{ dashboard ? `완료 ${dashboard.questCompletedCount} · 전체 ${dashboard.questTotalCount}` : '-' }}</span></div>
+        <div v-if="displayQuests.length === 0" class="quest-empty"><p>생성된 퀘스트가 없습니다.</p><AppButton v-if="isLeader" size="sm" :disabled="pendingActionId === 'generate-quests'" @click="generateQuests">퀘스트 생성</AppButton></div>
+        <div v-for="quest in displayQuests" :key="quest.questId" class="quest-entry">
           <MemberQuest :member="questMember(quest)" />
           <div v-if="quest.isMe" class="quest-actions"><AppButton v-if="quest.status === 'COMPLETED'" size="sm" :disabled="pendingActionId === `reward-${quest.questId}`" @click="claimQuestReward(quest.questId)">보상 수령</AppButton><AppPill v-if="quest.status === 'REWARDED'" tone="ok" size="sm">보상 수령 완료</AppPill></div>
         </div>
@@ -103,6 +103,15 @@ const isLeader = computed(() => guildRole.value === 'OWNER')
 const selectedBoss = computed(() => bosses.value.find((item) => item.bossId === selectedBossId.value) ?? bosses.value[0] ?? null)
 const hpPercent = computed(() => hp.value?.maxHp ? hp.value.currentHp / hp.value.maxHp * 100 : 0)
 const isBattleCleared = computed(() => ['DEFEATED', 'CLEARED', 'COMPLETED'].includes(String(battle.value?.status || '')))
+const displayQuests = computed<QuestSummary[]>(() => {
+  if (!myQuest.value) return quests.value
+
+  const myQuestIndex = quests.value.findIndex((quest) => quest.questId === myQuest.value?.questId)
+  const mine: QuestSummary = { ...myQuest.value, isMe: true }
+  if (myQuestIndex < 0) return [mine, ...quests.value]
+
+  return quests.value.map((quest, index) => index === myQuestIndex ? mine : quest)
+})
 
 function setError(error: unknown) {
   errorMessage.value = error instanceof ApiError ? error.message : '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'
