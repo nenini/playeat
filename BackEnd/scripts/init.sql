@@ -66,6 +66,8 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     nickname VARCHAR(50) NOT NULL,
     profile_image_url VARCHAR(500),
+    provider VARCHAR(20) NOT NULL DEFAULT 'LOCAL',
+    provider_id VARCHAR(100),
     selected_coach_id BIGINT,
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -73,6 +75,7 @@ CREATE TABLE users (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deactivated_at DATETIME,
     CONSTRAINT uk_users_email UNIQUE (email),
+    CONSTRAINT uk_users_provider_id UNIQUE (provider, provider_id),
     CONSTRAINT fk_users_selected_coach
         FOREIGN KEY (selected_coach_id)
         REFERENCES coaches(coach_id)

@@ -16,6 +16,11 @@ public interface UserRepository {
 
     Optional<User> findByEmail(@Param("email") String email);
 
+    Optional<User> findByProviderAndProviderId(
+            @Param("provider") String provider,
+            @Param("providerId") String providerId
+    );
+
     List<Long> findActiveUserIds();
 
     int releaseInactiveEmail(@Param("userId") Long userId);

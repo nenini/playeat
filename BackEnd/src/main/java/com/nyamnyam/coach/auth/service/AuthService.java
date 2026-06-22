@@ -1,6 +1,7 @@
 package com.nyamnyam.coach.auth.service;
 
 import com.nyamnyam.coach.auth.dto.request.LoginRequest;
+import com.nyamnyam.coach.auth.dto.request.GoogleOAuthLoginRequest;
 import com.nyamnyam.coach.auth.dto.request.LogoutRequest;
 import com.nyamnyam.coach.auth.dto.request.SignupRequest;
 import com.nyamnyam.coach.auth.dto.request.TokenRefreshRequest;
@@ -34,12 +35,15 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private static final String ACTIVE_STATUS = "ACTIVE";
+    private static final String LOCAL_PROVIDER = "LOCAL";
+    private static final String GOOGLE_PROVIDER = "GOOGLE";
     private static final String ROLE_USER = "ROLE_USER";
 
     private final UserRepository userRepository;
@@ -47,6 +51,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final CharacterGrowthService characterGrowthService;
+    private final GoogleOAuthService googleOAuthService;
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
@@ -62,6 +67,7 @@ public class AuthService {
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
+                .provider(LOCAL_PROVIDER)
                 .status(ACTIVE_STATUS)
                 .onboardingCompleted(false)
                 .build();
@@ -84,10 +90,63 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_CREDENTIALS));
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        if (!isLocalUser(user)
+                || user.getPasswordHash() == null
+                || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new BusinessException(AuthErrorCode.INVALID_CREDENTIALS);
         }
         validateActiveUser(user);
+
+        return issueLoginResponse(user);
+    }
+
+    @Transactional
+    public LoginResponse loginWithGoogle(GoogleOAuthLoginRequest request) {
+        GoogleOAuthUserInfo googleUser = googleOAuthService.authenticate(request);
+        User user = userRepository.findByProviderAndProviderId(GOOGLE_PROVIDER, googleUser.providerId())
+                .orElse(null);
+
+        if (user == null) {
+            if (userRepository.findByEmail(googleUser.email()).isPresent()) {
+                throw new BusinessException(AuthErrorCode.OAUTH_EMAIL_ALREADY_EXISTS);
+            }
+            user = createGoogleUser(googleUser);
+        }
+
+        validateActiveUser(user);
+        return issueLoginResponse(user);
+    }
+
+    private User createGoogleUser(GoogleOAuthUserInfo googleUser) {
+        String nickname = googleUser.name() == null
+                ? googleUser.email().substring(0, googleUser.email().indexOf('@'))
+                : googleUser.name();
+        if (nickname.length() > 50) {
+            nickname = nickname.substring(0, 50);
+        }
+
+        User user = User.builder()
+                .email(googleUser.email())
+                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .nickname(nickname)
+                .profileImageUrl(googleUser.picture())
+                .provider(GOOGLE_PROVIDER)
+                .providerId(googleUser.providerId())
+                .status(ACTIVE_STATUS)
+                .onboardingCompleted(false)
+                .build();
+
+        userRepository.save(user);
+        User savedUser = userRepository.findById(user.getUserId()).orElse(user);
+        characterGrowthService.createDefaultCharacterIfMissing(savedUser.getUserId(), savedUser.getNickname());
+        return savedUser;
+    }
+
+    private boolean isLocalUser(User user) {
+        return user.getProvider() == null || LOCAL_PROVIDER.equals(user.getProvider());
+    }
+
+    private LoginResponse issueLoginResponse(User user) {
 
         JwtToken jwtToken = issueToken(user);
         saveRefreshToken(user.getUserId(), jwtToken.getRefreshToken());

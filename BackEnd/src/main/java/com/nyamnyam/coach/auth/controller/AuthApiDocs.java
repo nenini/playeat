@@ -1,6 +1,7 @@
 package com.nyamnyam.coach.auth.controller;
 
 import com.nyamnyam.coach.auth.dto.request.LoginRequest;
+import com.nyamnyam.coach.auth.dto.request.GoogleOAuthLoginRequest;
 import com.nyamnyam.coach.auth.dto.request.LogoutRequest;
 import com.nyamnyam.coach.auth.dto.request.SignupRequest;
 import com.nyamnyam.coach.auth.dto.request.TokenRefreshRequest;
@@ -46,6 +47,16 @@ public interface AuthApiDocs {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "비활성화 계정")
     })
     ResponseEntity<ApiResponse<LoginResponse>> login(LoginRequest request);
+
+    @Operation(summary = "Google 로그인", description = "Google authorization code를 검증하고 기존 로그인과 동일한 JWT를 발급합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Google 로그인 성공",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "동일 이메일의 기존 계정 존재"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "Google 인증 또는 사용자 정보 조회 실패")
+    })
+    ResponseEntity<ApiResponse<LoginResponse>> loginWithGoogle(GoogleOAuthLoginRequest request);
 
     @Operation(summary = "토큰 재발급", description = "refresh token을 검증해 새 토큰을 발급하고 refresh token rotation을 적용합니다.")
     @ApiResponses({

@@ -1,6 +1,7 @@
 package com.nyamnyam.coach.auth.controller;
 
 import com.nyamnyam.coach.auth.dto.request.LoginRequest;
+import com.nyamnyam.coach.auth.dto.request.GoogleOAuthLoginRequest;
 import com.nyamnyam.coach.auth.dto.request.LogoutRequest;
 import com.nyamnyam.coach.auth.dto.request.SignupRequest;
 import com.nyamnyam.coach.auth.dto.request.TokenRefreshRequest;
@@ -133,6 +134,29 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.data.expiresIn").value(3600))
                 .andExpect(jsonPath("$.data.user.userId").value(1));
+    }
+
+    @Test
+    @DisplayName("Google OAuth 로그인 성공 응답을 반환한다")
+    void loginWithGoogle() throws Exception {
+        when(authService.loginWithGoogle(any(GoogleOAuthLoginRequest.class)))
+                .thenReturn(new LoginResponse(
+                        "access-token",
+                        "refresh-token",
+                        "Bearer",
+                        3600L,
+                        new AuthUserResponse(2L, "google@example.com", "구글냥", false)
+                ));
+
+        mockMvc.perform(post("/v1/auth/oauth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new GoogleOAuthLoginRequest("google-code", "http://localhost:5173/oauth/google/callback")
+                        )))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.data.user.email").value("google@example.com"))
+                .andExpect(jsonPath("$.message").value("Google 로그인에 성공했습니다."));
     }
 
     @Test
