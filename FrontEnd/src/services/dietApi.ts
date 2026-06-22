@@ -104,6 +104,13 @@ export const dietApi = {
     })
   },
 
+  createMeal(payload: DietSaveRequest) {
+    return apiRequest<DietDetailResponse>('/v1/diets', {
+      method: 'POST',
+      body: payload
+    })
+  },
+
   update(dietId: string | number, payload: DietSaveRequest) {
     return apiRequest<DietDetailResponse>(`/v1/diets/${dietId}`, {
       method: 'PATCH',

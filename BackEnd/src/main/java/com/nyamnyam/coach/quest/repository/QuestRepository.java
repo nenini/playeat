@@ -174,8 +174,8 @@ public interface QuestRepository {
 
     int countGuildBattleSatisfiedDiets(
             @Param("battleId") Long battleId,
-            @Param("startAt") LocalDateTime startAt,
-            @Param("endAt") LocalDateTime endAt,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
             @Param("metricType") String metricType,
             @Param("comparisonType") String comparisonType,
             @Param("thresholdValue") java.math.BigDecimal thresholdValue,

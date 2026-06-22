@@ -63,14 +63,11 @@ public class ConditionEvaluationService {
         }
 
         if (aggregationType == QuestAggregationType.TOTAL_COUNT) {
-            LocalDateTime startAt = battle.getStartedAt() == null
-                    ? today.atStartOfDay()
-                    : battle.getStartedAt();
-            LocalDateTime endAt = today.plusDays(1).atStartOfDay();
+            LocalDate startDate = battle.getStartedAt() == null ? today : battle.getStartedAt().toLocalDate();
             return questRepository.countGuildBattleSatisfiedDiets(
                     battle.getBattleId(),
-                    startAt,
-                    endAt,
+                    startDate,
+                    today,
                     condition.getMetricType(),
                     condition.getComparisonType(),
                     condition.getThresholdValue(),

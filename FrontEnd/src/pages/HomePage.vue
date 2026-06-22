@@ -28,8 +28,8 @@
               :hat-image-url="equipmentImageUrl(equippedHead)"
             />
             <div v-if="equippedHand" class="weapon-on-hand">
-              <img v-if="equipmentImageUrl(equippedHand)" :src="equipmentImageUrl(equippedHand) || ''" :alt="equippedHand.name || '손 장비'">
-              <WeaponIcon v-else :id="equipmentIconId(equippedHand) || undefined" />
+              <img v-if="equippedHandImage && !handImageFailed" :src="equippedHandImage" :alt="equippedHand.name || '손 장비'" @error="handImageFailed = true">
+              <WeaponIcon v-else-if="equipmentIconId(equippedHand)" :id="equipmentIconId(equippedHand) || undefined" />
             </div>
             <div class="speech">{{ characterMessage }}</div>
           </div>
@@ -65,7 +65,7 @@
     <div class="banners">
       <AppCard class="quest-card">
         <div class="banner-row">
-          <div class="quest-emoji">{{ inGuild ? '⚔️' : '🔒' }}</div>
+          <div class="quest-scroll-icon" aria-hidden="true">📜</div>
           <div class="grow">
             <AppPill tone="accent" size="sm">보스 퀘스트</AppPill>
             <h3>{{ questCardTitle }}</h3>
@@ -80,7 +80,10 @@
       </AppCard>
       <AppCard>
         <div class="banner-row">
-          <div class="quest-emoji">{{ inGuild ? '🏟️' : '🔒' }}</div>
+          <div class="boss-card-icon" aria-hidden="true">
+            <img v-if="activeBattle && bossImageUrl && !bossImageFailed" :src="bossImageUrl" :alt="`${bossCardTitle} 이미지`" @error="bossImageFailed = true">
+            <span v-else>{{ inGuild ? '👾' : '🔒' }}</span>
+          </div>
           <div class="grow">
             <AppPill tone="ok" size="sm">전투장</AppPill>
             <h3>{{ bossCardTitle }}</h3>
@@ -103,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AppButton from '../components/common/AppButton.vue'
 import AppCard from '../components/common/AppCard.vue'
 import AppIcon from '../components/common/AppIcon.vue'
@@ -125,6 +128,7 @@ import type { BossBattleDetail, BossBattleHp, BossBattleSummary } from '../types
 import type { CharacterEquipment } from '../types/characterEquipment'
 import type { MyGuildStatus } from '../types/guild'
 import type { QuestDetail } from '../types/quest'
+import { resolveApiAssetUrl } from '../utils/imageUrl'
 
 defineProps<{ stage: Stage, equippedWeapon: string }>()
 defineEmits<{ navigate: [page: PageId] }>()
@@ -140,6 +144,8 @@ const battleHp = ref<BossBattleHp | null>(null)
 const myQuest = ref<QuestDetail | null>(null)
 const homeError = ref('')
 const isLoading = ref(true)
+const handImageFailed = ref(false)
+const bossImageFailed = ref(false)
 
 const today = toDateInputValue(new Date())
 const todayLabel = computed(() => formatDateLabel(today))
@@ -165,11 +171,17 @@ const calorieSubText = computed(() => {
   if (!dailyAnalysis.value) return '칼로리 데이터 없음'
   return `목표 ${Math.round(Number(calorie.value?.target || 0)).toLocaleString()} · ${Math.round(Number(calorie.value?.achievementRate || 0))}%`
 })
-const equippedHand = computed(() => equipments.value.find((item) => item.slotType === 'HAND' && item.equipped) ?? null)
-const equippedHead = computed(() => equipments.value.find((item) => item.slotType === 'HEAD' && item.equipped) ?? null)
+const equippedHand = computed(() => equipments.value.find((item) => item.slotType === 'HAND' && item.equipped && item.itemId !== null) ?? null)
+const equippedHead = computed(() => equipments.value.find((item) => item.slotType === 'HEAD' && item.equipped && item.itemId !== null) ?? null)
+const equippedHandImage = computed(() => equipmentImageUrl(equippedHand.value))
 const guildId = computed(() => guildStatus.value?.guild?.guildId ?? guildStatus.value?.guildId ?? null)
 const inGuild = computed(() => guildId.value !== null)
 const activeBattle = computed(() => battleDetail.value ?? currentBattle.value)
+const bossImageUrl = computed(() => resolveApiAssetUrl(
+  activeBattle.value?.bossImageUrl
+  ?? activeBattle.value?.imageUrl
+  ?? activeBattle.value?.boss?.imageUrl
+))
 const bossCurrentHp = computed(() => Math.max(0, safeNumber(battleHp.value?.currentHp ?? activeBattle.value?.currentHp)))
 const bossMaxHp = computed(() => Math.max(1, safeNumber(battleHp.value?.maxHp ?? activeBattle.value?.maxHp, 1)))
 const questStatusLabel = computed(() => {
@@ -208,6 +220,14 @@ const mealByKind = computed(() => {
     if (key) result[key] = meal
   }
   return result
+})
+
+watch(equippedHandImage, () => {
+  handImageFailed.value = false
+})
+
+watch(bossImageUrl, () => {
+  bossImageFailed.value = false
 })
 
 function mealSummary(kindId: MealKindId) {
@@ -342,7 +362,9 @@ onMounted(() => {
 .banners { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .quest-card { background: linear-gradient(135deg, var(--accent-soft) 0%, var(--surface) 100%); }
 .banner-row { display: flex; align-items: center; gap: 14px; }
-.quest-emoji { width: 60px; height: 60px; border-radius: 14px; background: var(--surface); border: 1.5px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 30px; flex-shrink: 0; }
+.quest-scroll-icon, .boss-card-icon { width: 60px; height: 60px; border-radius: 14px; background: var(--surface); border: 1.5px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 30px; flex-shrink: 0; overflow: hidden; }
+.quest-scroll-icon { background: linear-gradient(145deg, #fffaf0, #fff1d8); }
+.boss-card-icon img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
 .grow { flex: 1; }
 h3 { margin: 6px 0 0; font-size: 15px; }
 p { margin: 4px 0 0; font-size: 11px; color: var(--ink-2); }

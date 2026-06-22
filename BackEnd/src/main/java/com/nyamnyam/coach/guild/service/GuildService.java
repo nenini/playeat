@@ -91,6 +91,7 @@ public class GuildService {
     private final GuildValidator guildValidator;
     private final GuildScoreService guildScoreService;
     private final CharacterEquipmentRepository characterEquipmentRepository;
+    private final GuildChatService guildChatService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional(readOnly = true)
@@ -280,6 +281,7 @@ public class GuildService {
 
         guildRepository.leaveGuild(guildId, userId);
         bossBattleParticipantRepository.markParticipantLeftByGuildAndUser(guildId, userId);
+        guildChatService.createSystemMessage(guildId, member.getNickname() + "님이 길드를 탈퇴했습니다.");
         GuildMemberRow leftMember = guildRepository.findMemberByGuildIdAndUserId(guildId, userId)
                 .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
 
@@ -344,6 +346,7 @@ public class GuildService {
 
         guildRepository.kickGuildMember(guildId, memberId);
         bossBattleParticipantRepository.markParticipantKickedByGuildAndUser(guildId, targetMember.getUserId());
+        guildChatService.createSystemMessage(guildId, targetMember.getNickname() + "님이 길드에서 추방되었습니다.");
         GuildMemberRow kickedMember = guildRepository.findMemberByMemberId(guildId, memberId)
                 .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
 
@@ -546,6 +549,7 @@ public class GuildService {
             throw new BusinessException(GuildErrorCode.JOIN_REQUEST_ALREADY_HANDLED);
         }
         guildRepository.cancelOtherPendingRequests(request.getUserId(), requestId, userId);
+        guildChatService.createSystemMessage(guildId, request.getNickname() + "님이 길드에 가입했습니다.");
         JoinRequestRow handledRequest = findJoinRequest(guildId, requestId);
 
         return new JoinRequestApproveResponse(

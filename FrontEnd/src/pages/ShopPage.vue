@@ -24,8 +24,8 @@
               :hat-image-url="displayHeadImage"
             />
             <div v-if="displayHandItem" class="hand">
-              <img v-if="displayHandImage" :src="displayHandImage" :alt="displayHandItem.name || '손 장비'">
-              <WeaponIcon v-else :id="displayHandIcon || undefined" />
+              <img v-if="displayHandImage && !handImageFailed" :src="displayHandImage" :alt="displayHandItem.name || '손 장비'" @error="handImageFailed = true">
+              <WeaponIcon v-else-if="displayHandIcon" :id="displayHandIcon" />
             </div>
           </div>
           <p v-if="equippedItems.length"><strong>{{ equipLabel }}</strong></p>
@@ -46,7 +46,7 @@
             @mouseleave="hovered = null"
           >
             <div class="item-preview" :class="{ head: item.slotType === 'HEAD' }">
-              <img v-if="equipmentImageUrl(item)" :src="equipmentImageUrl(item) || ''" :alt="item.name">
+              <img v-if="equipmentImageUrl(item) && !failedItemImages.has(item.itemId)" :src="equipmentImageUrl(item) || ''" :alt="item.name" @error="markItemImageFailed(item.itemId)">
               <WeaponIcon v-else-if="equipmentIconId(item)" :id="equipmentIconId(item) || undefined" />
               <span v-else class="no-image">이미지 없음</span>
             </div>
@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AppButton from '../components/common/AppButton.vue'
 import AppCard from '../components/common/AppCard.vue'
 import AppPill from '../components/common/AppPill.vue'
@@ -98,8 +98,10 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 const successMessage = ref('')
 const pendingActionId = ref<string | null>(null)
+const handImageFailed = ref(false)
+const failedItemImages = ref(new Set<number>())
 
-const equippedItems = computed(() => equipments.value.filter((equipment) => equipment.equipped))
+const equippedItems = computed(() => equipments.value.filter((equipment) => equipment.equipped && equipment.itemId !== null))
 const equipLabel = computed(() => equippedItems.value.map((equipment) => equipment.name).filter(Boolean).join(' + ') || '장착 안 함')
 const previewItem = computed(() => hovered.value && isOwned(hovered.value) ? hovered.value : null)
 const characterStage = computed(() => stageFromBackend(character.value?.stage))
@@ -126,6 +128,14 @@ const displayHeadIcon = computed(() => {
 })
 const displayHeadImage = computed(() => equipmentImageUrl(displayHeadItem.value))
 const isPending = computed(() => pendingActionId.value !== null)
+
+watch(displayHandImage, () => {
+  handImageFailed.value = false
+})
+
+function markItemImageFailed(itemId: number) {
+  failedItemImages.value = new Set([...failedItemImages.value, itemId])
+}
 
 function setError(error: unknown) {
   errorMessage.value = error instanceof ApiError ? error.message : '상점 요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'

@@ -81,11 +81,17 @@
               :hat-image-url="equipmentImageUrl(selectedHeadEquipment)"
             />
             <div v-if="selectedHandEquipment" class="member-hand-item">
-              <img v-if="equipmentImageUrl(selectedHandEquipment)" :src="equipmentImageUrl(selectedHandEquipment) || ''" :alt="selectedHandEquipment.name || '손 장비'">
-              <WeaponIcon v-else :id="equipmentIconId(selectedHandEquipment) || undefined" />
+              <img v-if="selectedHandImage && !selectedHandImageFailed" :src="selectedHandImage" :alt="selectedHandEquipment.name || '손 장비'" @error="selectedHandImageFailed = true">
+              <WeaponIcon v-else-if="equipmentIconId(selectedHandEquipment)" :id="equipmentIconId(selectedHandEquipment) || undefined" />
             </div>
           </div>
-          <div><h2>{{ selectedMember.nickname }}</h2><p>LV.{{ selectedMember.characterLevel ?? '-' }} · {{ roleLabel(selectedMember.role) }}</p></div>
+          <div class="member-identity">
+            <div class="member-profile-small">
+              <img v-if="resolveImageUrl(selectedMember.profileImageUrl) && !selectedProfileImageFailed" :src="resolveImageUrl(selectedMember.profileImageUrl)" :alt="`${selectedMember.nickname} 프로필`" @error="selectedProfileImageFailed = true">
+              <span v-else>{{ selectedMember.nickname[0] || '?' }}</span>
+            </div>
+            <div><h2>{{ selectedMember.nickname }}</h2><p>LV.{{ selectedMember.characterLevel ?? '-' }} · {{ roleLabel(selectedMember.role) }}</p></div>
+          </div>
         </div>
         <div class="modal-info">
           <span><b>이번 주 기록률</b><strong>{{ valueOrDash(selectedMember.weeklyRecordRate, '%') }}</strong></span>
@@ -151,7 +157,7 @@
 
       <AppCard class="ranking"><div class="section-title"><div><div class="section-title-main">🏆 길드 순위</div><div class="section-title-sub">이번 주 길드 순위</div></div><AppPill v-if="dashboard?.myRank" tone="ok" size="sm">우리 {{ dashboard.myRank }}위</AppPill></div><div v-if="displayRankings.length === 0" class="empty-state">랭킹 데이터가 없습니다.</div><RankRow v-for="rank in displayRankings" :key="String(rank[0])" :row="rank" /></AppCard>
 
-      <AppCard class="members"><div class="section-title-main">👥 길드원</div><div v-if="members.length === 0" class="empty-state">길드원 정보가 없습니다.</div><div class="member-grid"><button v-for="member in members" :key="member.memberId" @click="openMember(member)"><span>{{ member.nickname[0] || '?' }}</span><strong>{{ member.nickname }} <small>LV.{{ member.characterLevel ?? '-' }}</small></strong><em>{{ roleLabel(member.role) }}</em></button></div></AppCard>
+      <AppCard class="members"><div class="section-title-main">👥 길드원</div><div v-if="members.length === 0" class="empty-state">길드원 정보가 없습니다.</div><div class="member-grid"><button v-for="member in members" :key="member.memberId" @click="openMember(member)"><span><img v-if="resolveImageUrl(member.profileImageUrl) && !failedMemberImages.has(member.memberId)" :src="resolveImageUrl(member.profileImageUrl)" :alt="`${member.nickname} 프로필`" @error="markMemberImageFailed(member.memberId)"><template v-else>{{ member.nickname[0] || '?' }}</template></span><strong>{{ member.nickname }} <small>LV.{{ member.characterLevel ?? '-' }}</small></strong><em>{{ roleLabel(member.role) }}</em></button></div></AppCard>
 
       <AppCard class="stats"><div class="section-title-main">📊 길드 통계</div><div class="stat-grid"><StatBlock label="기록률" :value="dashboard ? `${dashboard.recordRate}%` : '-'" /><StatBlock label="보스 데미지" :value="dashboard ? `${dashboard.bossDamage} HP` : '-'" /><StatBlock label="주간 점수" :value="dashboard ? `${dashboard.weeklyScore.toLocaleString()} pt` : '-'" accent /><StatBlock label="퀘스트 완료" :value="dashboard ? `${dashboard.questCompletedCount}/${dashboard.questTotalCount}` : '-'" /></div><div v-if="chartStats.length" class="guild-chart"><div v-for="(stat, index) in chartStats" :key="stat.date"><b :style="{ height: stat.heightPercent > 0 ? `${stat.heightPercent}%` : '6px' }" :class="{ zero: stat.value === 0, today: index === chartStats.length - 1 }"></b><small>{{ dayLabel(stat.dayOfWeek) }}</small></div></div><p v-else>아직 주간 리포트가 없습니다.</p></AppCard>
     </div>
@@ -159,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import AppButton from '../components/common/AppButton.vue'
 import AppCard from '../components/common/AppCard.vue'
 import AppIcon from '../components/common/AppIcon.vue'
@@ -172,6 +178,7 @@ import { guildApi } from '../services/api/guildApi'
 import { guildChatApi } from '../services/api/guildChatApi'
 import { rankingApi } from '../services/api/rankingApi'
 import { stageFromBackend } from '../services/characterApi'
+import { resolveImageUrl } from '../utils/imageUrl'
 import type { GuildDailyStat, GuildDashboard, GuildDetail, GuildJoinRequest, GuildMember, GuildMemberDetail, GuildNotice, GuildSummary, GuildWeeklyReport } from '../types/guild'
 import type { GuildChatMessage } from '../types/guildChat'
 import type { GuildRanking } from '../types/ranking'
@@ -205,6 +212,9 @@ const code = ref('')
 const message = ref('')
 const chatMessagesRef = ref<HTMLElement | null>(null)
 const selectedMember = ref<GuildMemberDetail | null>(null)
+const selectedProfileImageFailed = ref(false)
+const selectedHandImageFailed = ref(false)
+const failedMemberImages = ref(new Set<number>())
 const showRequests = ref(false)
 const showSettings = ref(false)
 const createForm = reactive({ name: '', max: 30, description: '' })
@@ -214,17 +224,21 @@ const noticeDraft = reactive({ title: '', body: '' })
 
 const isLeader = computed(() => guild.value?.myRole === 'OWNER')
 const selectedEquipments = computed(() => selectedMember.value?.equippedItems ?? [])
-const selectedHeadEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HEAD' && item.equipped) ?? null)
-const selectedHandEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HAND' && item.equipped) ?? null)
+const selectedHeadEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HEAD' && item.equipped && item.itemId !== null) ?? null)
+const selectedHandEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HAND' && item.equipped && item.itemId !== null) ?? null)
+const selectedHandImage = computed(() => equipmentImageUrl(selectedHandEquipment.value))
 const selectedMemberMood = computed<'happy' | 'hungry' | 'sad'>(() => {
   const mood = String(selectedMember.value?.characterMood || '').toLowerCase()
   if (mood.includes('hungry')) return 'hungry'
   if (mood.includes('sad')) return 'sad'
   return 'happy'
 })
+watch(selectedHandImage, () => {
+  selectedHandImageFailed.value = false
+})
 const pages = computed(() => Array.from({ length: Math.max(lastKnownPage.value, currentPage.value + (hasNextPage.value ? 1 : 0)) }, (_, index) => index + 1))
 const kickableMembers = computed(() => members.value.filter((member) => !member.isMe && member.role !== 'OWNER'))
-const displayChats = computed(() => chats.value.map((chatItem) => ({ id: chatItem.chatId, name: chatItem.nickname, time: formatDate(chatItem.createdAt), text: chatItem.message, mine: Boolean(chatItem.isMe), system: chatItem.messageType === 'SYSTEM' })))
+const displayChats = computed(() => chats.value.map((chatItem) => ({ id: chatItem.chatId, name: chatItem.nickname, time: formatDate(chatItem.createdAt), text: chatItem.message, mine: Boolean(chatItem.isMe), system: chatItem.messageType === 'SYSTEM', profileImageUrl: chatItem.profileImageUrl })))
 const displayRankings = computed<Array<[number, string, string, number, boolean]>>(() => rankings.value.map((rank) => [rank.rank, rank.guildName, rank.myGuild ? '우리 길드' : '', rank.weeklyScore, rank.myGuild]))
 const chartStats = computed(() => {
   const dayOrder = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
@@ -402,16 +416,23 @@ function guardComposingEnter(event: KeyboardEvent) {
 
 async function openMember(member: GuildMember) {
   if (!guildId.value) return
+  selectedProfileImageFailed.value = false
+  selectedHandImageFailed.value = false
   await runAction(`member-${member.memberId}`, async () => {
     selectedMember.value = await guildApi.getGuildMember(guildId.value!, member.memberId)
   })
+}
+
+function markMemberImageFailed(memberId: number) {
+  failedMemberImages.value = new Set([...failedMemberImages.value, memberId])
 }
 
 async function approveRequest(requestId: number) {
   if (!guildId.value) return
   await runAction(`approve-${requestId}`, async () => {
     await guildApi.approveJoinRequest(guildId.value!, requestId)
-    ;[joinRequests.value, members.value] = await Promise.all([guildApi.getGuildJoinRequests(guildId.value!), guildApi.getGuildMembers(guildId.value!)])
+    await loadGuildData(guildId.value!)
+    await scrollChatToBottom()
   }, '참여 요청을 승인했습니다.')
 }
 
@@ -443,7 +464,8 @@ async function kickMember(member: GuildMember) {
   if (!guildId.value || !window.confirm(`${member.nickname}님을 길드에서 추방할까요?`)) return
   await runAction(`kick-${member.memberId}`, async () => {
     await guildApi.kickGuildMember(guildId.value!, member.memberId)
-    members.value = await guildApi.getGuildMembers(guildId.value!)
+    await loadGuildData(guildId.value!)
+    await scrollChatToBottom()
   }, '길드원을 추방했습니다.')
 }
 
@@ -559,12 +581,15 @@ onMounted(() => { void loadPage() })
 .notice-box input, .notice-box textarea { width: 100%; border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; background: var(--surface); color: var(--ink); outline: 0; font-size: 13px; }
 .notice-box textarea { min-height: 90px; resize: vertical; }
 .notice-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
-.member-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; } .member-grid button { display: grid; grid-template-columns: 28px 1fr; column-gap: 8px; padding: 7px 9px; border-radius: 8px; background: var(--surface-alt); border: 1px solid var(--border); text-align: left; cursor: pointer; } .member-grid span { width: 28px; height: 28px; border-radius: 14px; background: var(--yolk); display: flex; align-items: center; justify-content: center; font-weight: 800; } .member-grid strong { font-size: 11px; } .member-grid small, .member-grid em { font-family: var(--mono); font-size: 9px; color: var(--ink-3); font-style: normal; }
+.member-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; } .member-grid button { display: grid; grid-template-columns: 28px 1fr; column-gap: 8px; padding: 7px 9px; border-radius: 8px; background: var(--surface-alt); border: 1px solid var(--border); text-align: left; cursor: pointer; } .member-grid span { width: 28px; height: 28px; border-radius: 14px; background: var(--yolk); display: flex; align-items: center; justify-content: center; font-weight: 800; overflow: hidden; } .member-grid span img { width: 100%; height: 100%; object-fit: cover; display: block; } .member-grid strong { font-size: 11px; } .member-grid small, .member-grid em { font-family: var(--mono); font-size: 9px; color: var(--ink-3); font-style: normal; }
 .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin: 10px 0 14px; } .guild-chart { display: flex; align-items: flex-end; gap: 8px; height: 90px; } .guild-chart div { flex: 1; align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; } .guild-chart b { width: 100%; background: var(--ink); border-radius: 4px 4px 0 0; } .guild-chart b.today { background: var(--accent); } .guild-chart b.zero { background: var(--surface-alt); border: 1px dashed var(--border); } .guild-chart small { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
 .modal-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(31,28,23,.32); display: flex; align-items: center; justify-content: center; padding: 24px; }
 .member-modal, .request-modal { width: min(460px, 100%); max-height: 90vh; overflow: auto; background: var(--surface); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 24px; position: relative; }
 .modal-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border: 0; border-radius: 15px; background: var(--surface-alt); cursor: pointer; color: var(--ink-2); font-size: 18px; }
 .member-detail-head { display: flex; align-items: center; gap: 18px; margin-bottom: 16px; }
+.member-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.member-profile-small { width: 38px; height: 38px; border-radius: 19px; overflow: hidden; background: var(--yolk); display: flex; align-items: center; justify-content: center; flex: 0 0 38px; font-weight: 800; }
+.member-profile-small img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .member-character { width: 116px; height: 116px; border-radius: 58px; background: radial-gradient(circle at 50% 40%, #fff5e0 0%, #fbe5d3 100%); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex: 0 0 116px; position: relative; }
 .member-hand-item { position: absolute; right: -16px; top: 23px; width: 26px; height: 84px; z-index: 2; pointer-events: none; }
 .member-hand-item :deep(svg), .member-hand-item img { width: 26px; height: 84px; object-fit: contain; }

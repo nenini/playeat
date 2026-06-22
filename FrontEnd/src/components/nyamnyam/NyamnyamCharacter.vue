@@ -27,24 +27,31 @@
         <path d="M70 102 l -2 6 M70 102 l 2 6 M70 102 l 0 7" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" fill="none" />
         <Face :cx="60" :cy="62" :mood="mood" :es="9" :er="3" :my="82" />
       </g>
-      <image v-if="hatImageUrl" :href="hatImageUrl" x="30" y="0" width="60" height="38" preserveAspectRatio="xMidYMid meet" class="hat-image" />
+      <image v-if="hatImageUrl && !hatImageFailed" :href="hatImageUrl" x="30" y="0" width="60" height="38" preserveAspectRatio="xMidYMid meet" class="hat-image" @error="hatImageFailed = true" />
       <WeaponIcon v-else-if="hatId === 'crown'" id="crown" class="hat" />
     </g>
   </svg>
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import Face from './NyamnyamFace.vue'
 import WeaponIcon from './WeaponIcon.vue'
 import type { Stage } from '../../services/mock/nyamnyamMock'
 
-withDefaults(defineProps<{ stage?: Stage, size?: number, mood?: 'happy' | 'hungry' | 'sad', appearanceType?: string, hatId?: string | null, hatImageUrl?: string | null }>(), {
+const props = withDefaults(defineProps<{ stage?: Stage, size?: number, mood?: 'happy' | 'hungry' | 'sad', appearanceType?: string, hatId?: string | null, hatImageUrl?: string | null }>(), {
   stage: 'chick',
   size: 120,
   mood: 'happy',
   appearanceType: 'DEFAULT',
   hatId: null,
   hatImageUrl: null
+})
+
+const hatImageFailed = ref(false)
+
+watch(() => props.hatImageUrl, () => {
+  hatImageFailed.value = false
 })
 </script>
 

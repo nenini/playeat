@@ -23,5 +23,6 @@ export function equipmentIconId(item: Pick<CharacterEquipment, 'name' | 'imageUr
 }
 
 export function equipmentImageUrl(item: Pick<CharacterEquipment, 'name' | 'imageUrl'> | null | undefined) {
-  return equipmentIconId(item) ? null : item?.imageUrl || null
+  const imageUrl = item?.imageUrl?.trim()
+  return imageUrl || null
 }

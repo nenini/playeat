@@ -46,7 +46,7 @@
           <div class="mono-label block-label">음식 검색 <span>· 식품 DB</span></div>
           <label class="app-input">
             <AppIcon name="search" color="var(--ink-3)" />
-            <input v-model="query" placeholder="음식 이름 입력" @input="onQueryInput">
+            <input v-model="query" placeholder="음식 이름 입력">
           </label>
           <div class="search-list">
             <p v-if="foodLoading" class="empty-text">음식을 검색하는 중입니다.</p>
@@ -55,7 +55,7 @@
               v-for="food in filtered"
               :key="food.id"
               class="food-row"
-              :class="{ active: pending?.food.id === food.id }"
+              :class="{ active: isPendingFood(food.id) }"
               @click="selectFood(food)"
             >
               <span class="food-emoji">{{ food.emoji }}</span>
@@ -63,37 +63,57 @@
                 <strong>{{ food.name }}</strong>
                 <small>{{ food.kcal }}kcal · P{{ food.p }} C{{ food.c }} F{{ food.f }} / {{ food.per }}</small>
               </span>
-              <AppIcon :name="pending?.food.id === food.id ? 'check' : 'plus'" :size="14" :color="pending?.food.id === food.id ? 'var(--accent)' : 'var(--ink-3)'" />
+              <AppIcon :name="isPendingFood(food.id) ? 'check' : 'plus'" :size="14" :color="isPendingFood(food.id) ? 'var(--accent)' : 'var(--ink-3)'" />
             </button>
           </div>
         </AppCard>
 
-        <AppCard v-if="pending" :padding="14" class="pending-card">
-          <div class="mono-label block-label">중량 · 추가</div>
-          <div class="pending-head">
-            <span>{{ pending.food.emoji }}</span>
+        <AppCard :padding="14" class="pending-card">
+          <div class="pending-title">
             <div>
-              <strong>{{ pending.food.name }}</strong>
-              <small>{{ mealKinds.find(k => k.id === activeKind)?.label }}에 추가</small>
+              <div class="mono-label block-label">담은 음식</div>
+              <p>선택한 음식을 한 번에 식단에 추가해요.</p>
+            </div>
+            <strong>{{ pendingItems.length }}개</strong>
+          </div>
+          <p v-if="!pendingItems.length" class="pending-empty">음식을 눌러 식단에 담아보세요.</p>
+          <div v-else class="pending-list">
+            <div v-for="item in pendingItems" :key="item.food.id" class="pending-item">
+              <div class="pending-head">
+                <span>{{ item.food.emoji }}</span>
+                <div>
+                  <strong>{{ item.food.name }}</strong>
+                  <small>{{ mealKinds.find(k => k.id === activeKind)?.label }}에 추가</small>
+                </div>
+                <button class="pending-remove" type="button" aria-label="담은 음식 삭제" @click="removePendingItem(item.food.id)">×</button>
+              </div>
+              <div class="mode-row">
+                <button v-if="hasServingInput(item.food)" :class="{ active: item.unitMode === 'serving' }" @click="setMode(item, 'serving')">{{ servingModeText(item) }}</button>
+                <button v-if="isBasisFood(item.food)" :class="{ active: item.unitMode === 'gram' }" @click="setMode(item, 'gram')">{{ basisUnitLabel(item) }}</button>
+              </div>
+              <div class="qty-control">
+                <button type="button" @click="adjustQty(item, -1)">-</button>
+                <input v-model.number="item.qty" type="number" step="1" min="1">
+                <span>{{ unitLabel(item) }}</span>
+                <button type="button" @click="adjustQty(item, 1)">+</button>
+              </div>
+              <div class="preset-row">
+                <button
+                  v-for="preset in presetOptions(item)"
+                  :key="preset"
+                  type="button"
+                  :class="{ active: Number(item.qty) === preset }"
+                  @click="setQty(item, preset)"
+                >
+                  {{ formatPresetLabel(item, preset) }}
+                </button>
+                <span>직접 입력 가능</span>
+              </div>
             </div>
           </div>
-          <div class="mode-row">
-            <button v-if="canUseServingMode" :class="{ active: pending.unitMode === 'serving' }" @click="setMode('serving')">{{ servingModeText }}</button>
-            <button v-if="canUseBasisMode" :class="{ active: pending.unitMode === 'gram' }" @click="setMode('gram')">{{ basisUnitLabel }}</button>
-          </div>
-          <div class="preset-row">
-            <button v-for="preset in modePresets" :key="preset" :class="{ active: pending.qty === preset }" @click="pending.qty = preset">
-              {{ preset }}{{ unitLabel }}
-            </button>
-          </div>
-          <div class="qty-control">
-            <button @click="adjustQty(-1)">-</button>
-            <input v-model.number="pending.qty" type="number" :step="pending.unitMode === 'gram' ? 1 : 1" min="1">
-            <span>{{ unitLabel }}</span>
-            <button @click="adjustQty(1)">+</button>
-          </div>
-          <AppButton full size="lg" :disabled="saving" @click="commit">
-            <AppIcon name="plus" color="#fff" />{{ saving ? '저장 중' : `${pending.food.name} 추가` }}
+          <p v-if="saveError" class="save-error">{{ saveError }}</p>
+          <AppButton full size="lg" :disabled="saving || !pendingItems.length" @click="commit">
+            <AppIcon name="check" color="#fff" />{{ saving ? '적용 중...' : '선택한 음식 적용하기' }}
           </AppButton>
         </AppCard>
 
@@ -157,11 +177,13 @@ import { coachApi } from '../services/coachApi'
 
 defineProps<{ logs: MealLog[] }>()
 
+type PendingItem = { food: Food, qty: number, unitMode: 'serving' | 'gram' }
+
 const activeKind = ref<MealKindId>('breakfast')
 const query = ref('')
 const selectedDate = ref(toDateInputValue(new Date()))
 const showCalendar = ref(false)
-const pending = ref<{ food: Food, qty: number, unitMode: 'serving' | 'gram' } | null>(null)
+const pendingItems = ref<PendingItem[]>([])
 const apiFoods = ref<Food[]>([])
 const favorites = ref<Array<{ foodId: number, name: string }>>([])
 const dietDay = ref<DietDayResponse | null>(null)
@@ -170,6 +192,7 @@ const dayLoading = ref(false)
 const dayError = ref('')
 const foodLoading = ref(false)
 const saving = ref(false)
+const saveError = ref('')
 let dayRequestId = 0
 let foodRequestId = 0
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -195,14 +218,6 @@ const filtered = computed(() => {
 const selectedDateLabel = computed(() => formatDateLabel(selectedDate.value))
 const todayDate = toDateInputValue(new Date())
 const canGoForward = computed(() => selectedDate.value < todayDate)
-const servingUnitLabel = computed(() => pending.value ? servingLabel(pending.value.food) : '개')
-const servingModeText = computed(() => servingUnitLabel.value === '개' ? '개수' : '인분')
-const basisUnitLabel = computed(() => pending.value?.food.unit === 'ml' ? 'ml' : 'g')
-const canUseBasisMode = computed(() => pending.value ? isBasisFood(pending.value.food) : false)
-const canUseServingMode = computed(() => pending.value ? hasServingInput(pending.value.food) : false)
-const unitLabel = computed(() => pending.value?.unitMode === 'gram' ? basisUnitLabel.value : servingUnitLabel.value)
-const modePresets = computed(() => pending.value?.unitMode === 'gram' ? [50, 100, 150, 200] : [1, 2, 3])
-
 function servingLabel(food: Food) {
   return ['개', '조각', '장', '컵', '봉지'].includes(food.unit) ? '개' : '인분'
 }
@@ -240,77 +255,84 @@ function formatDateLabel(value: string) {
 }
 
 function selectFood(food: Food) {
-  const unitMode = hasServingInput(food) ? 'serving' : 'gram'
-  pending.value = { food, qty: unitMode === 'gram' ? 100 : 1, unitMode }
+  const existing = pendingItems.value.find((item) => item.food.id === food.id)
+  if (existing) {
+    adjustQty(existing, 1)
+    return
+  }
+  const unitMode = isBasisFood(food) ? 'gram' : 'serving'
+  pendingItems.value.push({ food, qty: unitMode === 'gram' ? 100 : 1, unitMode })
+  saveError.value = ''
 }
 
-function setMode(unitMode: 'serving' | 'gram') {
-  if (!pending.value) return
-  if (unitMode === 'serving' && !hasServingInput(pending.value.food)) return
-  if (unitMode === 'gram' && !isBasisFood(pending.value.food)) return
-  pending.value.unitMode = unitMode
-  pending.value.qty = unitMode === 'gram' ? 100 : 1
+function isPendingFood(foodId: string) {
+  return pendingItems.value.some((item) => item.food.id === foodId)
 }
 
-function adjustQty(delta: number) {
-  if (!pending.value) return
-  pending.value.qty = Math.max(1, Number(pending.value.qty || 1) + delta)
+function removePendingItem(foodId: string) {
+  pendingItems.value = pendingItems.value.filter((item) => item.food.id !== foodId)
+}
+
+function setMode(item: PendingItem, unitMode: 'serving' | 'gram') {
+  if (unitMode === 'serving' && !hasServingInput(item.food)) return
+  if (unitMode === 'gram' && !isBasisFood(item.food)) return
+  item.unitMode = unitMode
+  item.qty = unitMode === 'gram' ? 100 : 1
+}
+
+function adjustQty(item: PendingItem, delta: number) {
+  item.qty = Math.max(1, Number(item.qty || 1) + delta)
+}
+
+function setQty(item: PendingItem, qty: number) {
+  item.qty = Math.max(1, Number(qty || 1))
+}
+
+function presetOptions(item: PendingItem) {
+  return item.unitMode === 'gram' ? [50, 100, 150, 200] : [1, 2, 3]
+}
+
+function formatPresetLabel(item: PendingItem, qty: number) {
+  return `${qty}${unitLabel(item)}`
+}
+
+function servingModeText(item: PendingItem) {
+  return servingLabel(item.food) === '개' ? '개수' : '인분'
+}
+
+function basisUnitLabel(item: PendingItem) {
+  return item.food.unit === 'ml' ? 'ml' : 'g'
+}
+
+function unitLabel(item: PendingItem) {
+  return item.unitMode === 'gram' ? basisUnitLabel(item) : servingLabel(item.food)
 }
 
 function selectFavorite(foodName: string) {
   query.value = foodName
-  pending.value = null
 }
 
 async function commit() {
-  if (!pending.value || saving.value) return
+  if (!pendingItems.value.length || saving.value) return
   saving.value = true
-
-  // 서빙 모드 + g/ml 기반 음식: 백엔드가 piece → gramPerPiece 변환에 실패하는 경우를 방지
-  // 프론트에서 직접 qty * gramPerServing 으로 환산해 g/ml 단위로 전송
-  const food = pending.value.food
-  const isServingMode = pending.value.unitMode === 'serving'
-  const isBasisUnit = isBasisFood(food)
-  const servingAmount = Number(food.gramPerServing || 0)
-  const shouldConvertServingToBasis = isServingMode && isBasisUnit && servingAmount > 0
-  const finalQty = shouldConvertServingToBasis
-    ? pending.value.qty * servingAmount
-    : pending.value.qty
-  const finalInputUnit = shouldConvertServingToBasis
-    ? food.unit
-    : isServingMode && food.pieceUnitAvailable
-      ? 'piece'
-      : unitLabel.value
-
-  const payload = {
-    foodId: food.id,
-    mealKind: activeKind.value,
-    qty: finalQty,
-    inputUnit: finalInputUnit,
-    date: selectedDate.value
-  }
+  saveError.value = ''
 
   try {
     const meal = dietDay.value?.meals.find((item) => item.mealType === mealKindToBackendMealType(activeKind.value))
+    const pendingRequests = pendingItems.value.map(toDietItemRequest)
+    const saveRequest = {
+      mealType: mealKindToBackendMealType(activeKind.value),
+      eatenAt: meal?.eatenAt || `${selectedDate.value}T12:00:00`,
+      memo: meal?.memo || '',
+      items: mergeDietItems([...(meal ? itemsFromMeal(meal) : []), ...pendingRequests])
+    }
     let savedDietId: number | string | undefined
     let shouldCreateFeedback = false
     if (meal?.dietId) {
-      const updated = await dietApi.update(meal.dietId, {
-        mealType: meal.mealType,
-        eatenAt: meal.eatenAt || `${selectedDate.value}T12:00:00`,
-        memo: meal.memo || '',
-        items: [
-          ...itemsFromMeal(meal),
-          {
-            foodId: Number(payload.foodId),
-            inputAmount: payload.qty,
-            inputUnit: toBackendInputUnit(payload.inputUnit)
-          }
-        ]
-      })
+      const updated = await dietApi.update(meal.dietId, saveRequest)
       savedDietId = updated.dietId || meal.dietId
     } else {
-      const created = await dietApi.create(payload)
+      const created = await dietApi.createMeal(saveRequest)
       savedDietId = created.dietId
       shouldCreateFeedback = true
     }
@@ -319,11 +341,12 @@ async function commit() {
         console.warn('Coach feedback create API failed', error)
       })
     }
-    pending.value = null
+    pendingItems.value = []
     query.value = ''
     await loadDietDay()
   } catch (error) {
     console.warn('Diet create API failed', error)
+    saveError.value = errorMessage(error)
   } finally {
     saving.value = false
   }
@@ -360,8 +383,30 @@ function itemsFromMeal(meal: NonNullable<DietDayResponse['meals'][number]>): Die
   }))
 }
 
-function onQueryInput() {
-  pending.value = null
+function toDietItemRequest(item: PendingItem): DietItemRequest {
+  const food = item.food
+  const amount = Math.max(1, Number(item.qty || 1))
+  const servingAmount = Number(food.gramPerServing || 0)
+  const convertServingToBasis = item.unitMode === 'serving' && isBasisFood(food) && servingAmount > 0
+
+  return {
+    foodId: Number(food.id),
+    inputAmount: convertServingToBasis ? amount * servingAmount : amount,
+    inputUnit: convertServingToBasis
+      ? toBackendInputUnit(food.unit)
+      : toBackendInputUnit(item.unitMode === 'gram' ? food.unit : 'piece')
+  }
+}
+
+function mergeDietItems(items: DietItemRequest[]) {
+  const merged = new Map<string, DietItemRequest>()
+  for (const item of items) {
+    const key = `${item.foodId}-${item.inputUnit}`
+    const existing = merged.get(key)
+    if (existing) existing.inputAmount += item.inputAmount
+    else merged.set(key, { ...item })
+  }
+  return [...merged.values()]
 }
 
 async function loadDietDay() {
@@ -453,7 +498,13 @@ function errorMessage(error: unknown) {
 }
 
 watch(selectedDate, () => {
+  pendingItems.value = []
+  saveError.value = ''
   void loadDietDay()
+})
+watch(activeKind, () => {
+  pendingItems.value = []
+  saveError.value = ''
 })
 watch(query, () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
@@ -484,12 +535,18 @@ onMounted(() => {
 .food-info strong { font-size: 12px; }
 .food-info small { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
 .pending-card { background: var(--accent-soft); border-color: var(--accent); }
+.pending-title { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+.pending-title .block-label { margin-bottom: 3px; }
+.pending-title p { margin: 0; color: var(--ink-2); font-size: 11px; line-height: 1.45; }
+.pending-title > strong { font-family: var(--mono); color: var(--accent); font-size: 12px; white-space: nowrap; }
+.pending-empty { margin: 0 0 12px; padding: 16px 10px; text-align: center; border: 1px dashed var(--border-strong); border-radius: 10px; color: var(--ink-3); font-size: 12px; background: var(--surface); }
+.pending-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; margin-bottom: 10px; }
+.pending-item { padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .pending-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .pending-head span { font-size: 22px; }
+.pending-head > div { flex: 1; min-width: 0; }
 .pending-head small { display: block; font-family: var(--mono); color: var(--ink-2); font-size: 10px; margin-top: 2px; }
-.preset-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-.preset-row button { padding: 6px 12px; border: 1.5px solid var(--border); background: var(--surface); border-radius: 999px; font-weight: 700; color: var(--ink-2); cursor: pointer; }
-.preset-row button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pending-remove { width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--surface-alt); color: var(--ink-3); cursor: pointer; font-size: 17px; }
 .mode-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
 .mode-row button { border: 1.5px solid var(--border); background: var(--surface); border-radius: 10px; padding: 9px; font-weight: 800; cursor: pointer; color: var(--ink-2); }
 .mode-row button.active { border-color: var(--accent); background: var(--accent); color: #fff; }
@@ -497,6 +554,11 @@ onMounted(() => {
 .qty-control button { height: 36px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; font-size: 16px; font-weight: 900; }
 .qty-control input { height: 36px; border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 0 10px; text-align: center; font-family: var(--mono); }
 .qty-control span { font-family: var(--mono); color: var(--ink-3); font-size: 12px; padding-right: 4px; }
+.preset-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; align-items: center; }
+.preset-row button { border: 1px solid var(--border); background: var(--surface-alt); border-radius: 999px; padding: 7px 4px; font-family: var(--mono); font-size: 11px; font-weight: 800; cursor: pointer; color: var(--ink-2); }
+.preset-row button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.preset-row span { grid-column: 1 / -1; color: var(--ink-3); font-size: 10px; text-align: right; }
+.save-error { margin: 0 0 10px; color: var(--danger); font-size: 12px; font-weight: 700; }
 .fav-card { flex: 1; }
 .fav-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .fav-list button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border: 1px solid var(--border); background: var(--surface-alt); border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer; }
