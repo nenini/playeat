@@ -5,7 +5,7 @@
   <OnboardingPage v-else-if="view === 'onboarding'" :mode="onboardingMode" :api-error="onboardingError" @done="completeOnboarding" @cancel="enterApp" />
   <AppShell v-else :active-page="activePage" :logs-count="0" :streak="streak" :profile-image-url="currentUser?.profileImageUrl || currentUser?.profileImagePath" :profile-name="currentUser?.nickname" @navigate="go">
     <HomePage v-if="activePage === 'home'" :stage="stage" :equipped-weapon="equippedWeapon" @navigate="go" />
-    <MealsPage v-else-if="activePage === 'meals'" :logs="[]" />
+    <MealsPage v-else-if="activePage === 'meals'" :logs="[]" @diet-changed="refreshCharacter" />
     <AnalyzePage v-else-if="activePage === 'analyze'" :logs="logs" />
     <BossPage v-else-if="activePage === 'boss'" :logs="logs" :is-leader="isGuildLeader" @navigate="go" />
     <GuildPage v-else-if="activePage === 'guild'" :is-leader="isGuildLeader" />
@@ -53,6 +53,7 @@ const logs = ref<MealLog[]>([])
 const stage = ref<Stage>('chick')
 const equippedWeapon = ref('stick')
 const equippedHat = ref<string | null>(null)
+const streakDays = ref(0)
 const onboardingData = ref<Record<string, string | string[]> | null>(null)
 const onboardingMode = ref<'signup' | 'edit'>('signup')
 const onboardingError = ref('')
@@ -61,7 +62,7 @@ const authError = ref('')
 const isGuildLeader = ref(new URLSearchParams(window.location.search).get('role') === 'leader')
 const currentDate = ref(toDateInputValue(new Date()))
 
-const streak = computed(() => 0)
+const streak = computed(() => streakDays.value)
 
 function go(page: PageId) {
   if (!tokenStorage.getAccessToken()) {
@@ -143,6 +144,7 @@ async function handleLogout() {
   } finally {
     tokenStorage.clear()
     currentUser.value = null
+    streakDays.value = 0
   }
   showStart()
 }
@@ -206,6 +208,15 @@ function isProtectedPath(path: string) {
 async function hydrateCharacter() {
   const character = await characterApi.getMe()
   stage.value = stageFromBackend(character.stage)
+  streakDays.value = Number(character.streakDays || 0)
+}
+
+async function refreshCharacter() {
+  try {
+    await hydrateCharacter()
+  } catch (error) {
+    console.warn('Character refresh API failed', error)
+  }
 }
 
 function toDateInputValue(date: Date) {

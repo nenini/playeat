@@ -176,6 +176,7 @@ import { foodApi, type FoodSearchItem } from '../services/foodApi'
 import { coachApi } from '../services/coachApi'
 
 defineProps<{ logs: MealLog[] }>()
+const emit = defineEmits<{ dietChanged: [] }>()
 
 type PendingItem = { food: Food, qty: number, unitMode: 'serving' | 'gram' }
 
@@ -344,6 +345,7 @@ async function commit() {
     pendingItems.value = []
     query.value = ''
     await loadDietDay()
+    emit('dietChanged')
   } catch (error) {
     console.warn('Diet create API failed', error)
     saveError.value = errorMessage(error)
@@ -370,6 +372,7 @@ async function removeDiet(id: string) {
       await dietApi.remove(meal.dietId)
     }
     await loadDietDay()
+    emit('dietChanged')
   } catch (error) {
     console.warn('Diet delete API failed', error)
   }

@@ -16,6 +16,10 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -87,6 +91,24 @@ public class CharacterGrowthService {
                 character.getStreakDays(),
                 Math.max(character.getBestStreakDays(), character.getStreakDays())
         );
+    }
+
+    @Transactional
+    public void recalculateStreak(Long userId) {
+        if (!characterRepository.existsByUserId(userId)) {
+            return;
+        }
+
+        Set<LocalDate> recordedDates = new HashSet<>(characterRepository.findRecordedDatesByUserId(userId));
+        LocalDate cursor = LocalDate.now();
+        int streakDays = 0;
+
+        while (recordedDates.contains(cursor)) {
+            streakDays += 1;
+            cursor = cursor.minusDays(1);
+        }
+
+        characterRepository.updateStreak(userId, streakDays);
     }
 
     private int requiredXp(int level) {
