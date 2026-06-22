@@ -1,3 +1,5 @@
+import type { CharacterEquipment } from './characterEquipment'
+
 export type GuildRole = 'OWNER' | 'MEMBER'
 export type GuildJoinRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED'
 export type MyGuildJoinStatus = 'NONE' | 'PENDING' | 'JOINED'
@@ -13,9 +15,9 @@ export interface GuildJoinRequest { requestId: number; guildId: number; guildNam
 export interface MyGuild { guildId: number; name: string; description?: string; inviteCode?: string; myRole?: GuildRole; memberCount?: number; maxMembers?: number; guildPoint?: number; joinedAt?: string }
 export interface MyGuildStatusInfo { guildId: number; name: string; inviteCode: string; role: GuildRole }
 export interface MyGuildStatusRequest { requestId: number; status: GuildJoinRequestStatus; createdAt: string }
-export interface MyGuildStatus { status: MyGuildJoinStatus; guild: MyGuildStatusInfo | null; joinRequest: MyGuildStatusRequest | null }
+export interface MyGuildStatus { status: MyGuildJoinStatus; guildId?: number; guild: MyGuildStatusInfo | null; joinRequest: MyGuildStatusRequest | null }
 export interface GuildMember { memberId: number; guildId?: number; userId: number; nickname: string; profileImageUrl?: string; characterId?: number; characterName?: string; characterLevel?: number; characterStage?: string; characterMood?: string; characterAppearanceType?: string; role: GuildRole; joinedAt?: string; isMe?: boolean }
-export interface GuildMemberDetail extends GuildMember { streakDays?: number; weeklyRecordRate?: number; bossContribution?: number; completedQuestCount?: number }
+export interface GuildMemberDetail extends GuildMember { streakDays?: number; weeklyRecordRate?: number; bossContribution?: number; completedQuestCount?: number; equippedItems?: CharacterEquipment[] }
 export interface GuildNotice { noticeId: number; guildId: number; writerUserId?: number; writerNickname?: string; title: string; content: string; createdAt: string; updatedAt?: string; editable?: boolean }
 export type GuildNoticeDetail = GuildNotice
 export interface CreateGuildNoticeRequest { title: string; content: string }

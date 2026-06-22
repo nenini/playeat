@@ -1,5 +1,5 @@
 <template>
-  <svg viewBox="0 0 120 120" :width="size" :height="size" class="nyam-svg">
+  <svg viewBox="0 0 120 120" :width="size" :height="size" class="nyam-svg" :class="`appearance-${appearanceType}`">
     <g :class="{ 'nyam-hop': stage === 'chick' }">
       <g v-if="stage === 'egg'">
         <path d="M60 14 C 36 14, 22 56, 30 82 C 38 106, 82 106, 90 82 C 98 56, 84 14, 60 14 Z" fill="var(--yolk)" stroke="var(--ink)" stroke-width="2.4" />
@@ -27,7 +27,8 @@
         <path d="M70 102 l -2 6 M70 102 l 2 6 M70 102 l 0 7" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" fill="none" />
         <Face :cx="60" :cy="62" :mood="mood" :es="9" :er="3" :my="82" />
       </g>
-      <WeaponIcon v-if="hatId === 'crown'" id="crown" class="hat" />
+      <image v-if="hatImageUrl" :href="hatImageUrl" x="30" y="0" width="60" height="38" preserveAspectRatio="xMidYMid meet" class="hat-image" />
+      <WeaponIcon v-else-if="hatId === 'crown'" id="crown" class="hat" />
     </g>
   </svg>
 </template>
@@ -37,11 +38,13 @@ import Face from './NyamnyamFace.vue'
 import WeaponIcon from './WeaponIcon.vue'
 import type { Stage } from '../../services/mock/nyamnyamMock'
 
-withDefaults(defineProps<{ stage?: Stage, size?: number, mood?: 'happy' | 'hungry' | 'sad', hatId?: string | null }>(), {
+withDefaults(defineProps<{ stage?: Stage, size?: number, mood?: 'happy' | 'hungry' | 'sad', appearanceType?: string, hatId?: string | null, hatImageUrl?: string | null }>(), {
   stage: 'chick',
   size: 120,
   mood: 'happy',
-  hatId: null
+  appearanceType: 'DEFAULT',
+  hatId: null,
+  hatImageUrl: null
 })
 </script>
 
@@ -58,4 +61,5 @@ export default { name: 'NyamnyamCharacter' }
 .nyam-chick-wl { transform-box: fill-box; transform-origin: 100% 0%; animation: nyamFlutterL 5.4s ease-in-out infinite; }
 .nyam-chick-wr { transform-box: fill-box; transform-origin: 0% 0%; animation: nyamFlutterR 5.4s ease-in-out infinite; }
 .hat { transform: translate(28px, -6px) scale(1.05); }
+.hat-image { pointer-events: none; }
 </style>

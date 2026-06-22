@@ -71,7 +71,20 @@
       <div class="member-modal" @click.stop>
         <button class="modal-close" @click="selectedMember = null">×</button>
         <div class="member-detail-head">
-          <div class="member-character"><NyamnyamCharacter :stage="characterStage(selectedMember.characterLevel)" :size="96" /></div>
+          <div class="member-character">
+            <NyamnyamCharacter
+              :stage="stageFromBackend(selectedMember.characterStage)"
+              :size="96"
+              :mood="selectedMemberMood"
+              :appearance-type="selectedMember.characterAppearanceType || 'DEFAULT'"
+              :hat-id="equipmentIconId(selectedHeadEquipment)"
+              :hat-image-url="equipmentImageUrl(selectedHeadEquipment)"
+            />
+            <div v-if="selectedHandEquipment" class="member-hand-item">
+              <img v-if="equipmentImageUrl(selectedHandEquipment)" :src="equipmentImageUrl(selectedHandEquipment) || ''" :alt="selectedHandEquipment.name || '손 장비'">
+              <WeaponIcon v-else :id="equipmentIconId(selectedHandEquipment) || undefined" />
+            </div>
+          </div>
           <div><h2>{{ selectedMember.nickname }}</h2><p>LV.{{ selectedMember.characterLevel ?? '-' }} · {{ roleLabel(selectedMember.role) }}</p></div>
         </div>
         <div class="modal-info">
@@ -152,10 +165,13 @@ import AppCard from '../components/common/AppCard.vue'
 import AppIcon from '../components/common/AppIcon.vue'
 import AppPill from '../components/common/AppPill.vue'
 import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
+import WeaponIcon from '../components/nyamnyam/WeaponIcon.vue'
 import { ApiError } from '../services/api/client'
+import { equipmentIconId, equipmentImageUrl } from '../services/api/characterEquipmentApi'
 import { guildApi } from '../services/api/guildApi'
 import { guildChatApi } from '../services/api/guildChatApi'
 import { rankingApi } from '../services/api/rankingApi'
+import { stageFromBackend } from '../services/characterApi'
 import type { GuildDailyStat, GuildDashboard, GuildDetail, GuildJoinRequest, GuildMember, GuildMemberDetail, GuildNotice, GuildSummary, GuildWeeklyReport } from '../types/guild'
 import type { GuildChatMessage } from '../types/guildChat'
 import type { GuildRanking } from '../types/ranking'
@@ -197,6 +213,15 @@ const editingNoticeId = ref<number | 'new' | null>(null)
 const noticeDraft = reactive({ title: '', body: '' })
 
 const isLeader = computed(() => guild.value?.myRole === 'OWNER')
+const selectedEquipments = computed(() => selectedMember.value?.equippedItems ?? [])
+const selectedHeadEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HEAD' && item.equipped) ?? null)
+const selectedHandEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HAND' && item.equipped) ?? null)
+const selectedMemberMood = computed<'happy' | 'hungry' | 'sad'>(() => {
+  const mood = String(selectedMember.value?.characterMood || '').toLowerCase()
+  if (mood.includes('hungry')) return 'hungry'
+  if (mood.includes('sad')) return 'sad'
+  return 'happy'
+})
 const pages = computed(() => Array.from({ length: Math.max(lastKnownPage.value, currentPage.value + (hasNextPage.value ? 1 : 0)) }, (_, index) => index + 1))
 const kickableMembers = computed(() => members.value.filter((member) => !member.isMe && member.role !== 'OWNER'))
 const displayChats = computed(() => chats.value.map((chatItem) => ({ id: chatItem.chatId, name: chatItem.nickname, time: formatDate(chatItem.createdAt), text: chatItem.message, mine: Boolean(chatItem.isMe), system: chatItem.messageType === 'SYSTEM' })))
@@ -489,7 +514,6 @@ function formatDate(value?: string) {
 }
 function valueOrDash(value: number | undefined, suffix: string) { return value === undefined ? '-' : `${value}${suffix}` }
 function roleLabel(role: string) { return role === 'OWNER' ? '길드장' : '길드원' }
-function characterStage(level?: number): 'egg' | 'chick' | 'adult' { return !level || level < 5 ? 'egg' : level < 15 ? 'chick' : 'adult' }
 function dayLabel(day: string) { return ({ MON: '월', MONDAY: '월', TUE: '화', TUESDAY: '화', WED: '수', WEDNESDAY: '수', THU: '목', THURSDAY: '목', FRI: '금', FRIDAY: '금', SAT: '토', SATURDAY: '토', SUN: '일', SUNDAY: '일' } as Record<string, string>)[day.toUpperCase()] ?? day.slice(0, 1) }
 
 onMounted(() => { void loadPage() })
@@ -541,7 +565,9 @@ onMounted(() => { void loadPage() })
 .member-modal, .request-modal { width: min(460px, 100%); max-height: 90vh; overflow: auto; background: var(--surface); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 24px; position: relative; }
 .modal-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border: 0; border-radius: 15px; background: var(--surface-alt); cursor: pointer; color: var(--ink-2); font-size: 18px; }
 .member-detail-head { display: flex; align-items: center; gap: 18px; margin-bottom: 16px; }
-.member-character { width: 116px; height: 116px; border-radius: 58px; background: radial-gradient(circle at 50% 40%, #fff5e0 0%, #fbe5d3 100%); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex: 0 0 116px; }
+.member-character { width: 116px; height: 116px; border-radius: 58px; background: radial-gradient(circle at 50% 40%, #fff5e0 0%, #fbe5d3 100%); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex: 0 0 116px; position: relative; }
+.member-hand-item { position: absolute; right: -16px; top: 23px; width: 26px; height: 84px; z-index: 2; pointer-events: none; }
+.member-hand-item :deep(svg), .member-hand-item img { width: 26px; height: 84px; object-fit: contain; }
 .member-modal h2, .request-modal h2 { margin: 0; font-size: 22px; }
 .member-modal p, .request-modal > p { margin-bottom: 16px; color: var(--ink-2); }
 .modal-info { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }

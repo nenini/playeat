@@ -53,6 +53,11 @@ import com.nyamnyam.coach.guild.repository.row.GuildNoticeRow;
 import com.nyamnyam.coach.guild.repository.row.JoinRequestRow;
 import com.nyamnyam.coach.guild.repository.row.GuildSummaryRow;
 import com.nyamnyam.coach.guild.repository.row.MyGuildRow;
+import com.nyamnyam.coach.item.dto.response.CharacterEquipmentResponse;
+import com.nyamnyam.coach.item.entity.ItemSlotType;
+import com.nyamnyam.coach.item.repository.CharacterEquipmentRepository;
+import com.nyamnyam.coach.item.repository.row.CharacterEquipmentRow;
+import com.nyamnyam.coach.ranking.service.GuildScoreService;
 import com.nyamnyam.coach.user.entity.User;
 import com.nyamnyam.coach.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +66,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -82,6 +89,8 @@ public class GuildService {
     private final BossBattleParticipantRepository bossBattleParticipantRepository;
     private final UserRepository userRepository;
     private final GuildValidator guildValidator;
+    private final GuildScoreService guildScoreService;
+    private final CharacterEquipmentRepository characterEquipmentRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional(readOnly = true)
@@ -289,7 +298,33 @@ public class GuildService {
         GuildMemberRow member = guildRepository.findMemberDetail(guildId, memberId, userId)
                 .orElseThrow(() -> new BusinessException(GuildErrorCode.GUILD_MEMBER_NOT_FOUND));
 
-        return toGuildMemberDetailResponse(member, userId);
+        GuildScoreService.WeekPeriod period = guildScoreService.resolveWeek(null, null);
+        int elapsedDays = guildScoreService.calculateElapsedDaysInWeek(period.startDate(), period.endDate());
+        int recordedDays = guildRepository.countMemberRecordedDays(
+                guildId,
+                member.getUserId(),
+                period.startDate(),
+                period.endDate()
+        );
+        int weeklyRecordRate = (int) Math.round(guildScoreService.safeRate(recordedDays, elapsedDays));
+
+        Long battleId = guildRepository.findCurrentOrLatestBattleIdByGuildId(guildId).orElse(null);
+        int bossContribution = battleId == null
+                ? 0
+                : guildRepository.sumMemberCompletedQuestDamage(battleId, member.getUserId());
+        int completedQuestCount = battleId == null
+                ? 0
+                : guildRepository.countMemberCompletedQuests(battleId, member.getUserId());
+        List<CharacterEquipmentResponse> equippedItems = getCharacterEquipments(member.getCharacterId());
+
+        return toGuildMemberDetailResponse(
+                member,
+                userId,
+                weeklyRecordRate,
+                bossContribution,
+                completedQuestCount,
+                equippedItems
+        );
     }
 
     @Transactional
@@ -788,7 +823,14 @@ public class GuildService {
         );
     }
 
-    private GuildMemberDetailResponse toGuildMemberDetailResponse(GuildMemberRow row, Long userId) {
+    private GuildMemberDetailResponse toGuildMemberDetailResponse(
+            GuildMemberRow row,
+            Long userId,
+            int weeklyRecordRate,
+            int bossContribution,
+            int completedQuestCount,
+            List<CharacterEquipmentResponse> equippedItems
+    ) {
         return new GuildMemberDetailResponse(
                 row.getMemberId(),
                 row.getUserId(),
@@ -804,9 +846,56 @@ public class GuildService {
                 row.getRole(),
                 row.getJoinedAt(),
                 row.getUserId().equals(userId),
-                0,
-                0,
-                0
+                weeklyRecordRate,
+                bossContribution,
+                completedQuestCount,
+                equippedItems
+        );
+    }
+
+    private List<CharacterEquipmentResponse> getCharacterEquipments(Long characterId) {
+        List<CharacterEquipmentRow> rows = characterId == null
+                ? List.of()
+                : characterEquipmentRepository.findByCharacterId(characterId);
+        List<CharacterEquipmentResponse> responses = new ArrayList<>();
+
+        for (ItemSlotType slotType : ItemSlotType.values()) {
+            rows.stream()
+                    .filter(row -> slotType.name().equals(row.getSlotType()))
+                    .findFirst()
+                    .map(this::toCharacterEquipmentResponse)
+                    .ifPresentOrElse(
+                            responses::add,
+                            () -> responses.add(emptyCharacterEquipmentResponse(slotType))
+                    );
+        }
+        responses.sort(Comparator.comparingInt(response -> ItemSlotType.HAND.name().equals(response.slotType()) ? 1 : 2));
+        return responses;
+    }
+
+    private CharacterEquipmentResponse toCharacterEquipmentResponse(CharacterEquipmentRow row) {
+        return new CharacterEquipmentResponse(
+                row.getSlotType(),
+                true,
+                row.getUserItemId(),
+                row.getItemId(),
+                row.getName(),
+                row.getDescription(),
+                row.getImageUrl(),
+                row.getEquippedAt()
+        );
+    }
+
+    private CharacterEquipmentResponse emptyCharacterEquipmentResponse(ItemSlotType slotType) {
+        return new CharacterEquipmentResponse(
+                slotType.name(),
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
         );
     }
 

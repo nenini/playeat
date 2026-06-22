@@ -1,8 +1,10 @@
 package com.nyamnyam.coach.guild.dto.response;
 
+import com.nyamnyam.coach.item.dto.response.CharacterEquipmentResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Schema(description = "Guild member detail response")
 public record GuildMemberDetailResponse(
@@ -22,6 +24,7 @@ public record GuildMemberDetailResponse(
         Boolean isMe,
         Integer weeklyRecordRate,
         Integer bossContribution,
-        Integer completedQuestCount
+        Integer completedQuestCount,
+        List<CharacterEquipmentResponse> equippedItems
 ) {
 }

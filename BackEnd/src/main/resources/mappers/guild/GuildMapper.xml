@@ -503,6 +503,46 @@
         LIMIT 1
     </select>
 
+    <select id="countMemberRecordedDays" resultType="int">
+        SELECT COUNT(DISTINCT CAST(d.eaten_at AS DATE))
+        FROM diets d
+        JOIN guild_members gm
+            ON gm.guild_id = #{guildId}
+            AND gm.user_id = d.user_id
+            AND gm.left_at IS NULL
+        JOIN users u
+            ON u.user_id = d.user_id
+            AND u.status = 'ACTIVE'
+        WHERE d.user_id = #{userId}
+          AND CAST(d.eaten_at AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
+    </select>
+
+    <select id="findCurrentOrLatestBattleIdByGuildId" resultType="long">
+        SELECT battle_id
+        FROM boss_battles
+        WHERE guild_id = #{guildId}
+        ORDER BY CASE WHEN status = 'IN_PROGRESS' THEN 0 ELSE 1 END,
+                 started_at DESC,
+                 battle_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="sumMemberCompletedQuestDamage" resultType="int">
+        SELECT COALESCE(SUM(damage), 0)
+        FROM quests
+        WHERE battle_id = #{battleId}
+          AND user_id = #{userId}
+          AND status IN ('COMPLETED', 'REWARDED')
+    </select>
+
+    <select id="countMemberCompletedQuests" resultType="int">
+        SELECT COUNT(1)
+        FROM quests
+        WHERE battle_id = #{battleId}
+          AND user_id = #{userId}
+          AND status IN ('COMPLETED', 'REWARDED')
+    </select>
+
     <select id="findActiveMemberRole" resultType="string">
         SELECT role
         FROM guild_members

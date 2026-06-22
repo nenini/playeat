@@ -1,5 +1,7 @@
+export type CharacterEquipmentSlot = 'HAND' | 'HEAD' | string
+
 export interface CharacterEquipment {
-  slotType: string
+  slotType: CharacterEquipmentSlot
   equipped: boolean
   userItemId: number | null
   itemId: number | null
