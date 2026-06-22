@@ -20,6 +20,8 @@ public class User {
     private String passwordHash;
     private String nickname;
     private String profileImageUrl;
+    private String provider;
+    private String providerId;
     private Long selectedCoachId;
     private String status;
     private Boolean onboardingCompleted;

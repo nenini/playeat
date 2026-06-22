@@ -1,6 +1,7 @@
 package com.nyamnyam.coach.auth.service;
 
 import com.nyamnyam.coach.auth.dto.request.LoginRequest;
+import com.nyamnyam.coach.auth.dto.request.GoogleOAuthLoginRequest;
 import com.nyamnyam.coach.auth.dto.request.LogoutRequest;
 import com.nyamnyam.coach.auth.dto.request.SignupRequest;
 import com.nyamnyam.coach.auth.dto.request.TokenRefreshRequest;
@@ -57,6 +58,9 @@ class AuthServiceTest {
     @Mock
     private CharacterGrowthService characterGrowthService;
 
+    @Mock
+    private GoogleOAuthService googleOAuthService;
+
     private PasswordEncoder passwordEncoder;
     private JwtTokenProvider jwtTokenProvider;
     private JwtTokenProvider expiredJwtTokenProvider;
@@ -72,7 +76,8 @@ class AuthServiceTest {
                 refreshTokenRepository,
                 passwordEncoder,
                 jwtTokenProvider,
-                characterGrowthService
+                characterGrowthService,
+                googleOAuthService
         );
     }
 
@@ -191,6 +196,92 @@ class AuthServiceTest {
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("user@example.com", "wrong-password")))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.INVALID_CREDENTIALS);
+    }
+
+    @Test
+    @DisplayName("Google 신규 사용자는 계정과 기본 캐릭터를 생성하고 로그인한다")
+    void loginWithGoogleCreatesUser() {
+        GoogleOAuthLoginRequest request = new GoogleOAuthLoginRequest("code", "http://localhost:5173/oauth/google/callback");
+        GoogleOAuthUserInfo googleUser = new GoogleOAuthUserInfo("google-sub", "google@example.com", "구글냥", "https://example.com/profile.png");
+        User savedUser = User.builder()
+                .userId(2L)
+                .email(googleUser.email())
+                .nickname(googleUser.name())
+                .profileImageUrl(googleUser.picture())
+                .provider("GOOGLE")
+                .providerId(googleUser.providerId())
+                .status("ACTIVE")
+                .onboardingCompleted(false)
+                .build();
+
+        when(googleOAuthService.authenticate(request)).thenReturn(googleUser);
+        when(userRepository.findByProviderAndProviderId("GOOGLE", "google-sub")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("google@example.com")).thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setUserId(2L);
+            return null;
+        }).when(userRepository).save(any(User.class));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(savedUser));
+
+        LoginResponse response = authService.loginWithGoogle(request);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        verify(characterGrowthService).createDefaultCharacterIfMissing(2L, "구글냥");
+        assertThat(userCaptor.getValue().getProvider()).isEqualTo("GOOGLE");
+        assertThat(userCaptor.getValue().getProviderId()).isEqualTo("google-sub");
+        assertThat(passwordEncoder.matches("code", userCaptor.getValue().getPasswordHash())).isFalse();
+        assertThat(response.user().userId()).isEqualTo(2L);
+        assertThat(response.accessToken()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("기존 Google 사용자는 새 계정을 만들지 않고 로그인한다")
+    void loginWithGoogleExistingUser() {
+        GoogleOAuthLoginRequest request = new GoogleOAuthLoginRequest("code", "http://localhost:5173/oauth/google/callback");
+        GoogleOAuthUserInfo googleUser = new GoogleOAuthUserInfo("google-sub", "google@example.com", "구글냥", null);
+        User existingUser = activeUser(passwordEncoder.encode("unused-password"));
+        existingUser.setEmail(googleUser.email());
+        existingUser.setProvider("GOOGLE");
+        existingUser.setProviderId(googleUser.providerId());
+
+        when(googleOAuthService.authenticate(request)).thenReturn(googleUser);
+        when(userRepository.findByProviderAndProviderId("GOOGLE", "google-sub")).thenReturn(Optional.of(existingUser));
+
+        LoginResponse response = authService.loginWithGoogle(request);
+
+        verify(userRepository, org.mockito.Mockito.never()).save(any(User.class));
+        assertThat(response.user().userId()).isEqualTo(existingUser.getUserId());
+    }
+
+    @Test
+    @DisplayName("LOCAL 계정과 같은 이메일이면 Google 자동 연결을 거부한다")
+    void loginWithGoogleRejectsExistingEmail() {
+        GoogleOAuthLoginRequest request = new GoogleOAuthLoginRequest("code", "http://localhost:5173/oauth/google/callback");
+        GoogleOAuthUserInfo googleUser = new GoogleOAuthUserInfo("google-sub", "user@example.com", "구글냥", null);
+
+        when(googleOAuthService.authenticate(request)).thenReturn(googleUser);
+        when(userRepository.findByProviderAndProviderId("GOOGLE", "google-sub")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(activeUser("encoded")));
+
+        assertThatThrownBy(() -> authService.loginWithGoogle(request))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.OAUTH_EMAIL_ALREADY_EXISTS);
+    }
+
+    @Test
+    @DisplayName("Google 계정은 이메일과 비밀번호로 로그인할 수 없다")
+    void googleUserCannotUsePasswordLogin() {
+        User user = activeUser(passwordEncoder.encode("password123!"));
+        user.setProvider("GOOGLE");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("user@example.com", "password123!")))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(AuthErrorCode.INVALID_CREDENTIALS);

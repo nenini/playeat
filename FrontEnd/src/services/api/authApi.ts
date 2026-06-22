@@ -1,10 +1,20 @@
-import type { LoginRequest, LoginResponse, SignupRequest, SignupResponse, TokenRefreshResponse } from '../../types/auth'
+import type { GoogleOAuthLoginRequest, LoginRequest, LoginResponse, SignupRequest, SignupResponse, TokenRefreshResponse } from '../../types/auth'
 import { apiRequest } from './client'
 import { tokenStorage } from './tokenStorage'
 
 export const authApi = {
   async login(payload: LoginRequest): Promise<LoginResponse> {
     const response = await apiRequest<LoginResponse>('/v1/auth/login', {
+      method: 'POST',
+      auth: false,
+      body: payload
+    })
+    tokenStorage.setTokens(response.accessToken, response.refreshToken)
+    return response
+  },
+
+  async loginWithGoogle(payload: GoogleOAuthLoginRequest): Promise<LoginResponse> {
+    const response = await apiRequest<LoginResponse>('/v1/auth/oauth/google', {
       method: 'POST',
       auth: false,
       body: payload

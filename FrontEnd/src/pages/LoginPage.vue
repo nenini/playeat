@@ -15,6 +15,11 @@
         {{ formError || apiError }}
       </p>
       <button class="submit" type="submit">로그인</button>
+      <div class="auth-divider"><span>또는</span></div>
+      <button class="google-login" type="button" @click="$emit('google-login')">
+        <b aria-hidden="true">G</b>
+        Google로 로그인
+      </button>
       <div class="auth-switch">
         계정이 없나요?
         <button type="button" @click="$emit('signup')">회원가입</button>
@@ -28,6 +33,7 @@ import { ref, watch } from "vue";
 defineProps<{ apiError?: string }>();
 const emit = defineEmits<{
   done: [payload: { email: string; password: string }];
+  "google-login": [];
   signup: [];
   back: [];
 }>();
@@ -148,6 +154,10 @@ input:focus {
   cursor: pointer;
   margin-top: 8px;
 }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--ink-3); font-size: 11px; }
+.auth-divider::before,.auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.google-login { width: 100%; height: 48px; border: 1.5px solid var(--border-strong); border-radius: 10px; background: #fff; color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 800; cursor: pointer; }
+.google-login b { font-family: Arial,sans-serif; color: #4285f4; font-size: 18px; }
 .form-error {
   margin: -4px 0 10px;
   color: var(--bad);

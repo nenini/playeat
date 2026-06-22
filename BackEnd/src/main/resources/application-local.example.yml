@@ -66,3 +66,10 @@ app:
     root-dir: ${UPLOAD_ROOT_DIR:uploads}
     profile-image-dir: ${PROFILE_IMAGE_UPLOAD_DIR:${UPLOAD_ROOT_DIR:uploads}/profile-images}
     profile-image-path-prefix: /uploads/profile-images
+
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    token-uri: https://oauth2.googleapis.com/token
+    user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo

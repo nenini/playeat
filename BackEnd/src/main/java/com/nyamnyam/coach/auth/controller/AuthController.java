@@ -1,6 +1,7 @@
 package com.nyamnyam.coach.auth.controller;
 
 import com.nyamnyam.coach.auth.dto.request.LoginRequest;
+import com.nyamnyam.coach.auth.dto.request.GoogleOAuthLoginRequest;
 import com.nyamnyam.coach.auth.dto.request.LogoutRequest;
 import com.nyamnyam.coach.auth.dto.request.SignupRequest;
 import com.nyamnyam.coach.auth.dto.request.TokenRefreshRequest;
@@ -41,6 +42,15 @@ public class AuthController implements AuthApiDocs {
     ) {
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(response, "로그인에 성공했습니다."));
+    }
+
+    @Override
+    @PostMapping("/oauth/google")
+    public ResponseEntity<ApiResponse<LoginResponse>> loginWithGoogle(
+            @Valid @RequestBody GoogleOAuthLoginRequest request
+    ) {
+        LoginResponse response = authService.loginWithGoogle(request);
+        return ResponseEntity.ok(ApiResponse.success(response, "Google 로그인에 성공했습니다."));
     }
 
     @Override

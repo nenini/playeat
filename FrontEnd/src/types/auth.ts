@@ -10,6 +10,11 @@ export interface LoginRequest {
   password: string
 }
 
+export interface GoogleOAuthLoginRequest {
+  code: string
+  redirectUri: string
+}
+
 export interface SignupRequest {
   email: string
   password: string

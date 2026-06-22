@@ -1,8 +1,9 @@
 <template>
   <StartPage v-if="view === 'start'" @start="showSignup" @login="showLogin" />
-  <LoginPage v-else-if="view === 'login'" :api-error="authError" @done="login" @signup="showSignup" @back="showStart" />
+  <LoginPage v-else-if="view === 'login'" :api-error="authError" @done="login" @google-login="startGoogleLogin" @signup="showSignup" @back="showStart" />
   <SignupPage v-else-if="view === 'signup'" :api-error="authError" @onboarding="signup" @login="showLogin" @back="showStart" />
   <OnboardingPage v-else-if="view === 'onboarding'" :mode="onboardingMode" :api-error="onboardingError" @done="completeOnboarding" @cancel="enterApp" />
+  <OAuthCallbackPage v-else-if="view === 'oauthCallback'" />
   <AppShell v-else :active-page="activePage" :logs-count="0" :streak="streak" :profile-image-url="currentUser?.profileImageUrl || currentUser?.profileImagePath" :profile-name="currentUser?.nickname" @navigate="go">
     <HomePage v-if="activePage === 'home'" :stage="stage" :equipped-weapon="equippedWeapon" @navigate="go" />
     <MealsPage v-else-if="activePage === 'meals'" :logs="[]" @diet-changed="refreshCharacter" />
@@ -21,6 +22,7 @@ import StartPage from './pages/StartPage.vue'
 import LoginPage from './pages/LoginPage.vue'
 import SignupPage from './pages/SignupPage.vue'
 import OnboardingPage from './pages/OnboardingPage.vue'
+import OAuthCallbackPage from './pages/OAuthCallbackPage.vue'
 import HomePage from './pages/HomePage.vue'
 import MealsPage from './pages/MealsPage.vue'
 import AnalyzePage from './pages/AnalyzePage.vue'
@@ -35,13 +37,17 @@ import { characterApi, stageFromBackend } from './services/characterApi'
 import { userApi, type UserMeResponse } from './services/userApi'
 import { tokenStorage } from './services/api'
 
-type ViewMode = 'start' | 'login' | 'signup' | 'onboarding' | 'app'
+type ViewMode = 'start' | 'login' | 'signup' | 'onboarding' | 'oauthCallback' | 'app'
+
+const GOOGLE_CALLBACK_PATH = '/oauth/google/callback'
+const GOOGLE_OAUTH_STATE_KEY = 'nyamnyam.googleOAuthState'
 
 function initialView(): ViewMode {
   const path = window.location.pathname
   if (path === '/') return 'start'
   if (path === '/login') return 'login'
   if (path === '/signup') return 'signup'
+  if (path === GOOGLE_CALLBACK_PATH) return 'oauthCallback'
   if (!tokenStorage.getAccessToken()) return 'login'
   if (path === '/onboarding') return 'onboarding'
   return 'app'
@@ -80,8 +86,8 @@ function showStart() {
   window.history.pushState({}, '', '/')
 }
 
-function showLogin(replace = false) {
-  authError.value = ''
+function showLogin(replace = false, message = '') {
+  authError.value = message
   view.value = 'login'
   if (replace) window.history.replaceState({}, '', '/login')
   else window.history.pushState({}, '', '/login')
@@ -93,7 +99,7 @@ function showSignup() {
   window.history.pushState({}, '', '/signup')
 }
 
-function showOnboarding(mode: 'signup' | 'edit' = 'edit') {
+function showOnboarding(mode: 'signup' | 'edit' = 'edit', replace = false) {
   if (!tokenStorage.getAccessToken()) {
     showLogin(true)
     return
@@ -101,17 +107,19 @@ function showOnboarding(mode: 'signup' | 'edit' = 'edit') {
   onboardingMode.value = mode
   onboardingError.value = ''
   view.value = 'onboarding'
-  window.history.pushState({}, '', '/onboarding')
+  if (replace) window.history.replaceState({}, '', '/onboarding')
+  else window.history.pushState({}, '', '/onboarding')
 }
 
-function enterApp() {
+function enterApp(replace = false) {
   if (!tokenStorage.getAccessToken()) {
     showLogin(true)
     return
   }
   view.value = 'app'
   activePage.value = 'home'
-  window.history.pushState({}, '', '/home')
+  if (replace) window.history.replaceState({}, '', '/home')
+  else window.history.pushState({}, '', '/home')
   void hydrateApp()
 }
 
@@ -165,16 +173,85 @@ window.addEventListener('popstate', () => {
     return
   }
   view.value = initialView()
+  if (view.value === 'oauthCallback') {
+    void handleGoogleCallback()
+    return
+  }
   if (view.value === 'app') activePage.value = pageFromPath(window.location.pathname)
 })
 
 async function login(payload: { email: string, password: string }) {
   authError.value = ''
   try {
-    await authApi.login({ email: payload.email, password: payload.password })
-    enterApp()
+    const response = await authApi.login({ email: payload.email, password: payload.password })
+    routeAfterAuthentication(response.user.onboardingCompleted)
   } catch (error) {
     authError.value = error instanceof Error ? error.message : '로그인에 실패했습니다.'
+  }
+}
+
+function startGoogleLogin() {
+  authError.value = ''
+  const clientId = String(import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim()
+  if (!clientId) {
+    authError.value = 'Google 로그인 환경변수가 설정되지 않았습니다.'
+    return
+  }
+
+  const redirectUri = `${window.location.origin}${GOOGLE_CALLBACK_PATH}`
+  const state = crypto.randomUUID()
+  sessionStorage.setItem(GOOGLE_OAUTH_STATE_KEY, state)
+
+  const authorizationUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+  authorizationUrl.search = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid email profile',
+    prompt: 'select_account',
+    state
+  }).toString()
+  window.location.assign(authorizationUrl.toString())
+}
+
+let googleCallbackProcessing = false
+
+async function handleGoogleCallback() {
+  if (googleCallbackProcessing) return
+  googleCallbackProcessing = true
+  view.value = 'oauthCallback'
+
+  const params = new URLSearchParams(window.location.search)
+  const oauthError = params.get('error')
+  const code = params.get('code')
+  const state = params.get('state')
+  const expectedState = sessionStorage.getItem(GOOGLE_OAUTH_STATE_KEY)
+  sessionStorage.removeItem(GOOGLE_OAUTH_STATE_KEY)
+
+  try {
+    if (oauthError) {
+      showLogin(true, params.get('error_description') || 'Google 로그인이 취소되었습니다.')
+      return
+    }
+    if (!code) {
+      showLogin(true, 'Google 인증 코드를 확인할 수 없습니다.')
+      return
+    }
+    if (!state || !expectedState || state !== expectedState) {
+      showLogin(true, 'Google 로그인 요청을 확인할 수 없습니다. 다시 시도해주세요.')
+      return
+    }
+
+    const response = await authApi.loginWithGoogle({
+      code,
+      redirectUri: `${window.location.origin}${GOOGLE_CALLBACK_PATH}`
+    })
+    routeAfterAuthentication(response.user.onboardingCompleted, true)
+  } catch (error) {
+    tokenStorage.clear()
+    showLogin(true, error instanceof Error ? error.message : 'Google 로그인에 실패했습니다.')
+  } finally {
+    googleCallbackProcessing = false
   }
 }
 
@@ -192,8 +269,21 @@ async function signup(payload: { name: string, email: string, password: string }
 async function hydrateApp() {
   if (!tokenStorage.getAccessToken()) return
   const [characterResult, userResult] = await Promise.allSettled([hydrateCharacter(), userApi.getMe()])
-  if (userResult.status === 'fulfilled') currentUser.value = userResult.value
+  if (userResult.status === 'fulfilled') {
+    currentUser.value = userResult.value
+    if (!userResult.value.onboardingCompleted && view.value !== 'onboarding') {
+      showOnboarding('signup', true)
+    }
+  }
   if (characterResult.status === 'rejected' && userResult.status === 'rejected' && !tokenStorage.getAccessToken()) showLogin(true)
+}
+
+function routeAfterAuthentication(onboardingCompleted: boolean, replace = false) {
+  if (onboardingCompleted) {
+    enterApp(replace)
+    return
+  }
+  showOnboarding('signup', replace)
 }
 
 function handleProfileUpdated(profile: { nickname: string; profileImageUrl: string }) {
@@ -202,7 +292,7 @@ function handleProfileUpdated(profile: { nickname: string; profileImageUrl: stri
 }
 
 function isProtectedPath(path: string) {
-  return !['/', '/login', '/signup'].includes(path)
+  return !['/', '/login', '/signup', GOOGLE_CALLBACK_PATH].includes(path)
 }
 
 async function hydrateCharacter() {
@@ -227,6 +317,10 @@ function toDateInputValue(date: Date) {
 }
 
 onMounted(() => {
+  if (window.location.pathname === GOOGLE_CALLBACK_PATH) {
+    void handleGoogleCallback()
+    return
+  }
   if (isProtectedPath(window.location.pathname) && !tokenStorage.getAccessToken()) {
     showLogin(true)
     return
