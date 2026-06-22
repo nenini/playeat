@@ -88,6 +88,10 @@ export const userApi = {
     })
   },
 
+  updateHealthProfileFromOnboarding(payload: Record<string, string | string[]>) {
+    return userApi.updateHealthProfile(mapOnboardingPayload(payload))
+  },
+
   changePassword(payload: { currentPassword: string, newPassword: string, newPasswordConfirm: string }) {
     return apiRequest('/v1/users/me/password', {
       method: 'PATCH',
@@ -109,7 +113,7 @@ export const userApi = {
   }
 }
 
-function mapOnboardingPayload(payload: Record<string, string | string[]>): HealthProfileRequest {
+export function mapOnboardingPayload(payload: Record<string, string | string[]>): HealthProfileRequest {
   return {
     heightCm: numberOrNull(payload.height),
     weightKg: numberOrNull(payload.currentWeight),
@@ -141,7 +145,7 @@ function arrayValue(value: unknown) {
 }
 
 function mapGender(value: unknown): string | null {
-  const map: Record<string, string> = { '여성': 'FEMALE', '남성': 'MALE' }
+  const map: Record<string, string> = { '여성': 'FEMALE', '남성': 'MALE', '기타': 'OTHER', '선택 안 함': 'OTHER' }
   const raw = stringOrNull(value)
   return (raw && map[raw]) || null
 }

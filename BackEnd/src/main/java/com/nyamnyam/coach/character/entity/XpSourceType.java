@@ -7,6 +7,7 @@ public enum XpSourceType {
     BOSS,
     QUEST,
     BOSS_BATTLE,
+    ANALYSIS_DAILY_REPORT,
     ADMIN;
 
     public static boolean isValid(String value) {

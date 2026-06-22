@@ -18,7 +18,7 @@ public interface UserRepository {
 
     List<Long> findActiveUserIds();
 
-    void reactivate(User user);
+    int releaseInactiveEmail(@Param("userId") Long userId);
 
     boolean existsByEmail(@Param("email") String email);
 

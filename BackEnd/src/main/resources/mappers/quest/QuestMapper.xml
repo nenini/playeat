@@ -966,8 +966,8 @@
             JOIN diets d ON d.user_id = bp.user_id
             WHERE bp.battle_id = #{battleId}
               AND CAST(d.eaten_at AS DATE) BETWEEN #{startDate} AND #{endDate}
-              AND d.eaten_at &gt;= bp.joined_at
-              AND (bp.left_at IS NULL OR d.eaten_at &lt; bp.left_at)
+              AND CAST(d.eaten_at AS DATE) &gt;= CAST(bp.joined_at AS DATE)
+              AND (bp.left_at IS NULL OR CAST(d.eaten_at AS DATE) &lt; CAST(bp.left_at AS DATE))
             GROUP BY bp.user_id, CAST(d.eaten_at AS DATE)
             HAVING
             <choose>
@@ -998,10 +998,9 @@
         FROM boss_battle_participants bp
         JOIN diets d ON d.user_id = bp.user_id
         WHERE bp.battle_id = #{battleId}
-          AND d.eaten_at &gt;= #{startAt}
-          AND d.eaten_at &lt; #{endAt}
-          AND d.eaten_at &gt;= bp.joined_at
-          AND (bp.left_at IS NULL OR d.eaten_at &lt; bp.left_at)
+          AND CAST(d.eaten_at AS DATE) BETWEEN #{startDate} AND #{endDate}
+          AND CAST(d.eaten_at AS DATE) &gt;= CAST(bp.joined_at AS DATE)
+          AND (bp.left_at IS NULL OR CAST(d.eaten_at AS DATE) &lt; CAST(bp.left_at AS DATE))
           AND
           CASE #{metricType}
               WHEN 'CALORIE' THEN d.total_calories

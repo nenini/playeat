@@ -39,7 +39,7 @@
         </div>
         <div class="profile-card">
           <div class="avatar-wrap">
-            <img v-if="profile.photoUrl" :src="profile.photoUrl" alt="프로필 사진">
+            <img v-if="displayPhotoUrl && !profileImageFailed" :src="displayPhotoUrl" alt="프로필 사진" @error="profileImageFailed = true">
             <span v-else>{{ initial }}</span>
           </div>
           <div class="profile-meta">
@@ -104,9 +104,11 @@ import { type Stage } from '../services/mock/nyamnyamMock'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { myPageApi } from '../services/myPageApi'
 import { userApi } from '../services/userApi'
+import { resolveImageUrl } from '../utils/imageUrl'
+import { genderLabel, healthGoalLabel } from '../utils/labels'
 
 const props = defineProps<{ stage: Stage }>()
-const emit = defineEmits<{ restartOnboarding: [], logout: [] }>()
+const emit = defineEmits<{ restartOnboarding: [], profileUpdated: [profile: { nickname: string; profileImageUrl: string }], logout: [] }>()
 
 const editing = ref(false)
 const passwordOpen = ref(false)
@@ -116,12 +118,14 @@ const loadError = ref('')
 const deletePassword = ref('')
 const deleteError = ref('')
 const passwordError = ref('')
+const profileImageFailed = ref(false)
 const profile = reactive({ nickname: '', email: '', height: '', weight: '', gender: '', goal: '', birthDate: '', joinedAt: '', photoUrl: '' })
 const savedProfile = reactive({ nickname: '', photoUrl: '' })
 const passwordForm = reactive({ current: '', next: '', confirm: '' })
 const passwordMismatch = computed(() => !!passwordForm.next && !!passwordForm.confirm && passwordForm.next !== passwordForm.confirm)
 const canResetPassword = computed(() => !!passwordForm.current && !!passwordForm.next && !!passwordForm.confirm && !passwordMismatch.value)
 const initial = computed(() => profile.nickname.trim().slice(0, 1) || '?')
+const displayPhotoUrl = computed(() => resolveImageUrl(profile.photoUrl))
 const info = computed(() => [
   ['키', profile.height || '-'],
   ['몸무게', profile.weight || '-'],
@@ -152,6 +156,7 @@ function uploadPhoto(event: Event) {
   if (prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl)
   const blobUrl = URL.createObjectURL(file)
   profile.photoUrl = blobUrl
+  profileImageFailed.value = false
   savedProfile.photoUrl = blobUrl
   userApi.uploadProfileImage(file)
     .then(() => loadMyPage())
@@ -166,6 +171,7 @@ function uploadPhoto(event: Event) {
 function removePhoto() {
   if (profile.photoUrl.startsWith('blob:')) URL.revokeObjectURL(profile.photoUrl)
   profile.photoUrl = ''
+  profileImageFailed.value = false
   if (photoInput.value) photoInput.value.value = ''
   userApi.deleteProfileImage()
     .then(() => loadMyPage())
@@ -178,14 +184,16 @@ async function loadMyPage() {
     profile.nickname = overview.user.nickname || ''
     profile.email = overview.user.email || ''
     profile.photoUrl = overview.user.profileImageUrl || overview.user.profileImagePath || ''
+    profileImageFailed.value = false
     profile.height = overview.healthProfile.heightCm ? `${overview.healthProfile.heightCm} cm` : ''
     profile.weight = overview.healthProfile.weightKg ? `${overview.healthProfile.weightKg} kg` : ''
-    profile.gender = overview.healthProfile.gender || ''
-    profile.goal = overview.healthProfile.healthGoal || ''
+    profile.gender = genderLabel(overview.healthProfile.gender)
+    profile.goal = healthGoalLabel(overview.healthProfile.healthGoal)
     profile.birthDate = overview.healthProfile.birthDate || ''
     profile.joinedAt = overview.user.createdAt ? overview.user.createdAt.slice(0, 10) : ''
     savedProfile.nickname = profile.nickname
     savedProfile.photoUrl = profile.photoUrl
+    emit('profileUpdated', { nickname: profile.nickname, profileImageUrl: profile.photoUrl })
     loadError.value = ''
   } catch (error) {
     console.warn('MyPage overview API failed', error)

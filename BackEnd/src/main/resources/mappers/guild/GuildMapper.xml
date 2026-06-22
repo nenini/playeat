@@ -416,10 +416,12 @@
         SELECT
             gm.guild_member_id AS member_id,
             gm.user_id,
+            u.nickname,
             gm.role,
             gm.joined_at,
             gm.left_at
         FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
         WHERE gm.guild_id = #{guildId}
           AND gm.user_id = #{userId}
           AND gm.left_at IS NULL
@@ -430,10 +432,12 @@
         SELECT
             gm.guild_member_id AS member_id,
             gm.user_id,
+            u.nickname,
             gm.role,
             gm.joined_at,
             gm.left_at
         FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
         WHERE gm.guild_id = #{guildId}
           AND gm.user_id = #{userId}
         LIMIT 1
@@ -453,10 +457,12 @@
         SELECT
             gm.guild_member_id AS member_id,
             gm.user_id,
+            u.nickname,
             gm.role,
             gm.joined_at,
             gm.left_at
         FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
         WHERE gm.guild_id = #{guildId}
           AND gm.guild_member_id = #{memberId}
           AND gm.left_at IS NULL
@@ -467,10 +473,12 @@
         SELECT
             gm.guild_member_id AS member_id,
             gm.user_id,
+            u.nickname,
             gm.role,
             gm.joined_at,
             gm.left_at
         FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
         WHERE gm.guild_id = #{guildId}
           AND gm.guild_member_id = #{memberId}
         LIMIT 1

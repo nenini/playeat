@@ -14,7 +14,10 @@
       </nav>
       <div class="right-tools">
         <AppPill tone="accent" size="sm"><AppIcon name="fire" :size="11" color="var(--accent)" />{{ streak }}일 연속</AppPill>
-        <button class="profile" :class="{ active: activePage === 'mypage' }" type="button" title="마이페이지" @click="$emit('navigate', 'mypage')">👩</button>
+        <button class="profile" :class="{ active: activePage === 'mypage' }" type="button" title="마이페이지" @click="$emit('navigate', 'mypage')">
+          <img v-if="profileImage && !profileImageFailed" :src="profileImage" :alt="`${profileName || '사용자'} 프로필`" @error="profileImageFailed = true">
+          <span v-else>{{ profileInitial }}</span>
+        </button>
       </div>
     </header>
     <main class="page-container">
@@ -28,9 +31,17 @@ import AppIcon from '../common/AppIcon.vue'
 import AppPill from '../common/AppPill.vue'
 import NyamnyamCharacter from '../nyamnyam/NyamnyamCharacter.vue'
 import { pages, type PageId } from '../../services/mock/nyamnyamMock'
+import { computed, ref, watch } from 'vue'
+import { resolveImageUrl } from '../../utils/imageUrl'
 
-defineProps<{ activePage: PageId, logsCount: number, streak: number }>()
+const props = defineProps<{ activePage: PageId, logsCount: number, streak: number, profileImageUrl?: string, profileName?: string }>()
 defineEmits<{ navigate: [page: PageId] }>()
+
+const profileImageFailed = ref(false)
+const profileImage = computed(() => resolveImageUrl(props.profileImageUrl))
+const profileInitial = computed(() => props.profileName?.trim().slice(0, 1) || '냠')
+
+watch(() => props.profileImageUrl, () => { profileImageFailed.value = false })
 </script>
 
 <script lang="ts">
@@ -112,6 +123,7 @@ export default { name: 'AppShell' }
   width: 36px;
   height: 36px;
   border-radius: 18px;
+  padding: 0;
   background: var(--yolk);
   border: 1.5px solid var(--border);
   display: flex;
@@ -119,11 +131,15 @@ export default { name: 'AppShell' }
   justify-content: center;
   font-size: 16px;
   cursor: pointer;
+  overflow: hidden;
+  flex: 0 0 36px;
 }
 .profile.active {
   background: var(--accent);
   border-color: var(--accent-dark);
 }
+.profile img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
+.profile span { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-weight: 800; }
 .page-container {
   flex: 1;
   padding: 24px 32px 48px;

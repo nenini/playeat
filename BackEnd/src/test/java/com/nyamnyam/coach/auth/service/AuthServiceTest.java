@@ -126,16 +126,13 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("탈퇴한 이메일이면 기존 계정을 재활성화한다")
-    void signupReactivatesInactiveUser() {
+    @DisplayName("탈퇴한 이메일이면 새 사용자로 가입한다")
+    void signupCreatesNewUserForInactiveEmail() {
         SignupRequest request = new SignupRequest("user@example.com", "new-password123!", "냥냥");
-        LocalDateTime createdAt = LocalDateTime.of(2026, 5, 26, 10, 0);
         User inactiveUser = inactiveUser("old-password");
-        inactiveUser.setSelectedCoachId(10L);
-        inactiveUser.setOnboardingCompleted(true);
-        inactiveUser.setCreatedAt(createdAt);
-        User reactivatedUser = User.builder()
-                .userId(1L)
+        LocalDateTime createdAt = LocalDateTime.of(2026, 6, 22, 10, 0);
+        User newUser = User.builder()
+                .userId(2L)
                 .email(request.email())
                 .passwordHash("encoded")
                 .nickname(request.nickname())
@@ -145,22 +142,26 @@ class AuthServiceTest {
                 .build();
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(inactiveUser));
-        when(userRepository.findById(inactiveUser.getUserId())).thenReturn(Optional.of(reactivatedUser));
+        doAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setUserId(2L);
+            return null;
+        }).when(userRepository).save(any(User.class));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(newUser));
 
         SignupResponse response = authService.signup(request);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).reactivate(userCaptor.capture());
+        verify(userRepository).releaseInactiveEmail(inactiveUser.getUserId());
+        verify(userRepository).save(userCaptor.capture());
+        verify(characterGrowthService).createDefaultCharacterIfMissing(2L, request.nickname());
 
-        User userToReactivate = userCaptor.getValue();
-        assertThat(userToReactivate.getUserId()).isEqualTo(1L);
-        assertThat(userToReactivate.getPasswordHash()).isNotEqualTo("old-password");
-        assertThat(passwordEncoder.matches(request.password(), userToReactivate.getPasswordHash())).isTrue();
-        assertThat(userToReactivate.getStatus()).isEqualTo("ACTIVE");
-        assertThat(userToReactivate.getOnboardingCompleted()).isFalse();
-        assertThat(userToReactivate.getSelectedCoachId()).isNull();
-        assertThat(userToReactivate.getDeactivatedAt()).isNull();
-        assertThat(response.userId()).isEqualTo(1L);
+        User userToSave = userCaptor.getValue();
+        assertThat(userToSave.getUserId()).isEqualTo(2L);
+        assertThat(userToSave.getEmail()).isEqualTo(request.email());
+        assertThat(userToSave.getStatus()).isEqualTo("ACTIVE");
+        assertThat(userToSave.getOnboardingCompleted()).isFalse();
+        assertThat(response.userId()).isEqualTo(2L);
         assertThat(response.createdAt()).isEqualTo(createdAt);
     }
 

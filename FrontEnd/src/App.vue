@@ -1,16 +1,16 @@
 <template>
   <StartPage v-if="view === 'start'" @start="showSignup" @login="showLogin" />
-  <LoginPage v-else-if="view === 'login'" @done="login" @signup="showSignup" @back="showStart" />
-  <SignupPage v-else-if="view === 'signup'" @onboarding="signup" @login="showLogin" @back="showStart" />
-  <OnboardingPage v-else-if="view === 'onboarding'" @done="completeOnboarding" @cancel="enterApp" />
-  <AppShell v-else :active-page="activePage" :logs-count="0" :streak="streak" @navigate="go">
+  <LoginPage v-else-if="view === 'login'" :api-error="authError" @done="login" @signup="showSignup" @back="showStart" />
+  <SignupPage v-else-if="view === 'signup'" :api-error="authError" @onboarding="signup" @login="showLogin" @back="showStart" />
+  <OnboardingPage v-else-if="view === 'onboarding'" :mode="onboardingMode" :api-error="onboardingError" @done="completeOnboarding" @cancel="enterApp" />
+  <AppShell v-else :active-page="activePage" :logs-count="0" :streak="streak" :profile-image-url="currentUser?.profileImageUrl || currentUser?.profileImagePath" :profile-name="currentUser?.nickname" @navigate="go">
     <HomePage v-if="activePage === 'home'" :stage="stage" :equipped-weapon="equippedWeapon" @navigate="go" />
-    <MealsPage v-else-if="activePage === 'meals'" :logs="[]" />
+    <MealsPage v-else-if="activePage === 'meals'" :logs="[]" @diet-changed="refreshCharacter" />
     <AnalyzePage v-else-if="activePage === 'analyze'" :logs="logs" />
     <BossPage v-else-if="activePage === 'boss'" :logs="logs" :is-leader="isGuildLeader" @navigate="go" />
     <GuildPage v-else-if="activePage === 'guild'" :is-leader="isGuildLeader" />
     <ShopPage v-else-if="activePage === 'shop'" :stage="stage" :equipped-weapon="equippedWeapon" :equipped-hat="equippedHat" @equip="equip" @unequip="unequip" />
-    <MyPage v-else :stage="stage" @restart-onboarding="showOnboarding" @logout="handleLogout" />
+    <MyPage v-else :stage="stage" @restart-onboarding="showOnboarding('edit')" @profile-updated="handleProfileUpdated" @logout="handleLogout" />
   </AppShell>
 </template>
 
@@ -32,16 +32,18 @@ import { pageFromPath, pathFromPage } from './router/routes'
 import { type MealLog, type PageId, type Stage } from './services/mock/nyamnyamMock'
 import { authApi } from './services/api/authApi'
 import { characterApi, stageFromBackend } from './services/characterApi'
-import { userApi } from './services/userApi'
+import { userApi, type UserMeResponse } from './services/userApi'
 import { tokenStorage } from './services/api'
 
 type ViewMode = 'start' | 'login' | 'signup' | 'onboarding' | 'app'
 
 function initialView(): ViewMode {
-  if (window.location.pathname === '/') return 'start'
-  if (window.location.pathname === '/login') return 'login'
-  if (window.location.pathname === '/signup') return 'signup'
-  if (window.location.pathname === '/onboarding') return 'onboarding'
+  const path = window.location.pathname
+  if (path === '/') return 'start'
+  if (path === '/login') return 'login'
+  if (path === '/signup') return 'signup'
+  if (!tokenStorage.getAccessToken()) return 'login'
+  if (path === '/onboarding') return 'onboarding'
   return 'app'
 }
 
@@ -51,39 +53,62 @@ const logs = ref<MealLog[]>([])
 const stage = ref<Stage>('chick')
 const equippedWeapon = ref('stick')
 const equippedHat = ref<string | null>(null)
+const streakDays = ref(0)
 const onboardingData = ref<Record<string, string | string[]> | null>(null)
+const onboardingMode = ref<'signup' | 'edit'>('signup')
+const onboardingError = ref('')
+const currentUser = ref<UserMeResponse | null>(null)
+const authError = ref('')
 const isGuildLeader = ref(new URLSearchParams(window.location.search).get('role') === 'leader')
 const currentDate = ref(toDateInputValue(new Date()))
 
-const streak = computed(() => 0)
+const streak = computed(() => streakDays.value)
 
 function go(page: PageId) {
+  if (!tokenStorage.getAccessToken()) {
+    showLogin(true)
+    return
+  }
   view.value = 'app'
   activePage.value = page
-  window.history.pushState({}, '', pathFromPage(page))
+  window.history.pushState({}, '', page === 'home' ? '/home' : pathFromPage(page))
 }
 
 function showStart() {
+  authError.value = ''
   view.value = 'start'
   window.history.pushState({}, '', '/')
 }
 
-function showLogin() {
+function showLogin(replace = false) {
+  authError.value = ''
   view.value = 'login'
-  window.history.pushState({}, '', '/login')
+  if (replace) window.history.replaceState({}, '', '/login')
+  else window.history.pushState({}, '', '/login')
 }
 
 function showSignup() {
+  authError.value = ''
   view.value = 'signup'
   window.history.pushState({}, '', '/signup')
 }
 
-function showOnboarding() {
+function showOnboarding(mode: 'signup' | 'edit' = 'edit') {
+  if (!tokenStorage.getAccessToken()) {
+    showLogin(true)
+    return
+  }
+  onboardingMode.value = mode
+  onboardingError.value = ''
   view.value = 'onboarding'
   window.history.pushState({}, '', '/onboarding')
 }
 
 function enterApp() {
+  if (!tokenStorage.getAccessToken()) {
+    showLogin(true)
+    return
+  }
   view.value = 'app'
   activePage.value = 'home'
   window.history.pushState({}, '', '/home')
@@ -92,10 +117,21 @@ function enterApp() {
 
 async function completeOnboarding(payload: Record<string, string | string[]>) {
   onboardingData.value = payload
+  onboardingError.value = ''
   try {
+    if (onboardingMode.value === 'edit') {
+      await userApi.updateHealthProfileFromOnboarding(payload)
+      view.value = 'app'
+      activePage.value = 'mypage'
+      window.history.pushState({}, '', '/mypage')
+      void hydrateApp()
+      return
+    }
     await userApi.completeOnboarding(payload)
   } catch (error) {
     console.warn('Onboarding API failed', error)
+    onboardingError.value = error instanceof Error ? error.message : '온보딩 저장에 실패했습니다.'
+    return
   }
   enterApp()
 }
@@ -105,6 +141,10 @@ async function handleLogout() {
     await authApi.logout()
   } catch (error) {
     console.warn('Logout API failed', error)
+  } finally {
+    tokenStorage.clear()
+    currentUser.value = null
+    streakDays.value = 0
   }
   showStart()
 }
@@ -120,29 +160,63 @@ function unequip(slot: 'head' | 'hand') {
 }
 
 window.addEventListener('popstate', () => {
+  if (isProtectedPath(window.location.pathname) && !tokenStorage.getAccessToken()) {
+    showLogin(true)
+    return
+  }
   view.value = initialView()
   if (view.value === 'app') activePage.value = pageFromPath(window.location.pathname)
 })
 
 async function login(payload: { email: string, password: string }) {
-  await authApi.login({ email: payload.email, password: payload.password })
-  enterApp()
+  authError.value = ''
+  try {
+    await authApi.login({ email: payload.email, password: payload.password })
+    enterApp()
+  } catch (error) {
+    authError.value = error instanceof Error ? error.message : '로그인에 실패했습니다.'
+  }
 }
 
 async function signup(payload: { name: string, email: string, password: string }) {
-  await authApi.signup({ email: payload.email, password: payload.password, nickname: payload.name })
-  await authApi.login({ email: payload.email, password: payload.password })
-  showOnboarding()
+  authError.value = ''
+  try {
+    await authApi.signup({ email: payload.email, password: payload.password, nickname: payload.name })
+    await authApi.login({ email: payload.email, password: payload.password })
+    showOnboarding('signup')
+  } catch (error) {
+    authError.value = error instanceof Error ? error.message : '회원가입에 실패했습니다.'
+  }
 }
 
 async function hydrateApp() {
   if (!tokenStorage.getAccessToken()) return
-  await Promise.allSettled([hydrateCharacter(), userApi.getMe()])
+  const [characterResult, userResult] = await Promise.allSettled([hydrateCharacter(), userApi.getMe()])
+  if (userResult.status === 'fulfilled') currentUser.value = userResult.value
+  if (characterResult.status === 'rejected' && userResult.status === 'rejected' && !tokenStorage.getAccessToken()) showLogin(true)
+}
+
+function handleProfileUpdated(profile: { nickname: string; profileImageUrl: string }) {
+  if (!currentUser.value) return
+  currentUser.value = { ...currentUser.value, nickname: profile.nickname, profileImageUrl: profile.profileImageUrl }
+}
+
+function isProtectedPath(path: string) {
+  return !['/', '/login', '/signup'].includes(path)
 }
 
 async function hydrateCharacter() {
   const character = await characterApi.getMe()
   stage.value = stageFromBackend(character.stage)
+  streakDays.value = Number(character.streakDays || 0)
+}
+
+async function refreshCharacter() {
+  try {
+    await hydrateCharacter()
+  } catch (error) {
+    console.warn('Character refresh API failed', error)
+  }
 }
 
 function toDateInputValue(date: Date) {
@@ -153,6 +227,10 @@ function toDateInputValue(date: Date) {
 }
 
 onMounted(() => {
+  if (isProtectedPath(window.location.pathname) && !tokenStorage.getAccessToken()) {
+    showLogin(true)
+    return
+  }
   if (tokenStorage.getAccessToken()) void hydrateApp()
 })
 </script>

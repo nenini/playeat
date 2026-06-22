@@ -199,9 +199,9 @@ export const onboardingSteps: OnboardingStep[] = [
     questions: [
       { id: 'birthday', label: '생년월일을 입력해주세요', type: 'date' },
       { id: 'gender', label: '성별을 선택해주세요', type: 'single', options: ['여성', '남성', '선택 안 함'] },
-      { id: 'height', label: '키를 입력해주세요', type: 'number', unit: 'cm', placeholder: '162' },
-      { id: 'currentWeight', label: '현재 몸무게를 입력해주세요', type: 'number', unit: 'kg', placeholder: '54' },
-      { id: 'targetWeight', label: '목표 체중을 입력해주세요', type: 'number', unit: 'kg', placeholder: '50' }
+      { id: 'height', label: '키를 입력해주세요', type: 'number', unit: 'cm' },
+      { id: 'currentWeight', label: '현재 몸무게를 입력해주세요', type: 'number', unit: 'kg' },
+      { id: 'targetWeight', label: '목표 체중을 입력해주세요', type: 'number', unit: 'kg' }
     ]
   },
   {

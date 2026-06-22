@@ -244,7 +244,7 @@ const isSelectedWeekFinished = computed(() => weekRange.value.endDate < todayDat
 const dailyReportSections = computed(() => {
   if (dailyLoading.value) return [{ title: '조회 중', text: '선택한 날짜의 일간 분석과 AI 리포트를 불러오는 중입니다.' }]
   if (dailyError.value) return [{ title: '조회 실패', text: dailyError.value }]
-  return reportToSections(dailyAnalysis.value?.dailyReport, '선택한 날짜의 리포트가 없습니다.')
+  return reportToSections(dailyAnalysis.value?.dailyReport, '오늘 식단 기록이 마무리되면 하루 영양 리포트를 확인할 수 있어요.')
 })
 const weeklyReportSections = computed(() => {
   if (weeklyLoading.value) return [{ title: '조회 중', text: '선택한 주간 분석과 AI 리포트를 불러오는 중입니다.' }]

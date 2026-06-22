@@ -13,6 +13,8 @@ import com.nyamnyam.coach.ai.service.parser.DailyReportContent;
 import com.nyamnyam.coach.ai.service.parser.WeeklyReportContent;
 import com.nyamnyam.coach.ai.service.prompt.DailyReportPrompt;
 import com.nyamnyam.coach.ai.service.prompt.WeeklyReportPrompt;
+import com.nyamnyam.coach.character.entity.XpSourceType;
+import com.nyamnyam.coach.character.service.CharacterGrowthService;
 import com.nyamnyam.coach.diet.dto.response.DietDayResponse;
 import com.nyamnyam.coach.diet.dto.response.DietItemResponse;
 import com.nyamnyam.coach.diet.dto.response.DietMealResponse;
@@ -43,6 +45,7 @@ public class AiReportService {
     private final AiJsonResponseParser aiJsonResponseParser;
     private final WeeklyReportContextService weeklyReportContextService;
     private final HealthGuideRetrievalService healthGuideRetrievalService;
+    private final CharacterGrowthService characterGrowthService;
 
     public AiReportService(
             AiReportRepository aiReportRepository,
@@ -52,7 +55,8 @@ public class AiReportService {
             ObjectMapper objectMapper,
             AiJsonResponseParser aiJsonResponseParser,
             WeeklyReportContextService weeklyReportContextService,
-            HealthGuideRetrievalService healthGuideRetrievalService
+            HealthGuideRetrievalService healthGuideRetrievalService,
+            CharacterGrowthService characterGrowthService
     ) {
         this.aiReportRepository = aiReportRepository;
         this.aiTextGenerator = aiTextGenerator;
@@ -62,8 +66,10 @@ public class AiReportService {
         this.aiJsonResponseParser = aiJsonResponseParser;
         this.weeklyReportContextService = weeklyReportContextService;
         this.healthGuideRetrievalService = healthGuideRetrievalService;
+        this.characterGrowthService = characterGrowthService;
     }
 
+    @Transactional
     public AiReportResponse createDailyReport(Long userId, LocalDate date) {
         Optional<AiReport> existingReport = aiReportRepository.findByUserIdAndPeriod(userId, DAILY, date, date);
         if (existingReport.isPresent()) {
@@ -88,6 +94,15 @@ public class AiReportService {
         report.setWarningsJson(toJson(emptyIfNull(content.warnings())));
         report.setNextAction(nullToDefault(content.nextAction(), "다음 끼니 선택을 점검해보세요."));
         aiReportRepository.insert(report);
+        if (healthScore > 0) {
+            characterGrowthService.addXp(
+                    userId,
+                    XpSourceType.ANALYSIS_DAILY_REPORT,
+                    report.getReportId(),
+                    healthScore,
+                    "%s 일별 헬스스코어 리포트".formatted(date)
+            );
+        }
         return toResponse(report);
     }
 

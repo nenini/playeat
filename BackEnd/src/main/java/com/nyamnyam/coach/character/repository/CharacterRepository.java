@@ -4,6 +4,8 @@ import com.nyamnyam.coach.character.entity.CharacterEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Mapper
@@ -35,4 +37,11 @@ public interface CharacterRepository {
     );
 
     boolean existsByUserId(@Param("userId") Long userId);
+
+    List<LocalDate> findRecordedDatesByUserId(@Param("userId") Long userId);
+
+    int updateStreak(
+            @Param("userId") Long userId,
+            @Param("streakDays") int streakDays
+    );
 }

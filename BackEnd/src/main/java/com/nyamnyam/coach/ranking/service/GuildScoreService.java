@@ -109,7 +109,7 @@ public class GuildScoreService {
         if (denominator <= 0) {
             return 0.0;
         }
-        return roundToOneDecimal((double) numerator / denominator * 100.0);
+        return roundToOneDecimal(Math.min((double) numerator / denominator * 100.0, 100.0));
     }
 
     public double roundToOneDecimal(double value) {

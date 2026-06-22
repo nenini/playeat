@@ -2,7 +2,7 @@
   <section class="onboarding-page">
     <header class="onboarding-top">
       <button class="brand" type="button" @click="$emit('cancel')"><span>냠</span><strong>냠냠코치</strong></button>
-      <div class="progress-label">{{ currentIndex + 1 }} / {{ onboardingSteps.length }}</div>
+      <div class="progress-label">{{ loadingProfile ? '불러오는 중' : `${currentIndex + 1} / ${onboardingSteps.length}` }}</div>
     </header>
 
     <main class="onboarding-shell">
@@ -22,6 +22,7 @@
         </div>
 
         <div class="question-list">
+          <p v-if="formError" class="form-error">{{ formError }}</p>
           <div v-for="question in currentStep.questions" :key="question.id" class="question">
             <label>{{ question.label }}</label>
             <input v-if="question.type === 'date'" v-model="form[question.id]" type="date">
@@ -46,7 +47,7 @@
 
         <div class="step-actions">
           <button type="button" class="ghost" :disabled="currentIndex === 0" @click="prev">이전</button>
-          <button type="submit" class="primary">{{ currentIndex === onboardingSteps.length - 1 ? '완료하고 시작하기' : '다음' }}</button>
+          <button type="submit" class="primary" :disabled="loadingProfile">{{ currentIndex === onboardingSteps.length - 1 ? completeButtonText : '다음' }}</button>
         </div>
       </form>
     </main>
@@ -54,28 +55,42 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { onboardingSteps } from '../services/mock/nyamnyamMock'
+import { userApi, type HealthProfileResponse } from '../services/userApi'
 
+const props = withDefaults(defineProps<{ mode?: 'signup' | 'edit', apiError?: string }>(), {
+  mode: 'signup',
+  apiError: ''
+})
 const emit = defineEmits<{ done: [payload: Record<string, string | string[]>], cancel: [] }>()
 const currentIndex = ref(0)
+const loadingProfile = ref(false)
+const profileLoadError = ref('')
 const drafts = reactive<Record<string, string>>({})
 const form = reactive<Record<string, string | string[]>>({
-  birthday: '2001-03-15',
-  gender: '여성',
-  height: '162',
-  currentWeight: '54',
-  targetWeight: '50',
-  activityLevel: '가벼운 활동이 있어요',
-  exerciseFrequency: '주 1~2회',
-  mainGoal: '감량',
-  improveTarget: '식습관 개선',
-  healthFocus: ['없음'],
-  recordFrequency: '매일',
-  calorieTrackingExperience: '처음이에요'
+  birthday: '',
+  gender: '',
+  height: '',
+  currentWeight: '',
+  targetWeight: '',
+  activityLevel: '',
+  exerciseFrequency: '',
+  mainGoal: '',
+  improveTarget: '',
+  healthFocus: [],
+  changeNeeds: [],
+  difficultReasons: [],
+  dietStyle: '',
+  restrictedFoods: [],
+  allergies: [],
+  recordFrequency: '',
+  calorieTrackingExperience: ''
 })
 
 const currentStep = computed(() => onboardingSteps[currentIndex.value])
+const completeButtonText = computed(() => props.mode === 'edit' ? '수정 내용 저장하기' : '완료하고 시작하기')
+const formError = computed(() => props.apiError || profileLoadError.value)
 
 function multiValue(id: string) {
   const value = form[id]
@@ -119,6 +134,76 @@ function next() {
   }
   emit('done', { ...form })
 }
+
+async function loadHealthProfile() {
+  if (props.mode !== 'edit') return
+  loadingProfile.value = true
+  profileLoadError.value = ''
+  try {
+    applyHealthProfile(await userApi.getHealthProfile())
+  } catch (error) {
+    console.warn('Health profile load API failed', error)
+    profileLoadError.value = error instanceof Error ? error.message : '건강 프로필을 불러오지 못했습니다.'
+  } finally {
+    loadingProfile.value = false
+  }
+}
+
+function applyHealthProfile(profile: HealthProfileResponse) {
+  form.birthday = profile.birthDate || ''
+  form.gender = genderOption(profile.gender)
+  form.height = profile.heightCm ? String(profile.heightCm) : ''
+  form.currentWeight = profile.weightKg ? String(profile.weightKg) : ''
+  form.targetWeight = profile.targetWeightKg ? String(profile.targetWeightKg) : ''
+  form.activityLevel = activityOption(profile.activityLevel)
+  form.mainGoal = goalOption(profile.healthGoal)
+  form.dietStyle = firstValue(profile.dietStyles)
+  form.restrictedFoods = profile.restrictedFoods?.length ? [...profile.restrictedFoods] : []
+  form.allergies = profile.allergies?.length ? [...profile.allergies] : []
+}
+
+function genderOption(value: unknown) {
+  const key = stringKey(value)
+  const map: Record<string, string> = { FEMALE: '여성', MALE: '남성', OTHER: '선택 안 함' }
+  return map[key] || ''
+}
+
+function goalOption(value: unknown) {
+  const key = stringKey(value)
+  const map: Record<string, string> = {
+    LOSE_WEIGHT: '감량',
+    WEIGHT_LOSS: '감량',
+    MAINTAIN: '유지',
+    GAIN_WEIGHT: '증량',
+    MUSCLE_GAIN: '증량'
+  }
+  return map[key] || ''
+}
+
+function activityOption(value: unknown) {
+  const key = stringKey(value)
+  const map: Record<string, string> = {
+    SEDENTARY: '거의 앉아 있어요',
+    LIGHT: '가벼운 활동이 있어요',
+    MODERATE: '많이 걷거나 움직여요',
+    ACTIVE: '육체 활동이 많아요'
+  }
+  return map[key] || ''
+}
+
+function firstValue(value: unknown) {
+  return Array.isArray(value) ? String(value[0] || '') : ''
+}
+
+function stringKey(value: unknown) {
+  return typeof value === 'string' ? value.trim().toUpperCase() : ''
+}
+
+watch(() => props.mode, () => { void loadHealthProfile() })
+
+onMounted(() => {
+  void loadHealthProfile()
+})
 </script>
 
 <style scoped>
@@ -135,11 +220,12 @@ function next() {
 .bar { height: 7px; background: var(--surface-alt); } .bar span { display: block; height: 100%; background: var(--accent); transition: width .2s; }
 .step-head { padding: 32px 34px 18px; } .step-head p { margin: 0 0 8px; color: var(--accent-dark); font-family: var(--mono); font-size: 11px; letter-spacing: 1.2px; font-weight: 800; } .step-head h1 { margin: 0; font-size: 30px; letter-spacing: -0.6px; } .step-head span { display: block; margin-top: 8px; color: var(--ink-2); font-size: 14px; }
 .question-list { padding: 8px 34px 28px; display: flex; flex-direction: column; gap: 18px; }
+.form-error { margin: 0; padding: 12px 14px; border: 1px solid #ffd0c2; border-radius: 12px; background: #fff3ed; color: var(--bad); font-size: 13px; font-weight: 800; }
 .question { position: relative; padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: #fffdf8; } .question label { display: block; font-size: 14px; font-weight: 900; margin-bottom: 12px; } .question > small { position: absolute; right: 32px; bottom: 31px; color: var(--ink-3); font-family: var(--mono); font-size: 12px; }
 .question input { width: 100%; height: 44px; border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 0 14px; outline: 0; font-size: 14px; background: #fff; } .question input:focus { border-color: var(--accent); }
 .choice-grid { display: flex; flex-wrap: wrap; gap: 8px; } .choice-grid button { padding: 10px 14px; border-radius: 999px; border: 1.5px solid var(--border); background: #fff; color: var(--ink-2); cursor: pointer; font-weight: 700; } .choice-grid button.selected { border-color: var(--accent); background: var(--accent); color: #fff; }
 .custom-input { display: inline-flex; gap: 6px; align-items: center; width: 260px; max-width: 100%; } .custom-input input { flex: 1; min-width: 0; } .custom-input button { border-radius: 10px; background: var(--surface-alt); }
 .custom-tags { width: 100%; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; } .custom-tags button { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
-.step-actions { border-top: 1px solid var(--border); padding: 18px 34px; display: flex; justify-content: space-between; gap: 12px; background: #fff; } .step-actions button { height: 44px; padding: 0 24px; border-radius: 10px; font-weight: 900; cursor: pointer; } .step-actions .ghost { border: 1px solid var(--border-strong); background: #fff; color: var(--ink-2); } .step-actions .ghost:disabled { opacity: .4; cursor: not-allowed; } .step-actions .primary { border: 0; background: var(--accent); color: #fff; min-width: 180px; }
+.step-actions { border-top: 1px solid var(--border); padding: 18px 34px; display: flex; justify-content: space-between; gap: 12px; background: #fff; } .step-actions button { height: 44px; padding: 0 24px; border-radius: 10px; font-weight: 900; cursor: pointer; } .step-actions .ghost { border: 1px solid var(--border-strong); background: #fff; color: var(--ink-2); } .step-actions .ghost:disabled, .step-actions .primary:disabled { opacity: .4; cursor: not-allowed; } .step-actions .primary { border: 0; background: var(--accent); color: #fff; min-width: 180px; }
 @media (max-width: 860px) { .onboarding-shell { grid-template-columns: 1fr; padding: 24px 18px; } .step-list { position: static; display: grid; grid-template-columns: repeat(2, 1fr); } .onboarding-top { padding: 0 20px; } }
 </style>

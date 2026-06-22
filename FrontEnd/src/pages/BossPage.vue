@@ -28,19 +28,26 @@
     </div>
     <div class="battle-grid">
       <main class="battle-left">
+        <div v-if="isBattleCleared" class="clear-banner">
+          <div class="clear-badge">CLEAR</div>
+          <div>
+            <h2>보스 격파 성공!</h2>
+            <p>길드원들과 함께 보스를 쓰러뜨렸어요. 보상을 수령해 주세요.</p>
+          </div>
+        </div>
         <div class="arena"><div class="grid-bg"></div><BossMonster :size="300" :hp="hpPercent" /></div>
         <AppCard :padding="16"><div class="hp-row"><span>BOSS HP</span><ProgressBar :value="hp?.currentHp ?? 0" :max="hp?.maxHp || 1" :tone="hpPercent < 30 ? 'accent' : 'bad'" :height="18" /><b>{{ hp?.currentHp?.toLocaleString() ?? '-' }} / {{ hp?.maxHp?.toLocaleString() ?? '-' }}</b></div><div class="damage-row"><span>누적 데미지: <strong>−{{ hp?.totalDamage?.toLocaleString() ?? '-' }}</strong> HP</span><span>퀘스트 완료: <strong>{{ dashboard ? `${dashboard.questCompletedCount}/${dashboard.questTotalCount}` : '-' }}</strong></span></div></AppCard>
         <div class="condition-grid">
-          <AppCard :padding="16"><div class="condition-head"><div class="section-title-main">격파 조건</div><AppButton size="sm" variant="secondary" :disabled="pendingActionId === 'verify-conditions'" @click="verifyConditions">조건 확인</AppButton></div><div v-if="battle?.commonConditions?.length" class="checks"><p v-for="condition in battle.commonConditions" :key="condition.battleConditionId">{{ condition.completed ? '✓' : '□' }} {{ condition.title }} — {{ condition.currentValue ?? '-' }}/{{ condition.targetValue ?? '-' }} {{ condition.unit || '' }}</p></div><p v-else>격파 조건 데이터가 없습니다.</p></AppCard>
-          <AppCard :padding="16" class="reward"><div class="section-title-main">격파 보상</div><div><small>+ 경험치</small><strong>{{ bossDetail?.rewardExp?.toLocaleString() ?? '-' }} XP</strong><small>+ 코인</small><strong>{{ bossDetail?.rewardCoin?.toLocaleString() ?? '-' }}</strong></div><AppPill v-if="battle?.status === 'DEFEATED' && battle.rewardClaimed" tone="ok" size="sm">보상 수령 완료</AppPill><AppButton v-else-if="battle?.status === 'DEFEATED'" full size="sm" :disabled="pendingActionId === 'battle-reward'" @click="claimBattleReward">보스 보상 받기</AppButton></AppCard>
+          <AppCard :padding="16"><div class="condition-head"><div class="section-title-main">격파 조건</div></div><div v-if="battle?.commonConditions?.length" class="checks"><p v-for="condition in battle.commonConditions" :key="condition.battleConditionId">{{ condition.completed ? '✓' : '□' }} {{ condition.title }} — {{ condition.currentValue ?? '-' }}/{{ condition.targetValue ?? '-' }} {{ condition.unit || '' }}</p></div><p v-else>격파 조건 데이터가 없습니다.</p></AppCard>
+          <AppCard :padding="16" class="reward"><div class="section-title-main">격파 보상</div><div><small>+ 경험치</small><strong>{{ bossDetail?.rewardExp?.toLocaleString() ?? '-' }} XP</strong><small>+ 코인</small><strong>{{ bossDetail?.rewardCoin?.toLocaleString() ?? '-' }}</strong></div><AppPill v-if="isBattleCleared && battle?.rewardClaimed" tone="ok" size="sm">보상 수령 완료</AppPill><AppButton v-else-if="isBattleCleared" full size="sm" :disabled="pendingActionId === 'battle-reward'" @click="claimBattleReward">보스 보상 받기</AppButton></AppCard>
         </div>
       </main>
       <aside class="members">
-        <div class="member-head"><strong>길드원 개인 퀘스트 · {{ quests.length }}명</strong><span>{{ dashboard ? `완료 ${dashboard.questCompletedCount} · 전체 ${dashboard.questTotalCount}` : '-' }}</span></div>
-        <div v-if="quests.length === 0" class="quest-empty"><p>생성된 퀘스트가 없습니다.</p><AppButton v-if="isLeader" size="sm" :disabled="pendingActionId === 'generate-quests'" @click="generateQuests">퀘스트 생성</AppButton></div>
-        <div v-for="quest in quests" :key="quest.questId" class="quest-entry">
+        <div class="member-head"><strong>길드원 개인 퀘스트 · {{ displayQuests.length }}명</strong><span>{{ dashboard ? `완료 ${dashboard.questCompletedCount} · 전체 ${dashboard.questTotalCount}` : '-' }}</span></div>
+        <div v-if="displayQuests.length === 0" class="quest-empty"><p>생성된 퀘스트가 없습니다.</p><AppButton v-if="isLeader" size="sm" :disabled="pendingActionId === 'generate-quests'" @click="generateQuests">퀘스트 생성</AppButton></div>
+        <div v-for="quest in displayQuests" :key="quest.questId" class="quest-entry">
           <MemberQuest :member="questMember(quest)" />
-          <div v-if="quest.isMe" class="quest-actions"><AppButton v-if="quest.status === 'IN_PROGRESS'" size="sm" variant="secondary" :disabled="pendingActionId === `verify-${quest.questId}`" @click="verifyQuest(quest.questId)">퀘스트 확인</AppButton><AppButton v-if="quest.status === 'COMPLETED'" size="sm" :disabled="pendingActionId === `reward-${quest.questId}`" @click="claimQuestReward(quest.questId)">보상 수령</AppButton><AppPill v-if="quest.status === 'REWARDED'" tone="ok" size="sm">보상 수령 완료</AppPill></div>
+          <div v-if="quest.isMe" class="quest-actions"><AppButton v-if="quest.status === 'COMPLETED'" size="sm" :disabled="pendingActionId === `reward-${quest.questId}`" @click="claimQuestReward(quest.questId)">보상 수령</AppButton><AppPill v-if="quest.status === 'REWARDED'" tone="ok" size="sm">보상 수령 완료</AppPill></div>
         </div>
         <AppCard :padding="12" class="tip">💡 길드원이 자기 퀘스트를 깰 때마다 보스 HP가 감소해요.</AppCard>
       </aside>
@@ -95,6 +102,16 @@ const contributions = ref<QuestContribution[]>([])
 const isLeader = computed(() => guildRole.value === 'OWNER')
 const selectedBoss = computed(() => bosses.value.find((item) => item.bossId === selectedBossId.value) ?? bosses.value[0] ?? null)
 const hpPercent = computed(() => hp.value?.maxHp ? hp.value.currentHp / hp.value.maxHp * 100 : 0)
+const isBattleCleared = computed(() => ['DEFEATED', 'CLEARED', 'COMPLETED'].includes(String(battle.value?.status || '')))
+const displayQuests = computed<QuestSummary[]>(() => {
+  if (!myQuest.value) return quests.value
+
+  const myQuestIndex = quests.value.findIndex((quest) => quest.questId === myQuest.value?.questId)
+  const mine: QuestSummary = { ...myQuest.value, isMe: true }
+  if (myQuestIndex < 0) return [mine, ...quests.value]
+
+  return quests.value.map((quest, index) => index === myQuestIndex ? mine : quest)
+})
 
 function setError(error: unknown) {
   errorMessage.value = error instanceof ApiError ? error.message : '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'
@@ -319,7 +336,7 @@ function questMember(quest: QuestSummary) {
 
 function difficultyLabel(value: BossDifficulty) { return ({ EASY: '쉬움', NORMAL: '보통', HARD: '어려움' } as Record<BossDifficulty, string>)[value] }
 function difficultyTone(value: BossDifficulty): 'ok' | 'accent' | 'bad' { return value === 'EASY' ? 'ok' : value === 'HARD' ? 'bad' : 'accent' }
-function statusLabel(value?: string) { return ({ IN_PROGRESS: '진행 중', DEFEATED: '격파 성공', EXPIRED: '기간 종료', FAILED: '실패' } as Record<string, string>)[value || ''] || '데이터 없음' }
+function statusLabel(value?: string) { return ({ IN_PROGRESS: '진행 중', DEFEATED: '격파 성공', CLEARED: '격파 성공', COMPLETED: '격파 성공', EXPIRED: '기간 종료', FAILED: '실패' } as Record<string, string>)[value || ''] || '데이터 없음' }
 function formatDate(value?: string) { return value ? new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value)) : '-' }
 
 onMounted(() => { void loadBossPage() })
@@ -340,6 +357,10 @@ onMounted(() => { void loadBossPage() })
 .diff-summary { background: var(--surface-alt); } .diff-summary :deep(> div) { display: flex; gap: 16px; } .diff-summary div div { flex: 1; text-align: center; } .diff-summary small { font-family: var(--mono); color: var(--ink-3); font-size: 10px; } .diff-summary strong { display: block; font-family: var(--mono); font-size: 22px; margin-top: 4px; }
 .battle-actions { display: flex; gap: 8px; } .leader-help,.creation-step { margin-top: 6px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); text-align: right; }
 .battle-grid { display: grid; grid-template-columns: 1fr 440px; gap: 20px; } .battle-left, .members { display: flex; flex-direction: column; gap: 14px; }
+.clear-banner { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 2px solid var(--accent); border-radius: 16px; background: linear-gradient(135deg,#fff5e0 0%,#ffe4c4 100%); box-shadow: var(--shadow-lg); }
+.clear-badge { width: 76px; height: 76px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 900; letter-spacing: 1px; box-shadow: inset 0 -4px 0 rgba(0,0,0,.12); flex: 0 0 76px; }
+.clear-banner h2 { margin: 0; font-size: 28px; color: var(--accent-dark); }
+.clear-banner p { margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--ink); }
 .arena { position: relative; height: 380px; border-radius: 18px; overflow: hidden; background: linear-gradient(135deg,#fff5e0 0%,#fbe5d3 50%,#f6c098 100%); border: 1.5px solid var(--border); box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center; } .grid-bg { position: absolute; inset: 0; opacity: .16; background-image: linear-gradient(var(--ink) 1px, transparent 1px), linear-gradient(90deg,var(--ink) 1px, transparent 1px); background-size: 40px 40px; }
 .hp-row { display: flex; align-items: center; gap: 14px; } .hp-row span { font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-weight: 700; letter-spacing: 1px; } .hp-row :deep(.bar-wrap) { flex: 1; } .hp-row b { font-family: var(--mono); font-size: 18px; color: var(--accent); min-width: 130px; text-align: right; }
 .damage-row { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--ink-3); } .damage-row strong { color: var(--accent); }
