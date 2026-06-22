@@ -40,6 +40,10 @@ import com.nyamnyam.coach.guild.repository.row.GuildNoticeRow;
 import com.nyamnyam.coach.guild.repository.row.GuildStatusRow;
 import com.nyamnyam.coach.guild.repository.row.GuildSummaryRow;
 import com.nyamnyam.coach.guild.repository.row.JoinRequestRow;
+import com.nyamnyam.coach.item.repository.CharacterEquipmentRepository;
+import com.nyamnyam.coach.item.repository.row.CharacterEquipmentRow;
+import com.nyamnyam.coach.ranking.repository.GuildScoreRepository;
+import com.nyamnyam.coach.ranking.service.GuildScoreService;
 import com.nyamnyam.coach.user.entity.User;
 import com.nyamnyam.coach.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +54,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -76,16 +81,25 @@ class GuildServiceTest {
     @Mock
     private BossBattleParticipantRepository bossBattleParticipantRepository;
 
+    @Mock
+    private GuildScoreRepository guildScoreRepository;
+
+    @Mock
+    private CharacterEquipmentRepository characterEquipmentRepository;
+
     private GuildService guildService;
 
     @BeforeEach
     void setUp() {
         GuildValidator guildValidator = new GuildValidator(guildRepository);
+        GuildScoreService guildScoreService = new GuildScoreService(guildScoreRepository);
         guildService = new GuildService(
                 guildRepository,
                 bossBattleParticipantRepository,
                 userRepository,
-                guildValidator
+                guildValidator,
+                guildScoreService,
+                characterEquipmentRepository
         );
     }
 
@@ -426,7 +440,7 @@ class GuildServiceTest {
     }
 
     @Test
-    @DisplayName("길드원 상세 조회는 캐릭터 정보와 임시 통계 0을 반환한다")
+    @DisplayName("길드원 상세 조회는 주간 기록률과 최근 보스전 기여 통계를 반환한다")
     void getGuildMemberDetail() {
         GuildMemberRow row = guildMemberDetailRow(100L, 1L, "OWNER");
 
@@ -434,14 +448,36 @@ class GuildServiceTest {
         when(guildRepository.findById(10L)).thenReturn(Optional.of(savedGuild()));
         when(guildRepository.findActiveMemberRole(10L, 1L)).thenReturn(Optional.of("OWNER"));
         when(guildRepository.findMemberDetail(10L, 100L, 1L)).thenReturn(Optional.of(row));
+        LocalDate today = LocalDate.now();
+        LocalDate weekStart = today.with(java.time.DayOfWeek.MONDAY);
+        LocalDate weekEnd = weekStart.plusDays(6);
+        int elapsedDays = (int) (today.toEpochDay() - weekStart.toEpochDay()) + 1;
+        int recordedDays = Math.min(4, elapsedDays);
+        int expectedRecordRate = (int) Math.round((double) recordedDays / elapsedDays * 100.0);
+        when(guildRepository.countMemberRecordedDays(10L, 1L, weekStart, weekEnd)).thenReturn(recordedDays);
+        when(guildRepository.findCurrentOrLatestBattleIdByGuildId(10L)).thenReturn(Optional.of(30L));
+        when(guildRepository.sumMemberCompletedQuestDamage(30L, 1L)).thenReturn(250);
+        when(guildRepository.countMemberCompletedQuests(30L, 1L)).thenReturn(2);
+        CharacterEquipmentRow handEquipment = new CharacterEquipmentRow();
+        handEquipment.setSlotType("HAND");
+        handEquipment.setUserItemId(40L);
+        handEquipment.setItemId(4L);
+        handEquipment.setName("지팡이");
+        when(characterEquipmentRepository.findByCharacterId(row.getCharacterId()))
+                .thenReturn(List.of(handEquipment));
 
         GuildMemberDetailResponse response = guildService.getGuildMemberDetail(10L, 100L, 1L);
 
         assertThat(response.nickname()).isEqualTo("예린");
         assertThat(response.streakDays()).isEqualTo(5);
-        assertThat(response.weeklyRecordRate()).isZero();
-        assertThat(response.bossContribution()).isZero();
-        assertThat(response.completedQuestCount()).isZero();
+        assertThat(response.weeklyRecordRate()).isEqualTo(expectedRecordRate);
+        assertThat(response.bossContribution()).isEqualTo(250);
+        assertThat(response.completedQuestCount()).isEqualTo(2);
+        assertThat(response.equippedItems()).hasSize(2);
+        assertThat(response.equippedItems().get(0).slotType()).isEqualTo("HAND");
+        assertThat(response.equippedItems().get(0).equipped()).isTrue();
+        assertThat(response.equippedItems().get(1).slotType()).isEqualTo("HEAD");
+        assertThat(response.equippedItems().get(1).equipped()).isFalse();
     }
 
     @Test

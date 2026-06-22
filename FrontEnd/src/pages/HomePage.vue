@@ -4,7 +4,7 @@
       <div>
         <div class="mono-label">{{ todayLabel }}</div>
         <div class="hello">안녕, {{ nickname }}님</div>
-        <div class="muted">{{ homeError || '오늘의 식단 기록과 영양 상태를 확인하세요.' }}</div>
+        <div class="muted">{{ homeError || (isLoading ? '홈 정보를 불러오는 중...' : '오늘의 식단 기록과 영양 상태를 확인하세요.') }}</div>
       </div>
       <AppButton @click="$emit('navigate', 'meals')">
         <AppIcon name="plus" color="#fff" />식단 기록하기
@@ -19,8 +19,18 @@
         </div>
         <div class="mascot-wrap">
           <div class="mascot-stage">
-            <NyamnyamCharacter :stage="characterStage" :size="240" :mood="characterMood" />
-            <div v-if="equippedWeapon" class="weapon-on-hand"><WeaponIcon :id="equippedWeapon" /></div>
+            <NyamnyamCharacter
+              :stage="characterStage"
+              :size="240"
+              :mood="characterMood"
+              :appearance-type="character?.appearanceType || 'DEFAULT'"
+              :hat-id="equipmentIconId(equippedHead)"
+              :hat-image-url="equipmentImageUrl(equippedHead)"
+            />
+            <div v-if="equippedHand" class="weapon-on-hand">
+              <img v-if="equipmentImageUrl(equippedHand)" :src="equipmentImageUrl(equippedHand) || ''" :alt="equippedHand.name || '손 장비'">
+              <WeaponIcon v-else :id="equipmentIconId(equippedHand) || undefined" />
+            </div>
             <div class="speech">{{ characterMessage }}</div>
           </div>
           <ProgressBar :value="characterXp" :max="requiredXp" label="XP" :sub="`${characterXp} / ${requiredXp} XP`" tone="accent" :height="10" class="xp" />
@@ -53,26 +63,39 @@
     </AppCard>
 
     <div class="banners">
-      <AppCard class="quest-card" :class="{ locked: !inGuild }">
+      <AppCard class="quest-card">
         <div class="banner-row">
           <div class="quest-emoji">{{ inGuild ? '⚔️' : '🔒' }}</div>
           <div class="grow">
             <AppPill tone="accent" size="sm">보스 퀘스트</AppPill>
-            <h3>보스 퀘스트 이어가기</h3>
-            <p>{{ inGuild ? '오늘의 퀘스트를 완수하고 경험치를 획득하세요.' : '길드에 가입하면 이용할 수 있어요.' }}</p>
+            <h3>{{ questCardTitle }}</h3>
+            <p>{{ questCardDescription }}</p>
+            <div v-if="myQuest" class="banner-meta">
+              <span>{{ questStatusLabel }}</span>
+              <strong>{{ safeNumber(myQuest.currentValue) }} / {{ safeNumber(myQuest.targetValue) }} {{ myQuest.unit || '' }}</strong>
+            </div>
           </div>
-          <AppButton v-if="inGuild" size="sm" @click="$emit('navigate', 'boss')">이어가기</AppButton>
+          <AppButton size="sm" @click="$emit('navigate', questCardTarget)">{{ questCardButton }}</AppButton>
         </div>
       </AppCard>
-      <AppCard :class="{ locked: !inGuild }">
+      <AppCard>
         <div class="banner-row">
           <div class="quest-emoji">{{ inGuild ? '🏟️' : '🔒' }}</div>
           <div class="grow">
             <AppPill tone="ok" size="sm">전투장</AppPill>
-            <h3>전투장 입장하기</h3>
-            <p>{{ inGuild ? '길드원들과 함께 보스를 처치하세요.' : '길드에 가입하면 이용할 수 있어요.' }}</p>
+            <h3>{{ bossCardTitle }}</h3>
+            <p>{{ bossCardDescription }}</p>
+            <ProgressBar
+              v-if="activeBattle"
+              :value="bossCurrentHp"
+              :max="bossMaxHp"
+              :sub="`${bossCurrentHp.toLocaleString()} / ${bossMaxHp.toLocaleString()} HP`"
+              tone="accent"
+              :height="7"
+              class="boss-progress"
+            />
           </div>
-          <AppButton v-if="inGuild" variant="secondary" size="sm" @click="$emit('navigate', 'boss')">입장하기</AppButton>
+          <AppButton variant="secondary" size="sm" @click="$emit('navigate', bossCardTarget)">{{ bossCardButton }}</AppButton>
         </div>
       </AppCard>
     </div>
@@ -93,7 +116,15 @@ import HeroStat from './parts/HeroStat.vue'
 import { analysisApi, type AnalysisDailyResponse } from '../services/analysisApi'
 import { characterApi, stageFromBackend, type CharacterResponse } from '../services/characterApi'
 import { userApi, type UserMeResponse } from '../services/userApi'
-import { guildApi } from '../services/nyamnyamApi'
+import { bossBattleApi } from '../services/api/bossBattleApi'
+import { ApiError } from '../services/api/client'
+import { characterEquipmentApi, equipmentIconId, equipmentImageUrl } from '../services/api/characterEquipmentApi'
+import { guildApi } from '../services/api/guildApi'
+import { questApi } from '../services/api/questApi'
+import type { BossBattleDetail, BossBattleHp, BossBattleSummary } from '../types/bossBattle'
+import type { CharacterEquipment } from '../types/characterEquipment'
+import type { MyGuildStatus } from '../types/guild'
+import type { QuestDetail } from '../types/quest'
 
 defineProps<{ stage: Stage, equippedWeapon: string }>()
 defineEmits<{ navigate: [page: PageId] }>()
@@ -101,8 +132,14 @@ defineEmits<{ navigate: [page: PageId] }>()
 const user = ref<UserMeResponse | null>(null)
 const character = ref<CharacterResponse | null>(null)
 const dailyAnalysis = ref<AnalysisDailyResponse | null>(null)
-const inGuild = ref(false)
+const equipments = ref<CharacterEquipment[]>([])
+const guildStatus = ref<MyGuildStatus | null>(null)
+const currentBattle = ref<BossBattleSummary | null>(null)
+const battleDetail = ref<BossBattleDetail | null>(null)
+const battleHp = ref<BossBattleHp | null>(null)
+const myQuest = ref<QuestDetail | null>(null)
 const homeError = ref('')
+const isLoading = ref(true)
 
 const today = toDateInputValue(new Date())
 const todayLabel = computed(() => formatDateLabel(today))
@@ -128,6 +165,42 @@ const calorieSubText = computed(() => {
   if (!dailyAnalysis.value) return '칼로리 데이터 없음'
   return `목표 ${Math.round(Number(calorie.value?.target || 0)).toLocaleString()} · ${Math.round(Number(calorie.value?.achievementRate || 0))}%`
 })
+const equippedHand = computed(() => equipments.value.find((item) => item.slotType === 'HAND' && item.equipped) ?? null)
+const equippedHead = computed(() => equipments.value.find((item) => item.slotType === 'HEAD' && item.equipped) ?? null)
+const guildId = computed(() => guildStatus.value?.guild?.guildId ?? guildStatus.value?.guildId ?? null)
+const inGuild = computed(() => guildId.value !== null)
+const activeBattle = computed(() => battleDetail.value ?? currentBattle.value)
+const bossCurrentHp = computed(() => Math.max(0, safeNumber(battleHp.value?.currentHp ?? activeBattle.value?.currentHp)))
+const bossMaxHp = computed(() => Math.max(1, safeNumber(battleHp.value?.maxHp ?? activeBattle.value?.maxHp, 1)))
+const questStatusLabel = computed(() => {
+  if (myQuest.value?.status === 'COMPLETED') return '보상 수령 가능'
+  if (myQuest.value?.status === 'REWARDED') return '보상 수령 완료'
+  if (myQuest.value?.status === 'EXPIRED') return '기간 종료'
+  return '진행 중'
+})
+const questCardTitle = computed(() => {
+  if (!inGuild.value) return '오늘의 퀘스트'
+  if (!activeBattle.value) return '보스 퀘스트 준비 중'
+  return myQuest.value?.title || '내 퀘스트가 아직 없어요'
+})
+const questCardDescription = computed(() => {
+  if (!inGuild.value) return '길드에 가입하면 오늘의 퀘스트를 받을 수 있어요.'
+  if (!activeBattle.value) return '진행 중인 보스전이 없어 퀘스트가 아직 생성되지 않았어요.'
+  if (!myQuest.value) return '보스전은 진행 중이지만 내 퀘스트가 아직 생성되지 않았어요.'
+  return myQuest.value.description || '오늘의 퀘스트를 완수하고 경험치를 획득하세요.'
+})
+const questCardTarget = computed<PageId>(() => inGuild.value ? 'boss' : 'guild')
+const questCardButton = computed(() => inGuild.value ? '확인하기' : '길드 보기')
+const bossCardTitle = computed(() => activeBattle.value?.bossName || (inGuild.value ? '진행 중인 보스전 없음' : '길드 보스전'))
+const bossCardDescription = computed(() => {
+  if (!inGuild.value) return '길드에 가입하면 보스전에 참여할 수 있어요.'
+  if (!activeBattle.value) return '길드장이 보스전을 시작하면 참여할 수 있어요.'
+  const difficulty = activeBattle.value.difficulty || '난이도 정보 없음'
+  const status = activeBattle.value.status === 'DEFEATED' ? '격파 성공' : activeBattle.value.status === 'IN_PROGRESS' ? '진행 중' : activeBattle.value.status
+  return `${difficulty} · ${status}`
+})
+const bossCardTarget = computed<PageId>(() => inGuild.value ? 'boss' : 'guild')
+const bossCardButton = computed(() => inGuild.value ? '보스전 보기' : '길드 보기')
 const mealByKind = computed(() => {
   const result: Partial<Record<MealKindId, NonNullable<AnalysisDailyResponse['diet']>['meals'][number]>> = {}
   for (const meal of dailyAnalysis.value?.diet?.meals || []) {
@@ -149,25 +222,73 @@ function mealCalories(kindId: MealKindId) {
 }
 
 async function loadHomeSummary() {
+  isLoading.value = true
   homeError.value = ''
-  try {
-    const [meResult, characterResult, analysisResult, guildResult] = await Promise.allSettled([
-      userApi.getMe(),
-      characterApi.getMe(),
-      analysisApi.daily(today),
-      guildApi.me()
-    ])
-    if (meResult.status === 'fulfilled') user.value = meResult.value
-    if (characterResult.status === 'fulfilled') character.value = characterResult.value
-    if (analysisResult.status === 'fulfilled') dailyAnalysis.value = analysisResult.value
-    inGuild.value = guildResult.status === 'fulfilled' && !!guildResult.value
+  const [meResult, characterResult, equipmentResult, analysisResult, guildResult] = await Promise.allSettled([
+    userApi.getMe(),
+    characterApi.getMyCharacter(),
+    characterEquipmentApi.getMyEquipments(),
+    analysisApi.daily(today),
+    guildApi.getMyGuildStatus()
+  ])
+  if (meResult.status === 'fulfilled') user.value = meResult.value
+  if (characterResult.status === 'fulfilled') character.value = characterResult.value
+  if (equipmentResult.status === 'fulfilled') equipments.value = equipmentResult.value.equipments ?? []
+  if (analysisResult.status === 'fulfilled') dailyAnalysis.value = analysisResult.value
+  if (guildResult.status === 'fulfilled') guildStatus.value = guildResult.value
 
-    const failed = [meResult, characterResult, analysisResult].filter((result) => result.status === 'rejected')
-    if (failed.length) homeError.value = '일부 홈 데이터를 불러오지 못했습니다.'
-  } catch (error) {
-    console.warn('Home summary API failed', error)
-    homeError.value = error instanceof Error ? error.message : '홈 데이터를 불러오지 못했습니다.'
+  const failed = [meResult, characterResult, equipmentResult, analysisResult].filter((result) => result.status === 'rejected')
+  if (failed.length) homeError.value = '일부 홈 데이터를 불러오지 못했습니다.'
+  if (guildResult.status === 'rejected') {
+    homeError.value = errorMessage(guildResult.reason, '길드 정보를 불러오지 못했습니다.')
+    isLoading.value = false
+    return
   }
+
+  await loadBossSummary()
+  isLoading.value = false
+}
+
+async function loadBossSummary() {
+  currentBattle.value = null
+  battleDetail.value = null
+  battleHp.value = null
+  myQuest.value = null
+  if (!guildId.value) return
+
+  try {
+    const current = await bossBattleApi.getCurrentGuildBossBattle(guildId.value)
+    currentBattle.value = current?.battle || null
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return
+    homeError.value = errorMessage(error, '보스전 정보를 불러오지 못했습니다.')
+    return
+  }
+
+  const battleId = currentBattle.value?.battleId
+  if (!battleId) return
+
+  const [detailResult, hpResult, questResult] = await Promise.allSettled([
+    bossBattleApi.getBossBattle(battleId),
+    bossBattleApi.getBossBattleHp(battleId),
+    questApi.getMyBattleQuests(battleId)
+  ])
+  if (detailResult.status === 'fulfilled') battleDetail.value = detailResult.value
+  if (hpResult.status === 'fulfilled') battleHp.value = hpResult.value
+  if (questResult.status === 'fulfilled') myQuest.value = questResult.value
+
+  if ([detailResult, hpResult].some((result) => result.status === 'rejected')) {
+    homeError.value = '일부 보스전 데이터를 불러오지 못했습니다.'
+  }
+}
+
+function safeNumber(value: unknown, defaultValue = 0) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : defaultValue
+}
+
+function errorMessage(error: unknown, defaultMessage: string) {
+  return error instanceof Error && error.message ? error.message : defaultMessage
 }
 
 function mealTypeToKind(mealType: string): MealKindId | null {
@@ -207,6 +328,7 @@ onMounted(() => {
 .speech { position: absolute; bottom: -12px; background: var(--surface); padding: 8px 18px; border: 1.5px solid var(--border); border-radius: 999px; font-size: 14px; font-weight: 700; box-shadow: var(--shadow); white-space: nowrap; }
 .weapon-on-hand { position: absolute; right: -36px; top: 26%; width: 58px; height: 195px; z-index: 2; pointer-events: none; }
 .weapon-on-hand :deep(svg) { width: 58px; height: 195px; }
+.weapon-on-hand img { width: 58px; height: 195px; object-fit: contain; }
 .xp { width: 280px; margin-top: 8px; }
 .meal-strip { margin-bottom: 20px; }
 .meal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -219,10 +341,12 @@ onMounted(() => {
 .meal-tile.done .tile-body { font-style: normal; }
 .banners { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .quest-card { background: linear-gradient(135deg, var(--accent-soft) 0%, var(--surface) 100%); }
-.locked { opacity: 0.55; filter: grayscale(0.4); pointer-events: none; }
 .banner-row { display: flex; align-items: center; gap: 14px; }
 .quest-emoji { width: 60px; height: 60px; border-radius: 14px; background: var(--surface); border: 1.5px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 30px; flex-shrink: 0; }
 .grow { flex: 1; }
 h3 { margin: 6px 0 0; font-size: 15px; }
 p { margin: 4px 0 0; font-size: 11px; color: var(--ink-2); }
+.banner-meta { margin-top: 9px; display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--ink-2); }
+.banner-meta strong { font-family: var(--mono); color: var(--ink); }
+.boss-progress { max-width: 260px; margin-top: 9px; }
 </style>

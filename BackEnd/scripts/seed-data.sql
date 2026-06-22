@@ -147,8 +147,8 @@ INSERT INTO boss_seasons (
              '2026년 6월 당분 드래곤 시즌',
              '당류 섭취를 줄이는 길드 보스 시즌',
              'SUGAR',
-             '2026-06-15',
-             '2026-06-21',
+             '2026-06-22',
+             '2026-06-28',
              TRUE
          )
     ON DUPLICATE KEY UPDATE
@@ -188,8 +188,8 @@ INSERT INTO bosses (
           800,
           100,
           'ACTIVE',
-          '2026-06-15 00:00:00',
-          '2026-06-21 23:59:59'
+          '2026-06-22 00:00:00',
+          '2026-06-28 23:59:59'
       ),
       (
           @sugar_season_id,
@@ -201,8 +201,8 @@ INSERT INTO bosses (
           1200,
           150,
           'ACTIVE',
-          '2026-06-15 00:00:00',
-          '2026-06-21 23:59:59'
+          '2026-06-22 00:00:00',
+          '2026-06-28 23:59:59'
       ),
       (
           @sugar_season_id,
@@ -214,8 +214,8 @@ INSERT INTO bosses (
           2400,
           300,
           'ACTIVE',
-          '2026-06-15 00:00:00',
-          '2026-06-21 23:59:59'
+          '2026-06-22 00:00:00',
+          '2026-06-28 23:59:59'
       )
     ON DUPLICATE KEY UPDATE
                          name = VALUES(name),
@@ -792,8 +792,8 @@ INSERT INTO boss_seasons (
              '2026년 6월 당분 드래곤 테스트 시즌',
              'Swagger 공통 조건 검증 테스트용 시즌',
              'SUGAR',
-             '2026-06-15',
-             '2026-06-21',
+             '2026-06-22',
+             '2026-06-28',
              FALSE
          )
     ON DUPLICATE KEY UPDATE
@@ -823,9 +823,9 @@ INSERT INTO bosses (
     starts_at,
     ends_at
 ) VALUES
-      (@sugar_test_season_id, '당분 드래곤_테스트', 'Swagger 공통 조건 검증 테스트용 보스입니다.', 'EASY', 500, '/images/boss/sugar-dragon.png', 800, 100, 'ACTIVE', '2026-06-15 00:00:00', '2026-06-21 23:59:59'),
-      (@sugar_test_season_id, '당분 드래곤_테스트', 'Swagger 공통 조건 검증 테스트용 보스입니다.', 'NORMAL', 1000, '/images/boss/sugar-dragon.png', 1200, 150, 'ACTIVE', '2026-06-15 00:00:00', '2026-06-21 23:59:59'),
-      (@sugar_test_season_id, '당분 드래곤_테스트', 'Swagger 공통 조건 검증 테스트용 보스입니다.', 'HARD', 1800, '/images/boss/sugar-dragon.png', 2400, 300, 'ACTIVE', '2026-06-15 00:00:00', '2026-06-21 23:59:59')
+      (@sugar_test_season_id, '당분 드래곤_테스트', 'Swagger 공통 조건 검증 테스트용 보스입니다.', 'EASY', 500, '/images/boss/sugar-dragon.png', 800, 100, 'ACTIVE', '2026-06-22 00:00:00', '2026-06-28 23:59:59'),
+      (@sugar_test_season_id, '당분 드래곤_테스트', 'Swagger 공통 조건 검증 테스트용 보스입니다.', 'NORMAL', 1000, '/images/boss/sugar-dragon.png', 1200, 150, 'ACTIVE', '2026-06-22 00:00:00', '2026-06-28 23:59:59'),
+      (@sugar_test_season_id, '당분 드래곤_테스트', 'Swagger 공통 조건 검증 테스트용 보스입니다.', 'HARD', 1800, '/images/boss/sugar-dragon.png', 2400, 300, 'ACTIVE', '2026-06-22 00:00:00', '2026-06-28 23:59:59')
     ON DUPLICATE KEY UPDATE
                          name = VALUES(name),
                          description = VALUES(description),

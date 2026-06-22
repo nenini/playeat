@@ -25,6 +25,10 @@ export interface CharacterEquipmentResponse {
 }
 
 export const characterApi = {
+  getMyCharacter() {
+    return apiRequest<CharacterResponse>('/v1/characters/me')
+  },
+
   getMe() {
     return apiRequest<CharacterResponse>('/v1/characters/me')
   },

@@ -13,6 +13,7 @@ import com.nyamnyam.coach.guild.repository.row.MyGuildRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -88,6 +89,25 @@ public interface GuildRepository {
             @Param("guildId") Long guildId,
             @Param("memberId") Long memberId,
             @Param("currentUserId") Long currentUserId
+    );
+
+    int countMemberRecordedDays(
+            @Param("guildId") Long guildId,
+            @Param("userId") Long userId,
+            @Param("weekStartDate") LocalDate weekStartDate,
+            @Param("weekEndDate") LocalDate weekEndDate
+    );
+
+    Optional<Long> findCurrentOrLatestBattleIdByGuildId(@Param("guildId") Long guildId);
+
+    int sumMemberCompletedQuestDamage(
+            @Param("battleId") Long battleId,
+            @Param("userId") Long userId
+    );
+
+    int countMemberCompletedQuests(
+            @Param("battleId") Long battleId,
+            @Param("userId") Long userId
     );
 
     Optional<String> findActiveMemberRole(

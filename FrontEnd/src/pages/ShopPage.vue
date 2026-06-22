@@ -15,8 +15,18 @@
         <AppCard :padding="32" class="preview">
           <div class="mono-label">{{ hovered && isOwned(hovered) ? `미리보기 · ${hovered.name}` : `장착 중 · ${equipLabel}` }}</div>
           <div class="preview-circle">
-            <NyamnyamCharacter :stage="stage" :size="185" :hat-id="displayHeadIcon" />
-            <div v-if="displayHandIcon" class="hand"><WeaponIcon :id="displayHandIcon" /></div>
+            <NyamnyamCharacter
+              :stage="characterStage"
+              :size="185"
+              :mood="characterMood"
+              :appearance-type="character?.appearanceType || 'DEFAULT'"
+              :hat-id="displayHeadIcon"
+              :hat-image-url="displayHeadImage"
+            />
+            <div v-if="displayHandItem" class="hand">
+              <img v-if="displayHandImage" :src="displayHandImage" :alt="displayHandItem.name || '손 장비'">
+              <WeaponIcon v-else :id="displayHandIcon || undefined" />
+            </div>
           </div>
           <p v-if="equippedItems.length"><strong>{{ equipLabel }}</strong></p>
           <p v-else class="empty">장착된 아이템이 없어요</p>
@@ -36,8 +46,8 @@
             @mouseleave="hovered = null"
           >
             <div class="item-preview" :class="{ head: item.slotType === 'HEAD' }">
-              <WeaponIcon v-if="itemIconId(item)" :id="itemIconId(item) || undefined" />
-              <img v-else-if="item.imageUrl" :src="item.imageUrl" :alt="item.name">
+              <img v-if="equipmentImageUrl(item)" :src="equipmentImageUrl(item) || ''" :alt="item.name">
+              <WeaponIcon v-else-if="equipmentIconId(item)" :id="equipmentIconId(item) || undefined" />
               <span v-else class="no-image">이미지 없음</span>
             </div>
             <div class="grow">
@@ -69,12 +79,10 @@ import AppPill from '../components/common/AppPill.vue'
 import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
 import WeaponIcon from '../components/nyamnyam/WeaponIcon.vue'
 import { ApiError } from '../services/api/client'
-import { characterEquipmentApi } from '../services/api/characterEquipmentApi'
-import { coinApi } from '../services/api/coinApi'
-import { itemApi } from '../services/api/itemApi'
+import { characterEquipmentApi, equipmentIconId, equipmentImageUrl } from '../services/api/characterEquipmentApi'
 import { shopApi } from '../services/api/shopApi'
+import { characterApi, stageFromBackend, type CharacterResponse } from '../services/characterApi'
 import type { CharacterEquipment } from '../types/characterEquipment'
-import type { UserItem } from '../types/item'
 import type { ShopItem } from '../types/shop'
 
 type Stage = 'egg' | 'chick' | 'adult'
@@ -83,8 +91,8 @@ defineProps<{ stage: Stage; equippedWeapon?: string; equippedHat?: string | null
 
 const coins = ref(0)
 const shopItems = ref<ShopItem[]>([])
-const myItems = ref<UserItem[]>([])
 const equipments = ref<CharacterEquipment[]>([])
+const character = ref<CharacterResponse | null>(null)
 const hovered = ref<ShopItem | null>(null)
 const isLoading = ref(true)
 const errorMessage = ref('')
@@ -94,16 +102,29 @@ const pendingActionId = ref<string | null>(null)
 const equippedItems = computed(() => equipments.value.filter((equipment) => equipment.equipped))
 const equipLabel = computed(() => equippedItems.value.map((equipment) => equipment.name).filter(Boolean).join(' + ') || '장착 안 함')
 const previewItem = computed(() => hovered.value && isOwned(hovered.value) ? hovered.value : null)
+const characterStage = computed(() => stageFromBackend(character.value?.stage))
+const characterMood = computed<'happy' | 'hungry' | 'sad'>(() => {
+  const mood = String(character.value?.mood || '').toLowerCase()
+  if (mood.includes('hungry')) return 'hungry'
+  if (mood.includes('sad')) return 'sad'
+  return 'happy'
+})
+const displayHandItem = computed(() => {
+  if (previewItem.value?.slotType === 'HAND') return previewItem.value
+  return equippedItems.value.find((item) => item.slotType === 'HAND') ?? null
+})
 const displayHandIcon = computed(() => {
-  if (previewItem.value?.slotType === 'HAND') return itemIconId(previewItem.value)
-  const equipment = equippedItems.value.find((item) => item.slotType === 'HAND')
-  return equipment ? equipmentIconId(equipment) : null
+  return equipmentIconId(displayHandItem.value)
+})
+const displayHandImage = computed(() => equipmentImageUrl(displayHandItem.value))
+const displayHeadItem = computed(() => {
+  if (previewItem.value?.slotType === 'HEAD') return previewItem.value
+  return equippedItems.value.find((item) => item.slotType === 'HEAD') ?? null
 })
 const displayHeadIcon = computed(() => {
-  if (previewItem.value?.slotType === 'HEAD') return itemIconId(previewItem.value)
-  const equipment = equippedItems.value.find((item) => item.slotType === 'HEAD')
-  return equipment ? equipmentIconId(equipment) : null
+  return equipmentIconId(displayHeadItem.value)
 })
+const displayHeadImage = computed(() => equipmentImageUrl(displayHeadItem.value))
 const isPending = computed(() => pendingActionId.value !== null)
 
 function setError(error: unknown) {
@@ -119,17 +140,12 @@ async function loadShop() {
   isLoading.value = true
   clearFeedback()
   try {
-    const [shop, itemList, coin, ownedItems, equipmentList] = await Promise.all([
+    const [shop, characterData] = await Promise.all([
       shopApi.getShop(),
-      shopApi.getShopItems(),
-      coinApi.getMyCoin(),
-      itemApi.getMyItems(),
-      characterEquipmentApi.getMyEquipments()
+      characterApi.getMyCharacter()
     ])
-    coins.value = coin.balance
-    shopItems.value = itemList.items ?? shop.items ?? []
-    myItems.value = ownedItems ?? []
-    equipments.value = equipmentList.equipments ?? shop.equippedItems ?? []
+    applyShopResponse(shop)
+    character.value = characterData
   } catch (error) {
     setError(error)
   } finally {
@@ -137,28 +153,14 @@ async function loadShop() {
   }
 }
 
-async function refreshAfterPurchase() {
-  const [coin, itemList, ownedItems, equipmentList] = await Promise.all([
-    coinApi.getMyCoin(),
-    shopApi.getShopItems(),
-    itemApi.getMyItems(),
-    characterEquipmentApi.getMyEquipments()
-  ])
-  coins.value = coin.balance
-  shopItems.value = itemList.items ?? []
-  myItems.value = ownedItems ?? []
-  equipments.value = equipmentList.equipments ?? []
+async function refreshShop() {
+  applyShopResponse(await shopApi.getShop())
 }
 
-async function refreshEquipment() {
-  const [ownedItems, equipmentList, itemList] = await Promise.all([
-    itemApi.getMyItems(),
-    characterEquipmentApi.getMyEquipments(),
-    shopApi.getShopItems()
-  ])
-  myItems.value = ownedItems ?? []
-  equipments.value = equipmentList.equipments ?? []
-  shopItems.value = itemList.items ?? []
+function applyShopResponse(shop: Awaited<ReturnType<typeof shopApi.getShop>>) {
+  coins.value = Number(shop.balance || 0)
+  shopItems.value = shop.items ?? []
+  equipments.value = shop.equippedItems ?? []
 }
 
 async function purchase(item: ShopItem) {
@@ -167,7 +169,7 @@ async function purchase(item: ShopItem) {
   pendingActionId.value = `purchase-${item.itemId}`
   try {
     await shopApi.purchaseItem(item.itemId)
-    await refreshAfterPurchase()
+    await refreshShop()
     successMessage.value = `${item.name} 구매를 완료했습니다.`
   } catch (error) {
     setError(error)
@@ -178,7 +180,7 @@ async function purchase(item: ShopItem) {
 
 async function equip(item: ShopItem) {
   if (pendingActionId.value || !item.owned) return
-  const userItemId = item.userItemId ?? myItems.value.find((ownedItem) => ownedItem.itemId === item.itemId)?.userItemId
+  const userItemId = item.userItemId
   if (!userItemId) {
     errorMessage.value = '장착할 보유 아이템 정보를 확인할 수 없습니다.'
     return
@@ -188,7 +190,7 @@ async function equip(item: ShopItem) {
   pendingActionId.value = `equip-${item.itemId}`
   try {
     await characterEquipmentApi.equipItem({ userItemId })
-    await refreshEquipment()
+    await refreshShop()
     successMessage.value = `${item.name}을(를) 장착했습니다.`
   } catch (error) {
     setError(error)
@@ -203,7 +205,7 @@ async function unequip(slotType: string | null) {
   pendingActionId.value = `unequip-${slotType}`
   try {
     await characterEquipmentApi.unequipItem(slotType)
-    await refreshEquipment()
+    await refreshShop()
     successMessage.value = '아이템 장착을 해제했습니다.'
   } catch (error) {
     setError(error)
@@ -237,23 +239,6 @@ function itemTypeLabel(itemType: string) {
   return itemType || '유형 없음'
 }
 
-function itemIconId(item: Pick<ShopItem, 'name' | 'imageUrl'>) {
-  return iconId(item.name, item.imageUrl)
-}
-
-function equipmentIconId(item: Pick<CharacterEquipment, 'name' | 'imageUrl'>) {
-  return iconId(item.name, item.imageUrl)
-}
-
-function iconId(name: string | null, imageUrl: string | null) {
-  const source = `${name ?? ''} ${imageUrl ?? ''}`.toLowerCase()
-  if (source.includes('crown') || source.includes('왕관')) return 'crown'
-  if (source.includes('sword') || source.includes('칼')) return 'sword'
-  if (source.includes('staff') || source.includes('지팡이')) return 'staff'
-  if (source.includes('wood-stick') || source.includes('나무막대기')) return 'stick'
-  return null
-}
-
 onMounted(() => { void loadShop() })
 </script>
 
@@ -267,7 +252,7 @@ onMounted(() => { void loadShop() })
 .shop-left, .shop-main { display: flex; flex-direction: column; gap: 12px; } .shop-main { gap: 16px; }
 .coin-card { background: linear-gradient(135deg,#fff8dc 0%,#ffe57a 100%); border-color: var(--yolk-deep); } .coin-row { display: flex; justify-content: space-between; align-items: center; } .coin-row span { font-family: var(--mono); font-size: 11px; color: #7a5c00; letter-spacing: 1px; } .coin-row strong { font-family: var(--mono); font-size: 22px; color: #6b4c00; }
 .preview { background: linear-gradient(180deg,#fffaf0 0%,#fff 100%); text-align: center; } .preview-circle { position: relative; width: 210px; height: 210px; border-radius: 50%; background: radial-gradient(circle at 50% 40%,#fff5e0 0%,#fbe5d3 100%); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 20px auto 0; box-shadow: inset 0 -8px 20px rgba(232,138,77,.08); }
-.hand { position: absolute; right: -28px; top: 28%; z-index: 2; } .hand :deep(svg) { width: 52px; height: 175px; } .preview p { margin: 16px 0 0; font-size: 12px; color: var(--ink-2); line-height: 1.5; } .preview .empty { color: var(--ink-3); }
+.hand { position: absolute; right: -28px; top: 28%; z-index: 2; } .hand :deep(svg), .hand img { width: 52px; height: 175px; object-fit: contain; } .preview p { margin: 16px 0 0; font-size: 12px; color: var(--ink-2); line-height: 1.5; } .preview .empty { color: var(--ink-3); }
 .shop-title { font-size: 22px; font-weight: 900; letter-spacing: -0.4px; margin-bottom: 4px; } .shop-main > div > p { margin: 0; color: var(--ink-2); font-size: 13px; }
 .item-list { display: flex; flex-direction: column; gap: 12px; }
 .item-row { display: flex; align-items: center; gap: 20px; padding: 18px 22px; border-radius: 16px; border: 1.5px solid var(--border); background: var(--surface); box-shadow: var(--shadow); cursor: default; transition: all .15s; } .item-row.hover { background: var(--surface-alt); border-color: var(--border-strong); box-shadow: var(--shadow-lg); transform: translateY(-2px); } .item-row.equipped { background: var(--accent-soft); border-color: var(--accent); }
