@@ -81,7 +81,7 @@
       <AppCard>
         <div class="banner-row">
           <div class="boss-card-icon" aria-hidden="true">
-            <img v-if="activeBattle && bossImageUrl && !bossImageFailed" :src="bossImageUrl" :alt="`${bossCardTitle} 이미지`" @error="bossImageFailed = true">
+            <BossMonster v-if="activeBattle" :size="58" :hp="bossHpPercent" />
             <span v-else>{{ inGuild ? '👾' : '🔒' }}</span>
           </div>
           <div class="grow">
@@ -112,6 +112,7 @@ import AppCard from '../components/common/AppCard.vue'
 import AppIcon from '../components/common/AppIcon.vue'
 import AppPill from '../components/common/AppPill.vue'
 import ProgressBar from '../components/common/ProgressBar.vue'
+import BossMonster from '../components/nyamnyam/BossMonster.vue'
 import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
 import WeaponIcon from '../components/nyamnyam/WeaponIcon.vue'
 import { mealKinds, type MealKindId, type PageId, type Stage } from '../services/mock/nyamnyamMock'
@@ -128,7 +129,6 @@ import type { BossBattleDetail, BossBattleHp, BossBattleSummary } from '../types
 import type { CharacterEquipment } from '../types/characterEquipment'
 import type { MyGuildStatus } from '../types/guild'
 import type { QuestDetail } from '../types/quest'
-import { resolveApiAssetUrl } from '../utils/imageUrl'
 
 defineProps<{ stage: Stage, equippedWeapon: string }>()
 defineEmits<{ navigate: [page: PageId] }>()
@@ -145,7 +145,6 @@ const myQuest = ref<QuestDetail | null>(null)
 const homeError = ref('')
 const isLoading = ref(true)
 const handImageFailed = ref(false)
-const bossImageFailed = ref(false)
 
 const today = toDateInputValue(new Date())
 const todayLabel = computed(() => formatDateLabel(today))
@@ -177,15 +176,9 @@ const equippedHandImage = computed(() => equipmentImageUrl(equippedHand.value))
 const guildId = computed(() => guildStatus.value?.guild?.guildId ?? guildStatus.value?.guildId ?? null)
 const inGuild = computed(() => guildId.value !== null)
 const activeBattle = computed(() => battleDetail.value ?? currentBattle.value)
-const bossImageUrl = computed(() => {
-  const imagePath = battleDetail.value?.bossImageUrl
-    ?? currentBattle.value?.bossImageUrl
-    ?? activeBattle.value?.imageUrl
-    ?? activeBattle.value?.boss?.imageUrl
-  return resolveApiAssetUrl(imagePath)
-})
 const bossCurrentHp = computed(() => Math.max(0, safeNumber(battleHp.value?.currentHp ?? activeBattle.value?.currentHp)))
 const bossMaxHp = computed(() => Math.max(1, safeNumber(battleHp.value?.maxHp ?? activeBattle.value?.maxHp, 1)))
+const bossHpPercent = computed(() => bossCurrentHp.value / bossMaxHp.value * 100)
 const questStatusLabel = computed(() => {
   if (myQuest.value?.status === 'COMPLETED') return '보상 수령 가능'
   if (myQuest.value?.status === 'REWARDED') return '보상 수령 완료'
@@ -226,10 +219,6 @@ const mealByKind = computed(() => {
 
 watch(equippedHandImage, () => {
   handImageFailed.value = false
-})
-
-watch(bossImageUrl, () => {
-  bossImageFailed.value = false
 })
 
 function mealSummary(kindId: MealKindId) {
@@ -366,7 +355,7 @@ onMounted(() => {
 .banner-row { display: flex; align-items: center; gap: 14px; }
 .quest-scroll-icon, .boss-card-icon { width: 60px; height: 60px; border-radius: 14px; background: var(--surface); border: 1.5px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 30px; flex-shrink: 0; overflow: hidden; }
 .quest-scroll-icon { background: linear-gradient(145deg, #fffaf0, #fff1d8); }
-.boss-card-icon img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+.boss-card-icon :deep(.boss-monster) { flex: 0 0 auto; }
 .grow { flex: 1; }
 h3 { margin: 6px 0 0; font-size: 15px; }
 p { margin: 4px 0 0; font-size: 11px; color: var(--ink-2); }
