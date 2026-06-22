@@ -64,6 +64,31 @@ class AiJsonResponseParserTest {
     }
 
     @Test
+    void parseCharacterMood() {
+        CharacterMoodContent content = parser.parseCharacterMood("""
+                {
+                  "mood": "MUSCLE",
+                  "reason": "균형 잡힌 하루"
+                }
+                """);
+
+        assertThat(content.mood()).isEqualTo("MUSCLE");
+        assertThat(content.reason()).isEqualTo("균형 잡힌 하루");
+    }
+
+    @Test
+    void parseCharacterMoodDefaultsBlankMood() {
+        CharacterMoodContent content = parser.parseCharacterMood("""
+                {
+                  "mood": "",
+                  "reason": "상태값 누락"
+                }
+                """);
+
+        assertThat(content.mood()).isEqualTo("NORMAL");
+    }
+
+    @Test
     void parseInvalidJsonThrowsBusinessException() {
         assertThatThrownBy(() -> parser.parseCoachFeedback("not-json"))
                 .isInstanceOf(BusinessException.class)

@@ -115,10 +115,10 @@ import ProgressBar from '../components/common/ProgressBar.vue'
 import BossMonster from '../components/nyamnyam/BossMonster.vue'
 import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
 import WeaponIcon from '../components/nyamnyam/WeaponIcon.vue'
-import { mealKinds, type MealKindId, type PageId, type Stage } from '../services/mock/nyamnyamMock'
+import { mealKinds, type MealKindId, type NyamnyamMood, type PageId, type Stage } from '../services/mock/nyamnyamMock'
 import HeroStat from './parts/HeroStat.vue'
 import { analysisApi, type AnalysisDailyResponse } from '../services/analysisApi'
-import { characterApi, stageFromBackend, type CharacterResponse } from '../services/characterApi'
+import { characterApi, moodFromBackend, stageFromBackend, type CharacterResponse } from '../services/characterApi'
 import { userApi, type UserMeResponse } from '../services/userApi'
 import { bossBattleApi } from '../services/api/bossBattleApi'
 import { ApiError } from '../services/api/client'
@@ -151,13 +151,13 @@ const todayLabel = computed(() => formatDateLabel(today))
 const nickname = computed(() => user.value?.nickname || '사용자')
 const scoreText = computed(() => dailyAnalysis.value ? String(dailyAnalysis.value.healthScore) : '-')
 const characterStage = computed<Stage>(() => stageFromBackend(character.value?.stage))
-const characterMood = computed<'happy' | 'hungry' | 'sad'>(() => {
-  const mood = String(character.value?.mood || '').toLowerCase()
-  if (mood.includes('hungry')) return 'hungry'
-  if (mood.includes('sad')) return 'sad'
-  return 'happy'
+const characterMood = computed<NyamnyamMood>(() => moodFromBackend(character.value?.mood))
+const characterMessage = computed(() => {
+  if (!character.value) return '캐릭터 정보를 불러오지 못했습니다.'
+  const message = character.value.moodMessage?.trim()
+  if (message) return `"${message}"`
+  return `"${fallbackMoodMessage(characterMood.value)}"`
 })
-const characterMessage = computed(() => character.value ? `"${character.value.name}와 함께 기록해요."` : '캐릭터 정보를 불러오지 못했습니다.')
 const levelText = computed(() => character.value ? `LV.${character.value.level}` : '-')
 const characterSubText = computed(() => character.value ? `${character.value.name} · ${character.value.stage}` : '캐릭터 데이터 없음')
 const characterXp = computed(() => Number(character.value?.xp || 0))
@@ -310,6 +310,13 @@ function mealTypeToKind(mealType: string): MealKindId | null {
   return null
 }
 
+function fallbackMoodMessage(mood: NyamnyamMood) {
+  if (mood === 'hungry') return '배고파요. 밥 주세요ㅜㅜ'
+  if (mood === 'chubby') return '오늘은 조금 가볍게 먹어볼까요?'
+  if (mood === 'muscle') return '단백질 힘이 차올라요!'
+  return '오늘도 냠냠 기록해요.'
+}
+
 function toDateInputValue(date: Date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -336,7 +343,7 @@ onMounted(() => {
 .hero-side.right { align-items: flex-end; }
 .mascot-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .mascot-stage { width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #fff5e0 0%, #fbe5d3 100%); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; position: relative; box-shadow: inset 0 -8px 24px rgba(232,138,77,0.08); }
-.speech { position: absolute; bottom: -12px; background: var(--surface); padding: 8px 18px; border: 1.5px solid var(--border); border-radius: 999px; font-size: 14px; font-weight: 700; box-shadow: var(--shadow); white-space: nowrap; }
+.speech { position: absolute; bottom: -18px; max-width: 280px; background: var(--surface); padding: 8px 16px; border: 1.5px solid var(--border); border-radius: 18px; font-size: 14px; font-weight: 700; line-height: 1.35; text-align: center; box-shadow: var(--shadow); }
 .weapon-on-hand { position: absolute; right: -36px; top: 26%; width: 58px; height: 195px; z-index: 2; pointer-events: none; }
 .weapon-on-hand :deep(svg) { width: 58px; height: 195px; }
 .weapon-on-hand img { width: 58px; height: 195px; object-fit: contain; }

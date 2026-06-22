@@ -22,6 +22,7 @@ public class CharacterEntity {
     private Integer xp;
     private String stage;
     private String mood;
+    private String moodMessage;
     private String appearanceType;
     private Integer streakDays;
     private Integer bestStreakDays;

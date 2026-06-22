@@ -13,6 +13,7 @@
         <result property="xp" column="xp"/>
         <result property="stage" column="stage"/>
         <result property="mood" column="mood"/>
+        <result property="moodMessage" column="mood_message"/>
         <result property="appearanceType" column="appearance_type"/>
         <result property="streakDays" column="streak_days"/>
         <result property="bestStreakDays" column="best_streak_days"/>
@@ -28,6 +29,7 @@
         xp,
         stage,
         mood,
+        mood_message,
         appearance_type,
         streak_days,
         best_streak_days,
@@ -62,6 +64,7 @@
             xp,
             stage,
             mood,
+            mood_message,
             appearance_type,
             streak_days,
             best_streak_days
@@ -73,6 +76,7 @@
             COALESCE(#{xp}, 0),
             COALESCE(#{stage}, 'EGG'),
             COALESCE(#{mood}, 'NORMAL'),
+            COALESCE(#{moodMessage}, '냠냠이가 식단 기록과 함께 자랄 준비를 마쳤어요.'),
             COALESCE(#{appearanceType}, 'NORMAL'),
             COALESCE(#{streakDays}, 0),
             COALESCE(#{bestStreakDays}, 0)
@@ -93,12 +97,20 @@
             level = #{level},
             xp = #{xp},
             stage = #{stage},
-            mood = #{mood},
             appearance_type = #{appearanceType},
             streak_days = #{streakDays},
             best_streak_days = #{bestStreakDays},
             updated_at = CURRENT_TIMESTAMP
         WHERE character_id = #{characterId}
+    </update>
+
+    <update id="updateMood">
+        UPDATE characters
+        SET
+            mood = #{mood},
+            mood_message = #{moodMessage},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
     </update>
 
     <select id="existsByUserId" resultType="boolean">

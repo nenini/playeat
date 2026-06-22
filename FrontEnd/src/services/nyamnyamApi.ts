@@ -249,8 +249,10 @@ export function logsFromDietDay(day: DietDayResponse): MealLog[] {
 export function stageFromBackend(stage?: string): Stage {
   const value = String(stage || '').toLowerCase()
   if (value.includes('adult')) return 'adult'
+  if (value.includes('child')) return 'child'
+  if (value.includes('baby')) return 'baby'
   if (value.includes('egg')) return 'egg'
-  return 'chick'
+  return 'baby'
 }
 
 function mapOnboardingPayload(payload: Record<string, string | string[]>) {

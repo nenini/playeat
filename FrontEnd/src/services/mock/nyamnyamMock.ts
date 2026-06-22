@@ -1,6 +1,7 @@
 export type PageId = 'home' | 'meals' | 'analyze' | 'boss' | 'guild' | 'shop' | 'mypage'
 export type MealKindId = 'breakfast' | 'lunch' | 'snack' | 'dinner'
-export type Stage = 'egg' | 'chick' | 'adult'
+export type Stage = 'egg' | 'baby' | 'child' | 'adult'
+export type NyamnyamMood = 'normal' | 'hungry' | 'chubby' | 'muscle'
 
 export interface Food {
   id: string

@@ -1,6 +1,7 @@
 package com.nyamnyam.coach.ai.service;
 
 import com.nyamnyam.coach.ai.service.prompt.AiQuestPrompt;
+import com.nyamnyam.coach.ai.service.prompt.CharacterMoodPrompt;
 import com.nyamnyam.coach.ai.service.prompt.CoachFeedbackPrompt;
 import com.nyamnyam.coach.ai.service.prompt.DailyReportPrompt;
 import com.nyamnyam.coach.ai.service.prompt.WeeklyReportPrompt;
@@ -77,6 +78,28 @@ public class PlaceholderAiTextGenerator implements AiTextGenerator {
                   "customDescription": "오늘의 식단 기록을 완료해서 보스에게 피해를 주세요."
                 }
                 """.formatted(selectedTemplateId == null ? "null" : selectedTemplateId.toString());
+    }
+
+    @Override
+    public String selectCharacterMood(CharacterMoodPrompt prompt) {
+        log.info("AI generator selected provider=placeholder feature=character-mood model=placeholder");
+        int healthScore = prompt.healthScore() == null ? 0 : prompt.healthScore();
+        String mood;
+        if (healthScore >= 80) {
+            mood = "MUSCLE";
+        } else if (healthScore >= 60) {
+            mood = "NORMAL";
+        } else if (healthScore >= 40) {
+            mood = "HUNGRY";
+        } else {
+            mood = "CHUBBY";
+        }
+        return """
+                {
+                  "mood": "%s",
+                  "reason": "일간 리포트 건강 점수를 기준으로 선택했습니다."
+                }
+                """.formatted(mood);
     }
 
     @Override

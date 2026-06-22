@@ -1,5 +1,5 @@
 import { apiRequest } from './api'
-import type { Stage } from './mock/nyamnyamMock'
+import type { NyamnyamMood, Stage } from './mock/nyamnyamMock'
 
 export interface CharacterResponse {
   characterId: number
@@ -9,6 +9,7 @@ export interface CharacterResponse {
   requiredXp: number
   stage: string
   mood: string
+  moodMessage?: string
   streakDays: number
   bestStreakDays?: number
   appearanceType?: string
@@ -52,6 +53,16 @@ export const characterApi = {
 export function stageFromBackend(stage?: string): Stage {
   const value = String(stage || '').toLowerCase()
   if (value.includes('adult')) return 'adult'
+  if (value.includes('child')) return 'child'
+  if (value.includes('baby')) return 'baby'
   if (value.includes('egg')) return 'egg'
-  return 'chick'
+  return 'baby'
+}
+
+export function moodFromBackend(mood?: string): NyamnyamMood {
+  const value = String(mood || '').toLowerCase()
+  if (value.includes('muscle')) return 'muscle'
+  if (value.includes('chubby')) return 'chubby'
+  if (value.includes('hungry')) return 'hungry'
+  return 'normal'
 }

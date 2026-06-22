@@ -43,6 +43,7 @@ public class CharacterGrowthService {
                 .xp(0)
                 .stage(CharacterStage.EGG.name())
                 .mood(CharacterMood.NORMAL.name())
+                .moodMessage("냠냠이가 식단 기록과 함께 자랄 준비를 마쳤어요.")
                 .appearanceType(CharacterAppearanceType.NORMAL.name())
                 .streakDays(0)
                 .bestStreakDays(0)
@@ -86,7 +87,6 @@ public class CharacterGrowthService {
                 level,
                 xp,
                 stageFor(level),
-                CharacterMood.NORMAL.name(),
                 character.getAppearanceType(),
                 character.getStreakDays(),
                 Math.max(character.getBestStreakDays(), character.getStreakDays())

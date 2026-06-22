@@ -15,6 +15,7 @@ public record CharacterResponse(
         Double xpProgressRate,
         String stage,
         String mood,
+        String moodMessage,
         String appearanceType,
         Integer streakDays,
         Integer bestStreakDays,

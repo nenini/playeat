@@ -15,6 +15,7 @@ import com.nyamnyam.coach.ai.service.prompt.DailyReportPrompt;
 import com.nyamnyam.coach.ai.service.prompt.WeeklyReportPrompt;
 import com.nyamnyam.coach.character.entity.XpSourceType;
 import com.nyamnyam.coach.character.service.CharacterGrowthService;
+import com.nyamnyam.coach.character.service.CharacterMoodService;
 import com.nyamnyam.coach.diet.dto.response.DietDayResponse;
 import com.nyamnyam.coach.diet.dto.response.DietItemResponse;
 import com.nyamnyam.coach.diet.dto.response.DietMealResponse;
@@ -23,6 +24,7 @@ import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AiErrorCode;
 import com.nyamnyam.coach.nutrition.dto.response.DailyNutritionAnalysisResponse;
 import com.nyamnyam.coach.nutrition.service.NutritionService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class AiReportService {
 
@@ -46,6 +49,7 @@ public class AiReportService {
     private final WeeklyReportContextService weeklyReportContextService;
     private final HealthGuideRetrievalService healthGuideRetrievalService;
     private final CharacterGrowthService characterGrowthService;
+    private final CharacterMoodService characterMoodService;
 
     public AiReportService(
             AiReportRepository aiReportRepository,
@@ -56,7 +60,8 @@ public class AiReportService {
             AiJsonResponseParser aiJsonResponseParser,
             WeeklyReportContextService weeklyReportContextService,
             HealthGuideRetrievalService healthGuideRetrievalService,
-            CharacterGrowthService characterGrowthService
+            CharacterGrowthService characterGrowthService,
+            CharacterMoodService characterMoodService
     ) {
         this.aiReportRepository = aiReportRepository;
         this.aiTextGenerator = aiTextGenerator;
@@ -67,6 +72,7 @@ public class AiReportService {
         this.weeklyReportContextService = weeklyReportContextService;
         this.healthGuideRetrievalService = healthGuideRetrievalService;
         this.characterGrowthService = characterGrowthService;
+        this.characterMoodService = characterMoodService;
     }
 
     @Transactional
@@ -94,16 +100,33 @@ public class AiReportService {
         report.setWarningsJson(toJson(emptyIfNull(content.warnings())));
         report.setNextAction(nullToDefault(content.nextAction(), "다음 끼니 선택을 점검해보세요."));
         aiReportRepository.insert(report);
+        updateCharacterMoodFromDailyReport(userId, date, report);
         if (healthScore > 0) {
             characterGrowthService.addXp(
                     userId,
                     XpSourceType.ANALYSIS_DAILY_REPORT,
                     report.getReportId(),
                     healthScore,
-                    "%s 일별 헬스스코어 리포트".formatted(date)
+                    "%s 일간 건강 점수 리포트".formatted(date)
             );
         }
         return toResponse(report);
+    }
+
+    private void updateCharacterMoodFromDailyReport(Long userId, LocalDate date, AiReport report) {
+        try {
+            characterMoodService.updateMoodFromDailyReport(
+                    userId,
+                    date,
+                    report.getHealthScore(),
+                    report.getSummary(),
+                    fromJson(report.getStrengthsJson()),
+                    fromJson(report.getWarningsJson()),
+                    report.getNextAction()
+            );
+        } catch (Exception exception) {
+            log.warn("Failed to update character mood after daily report. userId={} date={}", userId, date, exception);
+        }
     }
 
     @Transactional(readOnly = true)
