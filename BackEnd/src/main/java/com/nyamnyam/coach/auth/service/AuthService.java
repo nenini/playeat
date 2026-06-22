@@ -55,7 +55,7 @@ public class AuthService {
             throw new BusinessException(AuthErrorCode.EMAIL_ALREADY_EXISTS);
         }
         if (existingUser != null) {
-            return reactivateUser(existingUser, request);
+            userRepository.releaseInactiveEmail(existingUser.getUserId());
         }
 
         User user = User.builder()
@@ -76,27 +76,6 @@ public class AuthService {
                 savedUser.getNickname(),
                 savedUser.getOnboardingCompleted(),
                 savedUser.getCreatedAt()
-        );
-    }
-
-    private SignupResponse reactivateUser(User user, SignupRequest request) {
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setNickname(request.nickname());
-        user.setSelectedCoachId(null);
-        user.setStatus(ACTIVE_STATUS);
-        user.setOnboardingCompleted(false);
-        user.setDeactivatedAt(null);
-
-        userRepository.reactivate(user);
-        User reactivatedUser = userRepository.findById(user.getUserId()).orElse(user);
-        characterGrowthService.createDefaultCharacterIfMissing(reactivatedUser.getUserId(), reactivatedUser.getNickname());
-
-        return new SignupResponse(
-                reactivatedUser.getUserId(),
-                reactivatedUser.getEmail(),
-                reactivatedUser.getNickname(),
-                reactivatedUser.getOnboardingCompleted(),
-                reactivatedUser.getCreatedAt()
         );
     }
 

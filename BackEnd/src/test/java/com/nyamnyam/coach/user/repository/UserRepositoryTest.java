@@ -113,7 +113,7 @@ class UserRepositoryTest {
     }
 
     @Test
-    void reactivateInactiveUser() {
+    void releaseInactiveEmail() {
         User inactiveUser = User.builder()
                 .email("reactivate@example.com")
                 .passwordHash("old-password")
@@ -124,20 +124,13 @@ class UserRepositoryTest {
                 .build();
         userRepository.save(inactiveUser);
 
-        inactiveUser.setPasswordHash("new-password");
-        inactiveUser.setNickname("new-nickname");
-        inactiveUser.setSelectedCoachId(null);
-        inactiveUser.setOnboardingCompleted(false);
-        inactiveUser.setDeactivatedAt(null);
-        userRepository.reactivate(inactiveUser);
+        int updatedCount = userRepository.releaseInactiveEmail(inactiveUser.getUserId());
 
-        User reactivatedUser = userRepository.findByEmail("reactivate@example.com").orElseThrow();
-        assertThat(reactivatedUser.getUserId()).isEqualTo(inactiveUser.getUserId());
-        assertThat(reactivatedUser.getPasswordHash()).isEqualTo("new-password");
-        assertThat(reactivatedUser.getNickname()).isEqualTo("new-nickname");
-        assertThat(reactivatedUser.getStatus()).isEqualTo("ACTIVE");
-        assertThat(reactivatedUser.getOnboardingCompleted()).isFalse();
-        assertThat(reactivatedUser.getDeactivatedAt()).isNull();
+        User releasedUser = userRepository.findById(inactiveUser.getUserId()).orElseThrow();
+        assertThat(updatedCount).isEqualTo(1);
+        assertThat(userRepository.findByEmail("reactivate@example.com")).isEmpty();
+        assertThat(releasedUser.getEmail()).startsWith("deleted-" + inactiveUser.getUserId() + "-");
+        assertThat(releasedUser.getStatus()).isEqualTo("INACTIVE");
     }
 
     @Test
@@ -151,6 +144,8 @@ class UserRepositoryTest {
         assertThat(updatedCount).isEqualTo(1);
         assertThat(deactivatedUser.getStatus()).isEqualTo("INACTIVE");
         assertThat(deactivatedUser.getDeactivatedAt()).isNotNull();
+        assertThat(userRepository.findByEmail("deactivate@example.com")).isEmpty();
+        assertThat(deactivatedUser.getEmail()).startsWith("deleted-" + user.getUserId() + "-");
     }
 
     private User user(String email, String nickname) {

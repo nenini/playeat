@@ -91,17 +91,13 @@
         WHERE email = #{email}
     </select>
 
-    <update id="reactivate" parameterType="com.nyamnyam.coach.user.entity.User">
+    <update id="releaseInactiveEmail">
         UPDATE users
         SET
-            password_hash = #{passwordHash},
-            nickname = #{nickname},
-            selected_coach_id = #{selectedCoachId},
-            status = 'ACTIVE',
-            onboarding_completed = COALESCE(#{onboardingCompleted}, FALSE),
-            updated_at = CURRENT_TIMESTAMP,
-            deactivated_at = NULL
+            email = CONCAT('deleted-', user_id, '-', REPLACE(UUID(), '-', ''), '@invalid.local'),
+            updated_at = CURRENT_TIMESTAMP
         WHERE user_id = #{userId}
+          AND status = 'INACTIVE'
     </update>
 
     <update id="updateProfile">
@@ -148,6 +144,7 @@
     <update id="deactivate">
         UPDATE users
         SET
+            email = CONCAT('deleted-', user_id, '-', REPLACE(UUID(), '-', ''), '@invalid.local'),
             status = 'INACTIVE',
             deactivated_at = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
