@@ -299,7 +299,7 @@ class GuildServiceTest {
         row.setCharacterName("냠냠이");
         row.setCharacterLevel(7);
         row.setCharacterStage("BABY");
-        row.setCharacterMood("HAPPY");
+        row.setCharacterMood("NORMAL");
         row.setCharacterAppearanceType("NORMAL");
         row.setRole("OWNER");
         row.setJoinedAt(LocalDateTime.of(2026, 6, 9, 10, 30));
@@ -975,7 +975,7 @@ class GuildServiceTest {
         row.setCharacterName("냠냠이");
         row.setCharacterLevel(7);
         row.setCharacterStage("BABY");
-        row.setCharacterMood("HAPPY");
+        row.setCharacterMood("NORMAL");
         row.setCharacterAppearanceType("NORMAL");
         row.setStreakDays(5);
         return row;

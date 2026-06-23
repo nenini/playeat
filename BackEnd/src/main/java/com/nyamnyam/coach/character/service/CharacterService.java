@@ -99,6 +99,7 @@ public class CharacterService {
                 xpProgressRate(character.getXp(), requiredXp),
                 character.getStage(),
                 character.getMood(),
+                character.getMoodMessage(),
                 character.getAppearanceType(),
                 character.getStreakDays(),
                 character.getBestStreakDays(),

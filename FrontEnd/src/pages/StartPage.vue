@@ -24,7 +24,7 @@
         </div>
         <div class="hero-pet">
           <div class="pet-orbit">
-            <NyamnyamCharacter stage="chick" :size="190" />
+            <NyamnyamCharacter stage="baby" :size="190" />
           </div>
           <div class="pet-level"><small>YOUR PARTNER</small><strong>LV.1 냠냠이</strong><span>첫 식단을 기록하고 함께 성장해요</span></div>
         </div>

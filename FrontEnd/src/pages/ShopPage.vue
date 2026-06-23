@@ -81,11 +81,10 @@ import WeaponIcon from '../components/nyamnyam/WeaponIcon.vue'
 import { ApiError } from '../services/api/client'
 import { characterEquipmentApi, equipmentIconId, equipmentImageUrl } from '../services/api/characterEquipmentApi'
 import { shopApi } from '../services/api/shopApi'
-import { characterApi, stageFromBackend, type CharacterResponse } from '../services/characterApi'
+import { characterApi, moodFromBackend, stageFromBackend, type CharacterResponse } from '../services/characterApi'
+import type { NyamnyamMood, Stage } from '../services/mock/nyamnyamMock'
 import type { CharacterEquipment } from '../types/characterEquipment'
 import type { ShopItem } from '../types/shop'
-
-type Stage = 'egg' | 'chick' | 'adult'
 
 defineProps<{ stage: Stage; equippedWeapon?: string; equippedHat?: string | null }>()
 
@@ -105,12 +104,7 @@ const equippedItems = computed(() => equipments.value.filter((equipment) => equi
 const equipLabel = computed(() => equippedItems.value.map((equipment) => equipment.name).filter(Boolean).join(' + ') || '장착 안 함')
 const previewItem = computed(() => hovered.value && isOwned(hovered.value) ? hovered.value : null)
 const characterStage = computed(() => stageFromBackend(character.value?.stage))
-const characterMood = computed<'happy' | 'hungry' | 'sad'>(() => {
-  const mood = String(character.value?.mood || '').toLowerCase()
-  if (mood.includes('hungry')) return 'hungry'
-  if (mood.includes('sad')) return 'sad'
-  return 'happy'
-})
+const characterMood = computed<NyamnyamMood>(() => moodFromBackend(character.value?.mood))
 const displayHandItem = computed(() => {
   if (previewItem.value?.slotType === 'HAND') return previewItem.value
   return equippedItems.value.find((item) => item.slotType === 'HAND') ?? null

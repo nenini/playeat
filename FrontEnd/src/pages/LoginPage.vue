@@ -3,7 +3,7 @@
     <button class="auth-brand" type="button" @click="$emit('back')">
       <span>냠</span><strong>냠냠코치</strong>
     </button>
-    <div class="auth-companion"><div class="companion-ring"><NyamnyamCharacter stage="chick" :size="150" /></div><b>모험가님, 다시 만났네요!</b><span>오늘의 퀘스트가 기다리고 있어요.</span></div>
+    <div class="auth-companion"><div class="companion-ring"><NyamnyamCharacter stage="baby" :size="150" /></div><b>모험가님, 다시 만났네요!</b><span>오늘의 퀘스트가 기다리고 있어요.</span></div>
     <form class="auth-card" @submit.prevent="submit">
       <div class="auth-head">
         <p>RETURN TO ADVENTURE</p>

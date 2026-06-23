@@ -184,7 +184,8 @@ import { equipmentIconId, equipmentImageUrl } from '../services/api/characterEqu
 import { guildApi } from '../services/api/guildApi'
 import { guildChatApi } from '../services/api/guildChatApi'
 import { rankingApi } from '../services/api/rankingApi'
-import { stageFromBackend } from '../services/characterApi'
+import { moodFromBackend, stageFromBackend } from '../services/characterApi'
+import type { NyamnyamMood } from '../services/mock/nyamnyamMock'
 import { resolveImageUrl } from '../utils/imageUrl'
 import type { GuildDailyStat, GuildDashboard, GuildDetail, GuildJoinRequest, GuildMember, GuildMemberDetail, GuildNotice, GuildSummary, GuildWeeklyReport } from '../types/guild'
 import type { GuildChatMessage } from '../types/guildChat'
@@ -235,12 +236,7 @@ const selectedEquipments = computed(() => selectedMember.value?.equippedItems ??
 const selectedHeadEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HEAD' && item.equipped && item.itemId !== null) ?? null)
 const selectedHandEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HAND' && item.equipped && item.itemId !== null) ?? null)
 const selectedHandImage = computed(() => equipmentImageUrl(selectedHandEquipment.value))
-const selectedMemberMood = computed<'happy' | 'hungry' | 'sad'>(() => {
-  const mood = String(selectedMember.value?.characterMood || '').toLowerCase()
-  if (mood.includes('hungry')) return 'hungry'
-  if (mood.includes('sad')) return 'sad'
-  return 'happy'
-})
+const selectedMemberMood = computed<NyamnyamMood>(() => moodFromBackend(selectedMember.value?.characterMood))
 watch(selectedHandImage, () => {
   selectedHandImageFailed.value = false
 })

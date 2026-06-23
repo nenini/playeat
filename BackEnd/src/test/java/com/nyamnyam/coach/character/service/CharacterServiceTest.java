@@ -112,7 +112,7 @@ class CharacterServiceTest {
                 .level(7)
                 .xp(950)
                 .stage("EGG")
-                .mood("HAPPY")
+                .mood("NORMAL")
                 .appearanceType("NORMAL")
                 .streakDays(15)
                 .bestStreakDays(21)

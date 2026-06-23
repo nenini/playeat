@@ -57,7 +57,8 @@ class CharacterControllerTest {
                         1200,
                         79.2,
                         "EGG",
-                        "HAPPY",
+                        "NORMAL",
+                        "오늘은 무난해요.",
                         "NORMAL",
                         15,
                         21,
@@ -71,6 +72,7 @@ class CharacterControllerTest {
                 .andExpect(jsonPath("$.data.characterId").value(1))
                 .andExpect(jsonPath("$.data.requiredXp").value(1200))
                 .andExpect(jsonPath("$.data.xpProgressRate").value(79.2))
+                .andExpect(jsonPath("$.data.moodMessage").value("오늘은 무난해요."))
                 .andExpect(jsonPath("$.data.bestStreakDays").value(21));
     }
 

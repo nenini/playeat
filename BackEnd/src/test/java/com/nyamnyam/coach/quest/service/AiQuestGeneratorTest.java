@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nyamnyam.coach.ai.service.AiTextGenerator;
 import com.nyamnyam.coach.ai.service.parser.AiJsonResponseParser;
 import com.nyamnyam.coach.ai.service.prompt.AiQuestPrompt;
+import com.nyamnyam.coach.ai.service.prompt.CharacterMoodPrompt;
 import com.nyamnyam.coach.ai.service.prompt.CoachFeedbackPrompt;
 import com.nyamnyam.coach.ai.service.prompt.DailyReportPrompt;
 import com.nyamnyam.coach.ai.service.prompt.WeeklyReportPrompt;
@@ -309,6 +310,11 @@ class AiQuestGeneratorTest {
         public String generateDailyQuest(AiQuestPrompt prompt) {
             this.lastPrompt = prompt;
             return questResponse;
+        }
+
+        @Override
+        public String selectCharacterMood(CharacterMoodPrompt prompt) {
+            return "{\"mood\":\"NORMAL\",\"reason\":\"테스트\"}";
         }
 
         @Override
