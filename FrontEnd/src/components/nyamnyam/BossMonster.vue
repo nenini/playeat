@@ -4,8 +4,11 @@
     :class="{ defeated: hp === 0 }"
     :style="{ width: `${size}px`, height: `${height}px` }"
   >
-    <img class="boss-wing" :src="nwing" alt="" draggable="false" />
-    <img class="boss-body" :src="nbody" alt="당분 드래곤" draggable="false" />
+    <img v-if="isDefeated" class="boss-clear" :src="dragonClear" alt="격파된 당분 드래곤" draggable="false" />
+    <template v-else>
+      <img class="boss-wing" :src="nwing" alt="" draggable="false" />
+      <img class="boss-body" :src="nbody" alt="당분 드래곤" draggable="false" />
+    </template>
   </div>
 </template>
 
@@ -13,12 +16,14 @@
 import { computed } from "vue";
 import nbody from "../../assets/nbody.png";
 import nwing from "../../assets/nwing.png";
+import dragonClear from "../../assets/dragon_clear.png";
 
 const props = withDefaults(defineProps<{ size?: number; hp?: number }>(), {
   size: 240,
   hp: 60,
 });
 const height = computed(() => Math.round(props.size * (428 / 540)));
+const isDefeated = computed(() => props.hp === 0);
 </script>
 
 <script lang="ts">
@@ -53,12 +58,19 @@ export default { name: "BossMonster" };
   object-fit: contain;
   user-select: none;
 }
-.defeated {
-  transform: rotate(6deg);
-  filter: grayscale(0.18);
+.boss-clear {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  top: 0;
+  width: 95%;
+  height: 95%;
+  object-fit: contain;
+  user-select: none;
 }
-.defeated .boss-wing {
-  animation-duration: 1500ms;
+.defeated {
+  transform: none;
+  filter: none;
 }
 @keyframes bossWingFlap {
   0% {
