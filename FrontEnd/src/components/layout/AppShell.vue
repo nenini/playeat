@@ -144,9 +144,9 @@ export default { name: 'AppShell' }
 .profile.active span { background: var(--accent); color: #fff; }
 .page-container {
   flex: 1;
-  padding: 30px 32px 56px;
-  max-width: 1320px;
-  width: 100%;
+  padding: 30px clamp(16px, 2.5vw, 48px) 56px;
+  max-width: none;
+  width: 80%;
   margin: 0 auto;
 }
 </style>

@@ -29,7 +29,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  min-width: 1120px;
+  min-width: 0;
   background: linear-gradient(180deg, #fffaf3 0%, var(--bg) 58%, #fff4e8 100%);
   color: var(--ink);
   font-family: var(--sans);
@@ -117,6 +117,5 @@ button:active:not(:disabled) { transform: translateY(2px) scale(.98); }
 }
 
 @media (max-width: 760px) {
-  body { min-width: 0; }
   .page-title-row { align-items: flex-start; flex-direction: column; }
 }

@@ -1,5 +1,5 @@
 <template>
-  <section>
+  <section class="meals-page">
     <div class="page-title-row">
       <div>
         <div class="mono-label">MEALS · 매일 식단</div>
@@ -520,11 +520,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.meals-page { min-height: calc(100vh - 158px); display: flex; flex-direction: column; }
 .date-box { position: relative; display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px 6px; box-shadow: var(--shadow); }
 .date-open { border: 0; background: transparent; padding: 6px 14px; font-family: var(--mono); font-size: 13px; font-weight: 800; min-width: 200px; text-align: center; cursor: pointer; color: var(--ink); }
 .calendar-pop { position: absolute; right: 44px; top: 44px; z-index: 10; border: 1px solid var(--border-strong); border-radius: 10px; padding: 8px; box-shadow: var(--shadow-lg); }
-.meals-layout { display: grid; grid-template-columns: 360px 1fr; gap: 20px; }
-.left-panel, .right-panel { display: flex; flex-direction: column; gap: 14px; }
+.meals-layout { flex: 1; display: grid; grid-template-columns: 360px 1fr; gap: 20px; min-height: 40vh; }
+.left-panel, .right-panel { min-height: 0; display: flex; flex-direction: column; gap: 14px; }
 .block-label { margin-bottom: 10px; }
 .kind-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .kind-btn { padding: 10px 4px; border: 1.5px solid var(--border); background: var(--surface); border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; color: var(--ink); display: flex; flex-direction: column; gap: 2px; align-items: center; }
@@ -565,7 +566,7 @@ onMounted(() => {
 .fav-card { flex: 1; }
 .fav-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .fav-list button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border: 1px solid var(--border); background: var(--surface-alt); border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer; }
-.quadrants { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; min-height: 480px; }
+.quadrants { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; min-height: 320px; }
 .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
 .empty-panel { min-height: 480px; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface-alt); display: flex; align-items: center; justify-content: center; color: var(--ink-3); font-weight: 700; }
 .empty-text { padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; background: var(--surface-alt); color: var(--ink-3); font-size: 12px; }
