@@ -433,12 +433,12 @@ onMounted(() => {
 .calendar-pop { position: absolute; right: 44px; top: 44px; z-index: 10; border: 1px solid var(--border-strong); border-radius: 10px; padding: 8px; box-shadow: var(--shadow-lg); }
 .tabs { padding: 8px; margin: 14px; border: 1px solid var(--border); border-radius: 14px; display: flex; gap: 6px; background: var(--surface-alt); }
 .tabs button { flex: 1; padding: 12px 20px; border: 1px solid transparent; border-radius: 10px; background: transparent; cursor: pointer; display: flex; flex-direction: column; gap: 2px; text-align: left; }
-.tabs button.active { border-color: var(--accent); background: #fff; box-shadow: 0 3px 0 rgba(190,78,31,.14); }
+.tabs button.active { border-color: var(--accent); background: #fff; box-shadow: 0 3px 0 rgba(143,207,85,.14); }
 .tabs strong { font-size: 14px; }
 .tabs small { font-family: var(--mono); color: var(--ink-3); font-size: 10px; }
 .tabs .active small { color: var(--accent); }
 .report-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
-.score-card { display: flex; align-items: center; gap: 22px; padding: 24px; border-radius: 18px; background: radial-gradient(circle at 10% 20%,#fff 0%,#fff2cf 30%,#ffe4cf 100%); border: 1px solid #e8bb91; box-shadow: var(--shadow); }
+.score-card { display: flex; align-items: center; gap: 22px; padding: 24px; border-radius: 18px; background: #fff9ec; border: 1px solid #e8bb91; box-shadow: var(--shadow); }
 .score-loot { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .empty-score { width: 120px; height: 120px; border: 10px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 28px; font-weight: 800; color: var(--ink-3); flex: 0 0 120px; }
 h2 { margin: 6px 0; font-size: 22px; }

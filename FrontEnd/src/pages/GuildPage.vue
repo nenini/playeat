@@ -74,7 +74,7 @@
           <div class="member-character">
             <NyamnyamCharacter
               :stage="stageFromBackend(selectedMember.characterStage)"
-              :size="96"
+              :size="50"
               :mood="selectedMemberMood"
               :appearance-type="selectedMember.characterAppearanceType || 'DEFAULT'"
               :hat-id="equipmentIconId(selectedHeadEquipment)"
@@ -138,35 +138,31 @@
       <div class="header-actions"><AppButton v-if="isLeader" variant="secondary" size="sm" @click="showRequests = true">참여 요청 <AppPill tone="bad" size="sm">{{ joinRequests.length }}</AppPill></AppButton><AppButton v-if="isLeader" variant="secondary" size="sm" @click="openSettings">길드 설정</AppButton><AppButton v-if="!isLeader" variant="danger" size="sm" :disabled="pendingActionId === 'leave-guild'" @click="leaveGuild">{{ pendingActionId === 'leave-guild' ? '탈퇴 중...' : '길드 탈퇴' }}</AppButton></div>
     </AppCard>
 
-    <nav class="game-tabs guild-tabs" aria-label="길드 메뉴">
-      <button type="button" :class="{ active: activeGuildTab === 'members' }" @click="activeGuildTab = 'members'">👥 길드원</button>
-      <button type="button" :class="{ active: activeGuildTab === 'chat' }" @click="activeGuildTab = 'chat'">💬 채팅</button>
-      <button type="button" :class="{ active: activeGuildTab === 'notice' }" @click="activeGuildTab = 'notice'">📢 공지</button>
-      <button type="button" :class="{ active: activeGuildTab === 'weekly' }" @click="activeGuildTab = 'weekly'">🏆 주간 기록</button>
-    </nav>
 
     <div class="board">
-      <AppCard v-if="activeGuildTab === 'chat'" :padding="0" class="chat-card">
+      <AppCard :padding="0" class="chat-card">
         <div class="chat-head"><span></span><strong>길드 채팅</strong></div>
         <div ref="chatMessagesRef" class="feed"><div v-if="displayChats.length === 0" class="empty-state">아직 채팅이 없습니다.</div><ChatBubble v-for="chatItem in displayChats" :key="chatItem.id" :msg="chatItem" /></div>
         <form class="chat-input" @submit.prevent="sendChatMessage"><label><AppIcon name="plus" color="var(--ink-3)" /><input v-model="message" placeholder="메시지 보내기…" @keydown.enter="guardComposingEnter"><button class="chat-submit" type="submit" :disabled="!message.trim() || sendingChat"><AppIcon name="send" color="#fff" />보내기</button></label></form>
       </AppCard>
 
-      <AppCard v-if="activeGuildTab === 'notice'" class="notice">
+      <AppCard class="notice">
         <div class="notice-head"><div class="section-title-main">📢 공지사항</div><AppButton v-if="isLeader" size="sm" variant="secondary" @click="startAddNotice">공지 추가</AppButton></div>
-        <div v-if="notices.length === 0 && editingNoticeId !== 'new'" class="empty-state">등록된 공지가 없습니다.</div>
-        <div v-if="editingNoticeId === 'new'" class="notice-box"><label>제목<input v-model="noticeDraft.title" placeholder="공지 제목"></label><label>내용<textarea v-model="noticeDraft.body" placeholder="길드원에게 알릴 내용을 입력하세요."></textarea></label><div class="notice-actions"><AppButton size="sm" variant="ghost" @click="cancelNoticeEdit">취소</AppButton><AppButton size="sm" :disabled="pendingActionId === 'notice-save'" @click="saveNotice">저장</AppButton></div></div>
-        <div v-for="noticeItem in notices" :key="noticeItem.noticeId" class="notice-box">
-          <template v-if="editingNoticeId === noticeItem.noticeId"><label>제목<input v-model="noticeDraft.title"></label><label>내용<textarea v-model="noticeDraft.body"></textarea></label><div class="notice-actions"><AppButton size="sm" variant="ghost" @click="cancelNoticeEdit">취소</AppButton><AppButton size="sm" :disabled="pendingActionId === 'notice-save'" @click="saveNotice">저장</AppButton></div></template>
-          <template v-else><strong>{{ noticeItem.title }}</strong><small>{{ formatDate(noticeItem.updatedAt || noticeItem.createdAt) }}</small><p>{{ noticeItem.content }}</p><div v-if="isLeader" class="notice-actions"><AppButton size="sm" variant="secondary" @click="startEditNotice(noticeItem)">수정</AppButton><AppButton size="sm" variant="danger" :disabled="pendingActionId === `notice-delete-${noticeItem.noticeId}`" @click="deleteNotice(noticeItem.noticeId)">삭제</AppButton></div></template>
+        <div ref="noticeListRef" class="notice-list">
+          <div v-if="notices.length === 0 && editingNoticeId !== 'new'" class="empty-state">등록된 공지가 없습니다.</div>
+          <div v-if="editingNoticeId === 'new'" class="notice-box"><label>제목<input v-model="noticeDraft.title" placeholder="공지 제목"></label><label>내용<textarea v-model="noticeDraft.body" placeholder="길드원에게 알릴 내용을 입력하세요."></textarea></label><div class="notice-actions"><AppButton size="sm" variant="ghost" @click="cancelNoticeEdit">취소</AppButton><AppButton size="sm" :disabled="pendingActionId === 'notice-save'" @click="saveNotice">저장</AppButton></div></div>
+          <div v-for="noticeItem in notices" :key="noticeItem.noticeId" class="notice-box">
+            <template v-if="editingNoticeId === noticeItem.noticeId"><label>제목<input v-model="noticeDraft.title"></label><label>내용<textarea v-model="noticeDraft.body"></textarea></label><div class="notice-actions"><AppButton size="sm" variant="ghost" @click="cancelNoticeEdit">취소</AppButton><AppButton size="sm" :disabled="pendingActionId === 'notice-save'" @click="saveNotice">저장</AppButton></div></template>
+            <template v-else><strong>{{ noticeItem.title }}</strong><small>{{ formatDate(noticeItem.updatedAt || noticeItem.createdAt) }}</small><p>{{ noticeItem.content }}</p><div v-if="isLeader" class="notice-actions"><AppButton size="sm" variant="secondary" @click="startEditNotice(noticeItem)">수정</AppButton><AppButton size="sm" variant="danger" :disabled="pendingActionId === `notice-delete-${noticeItem.noticeId}`" @click="deleteNotice(noticeItem.noticeId)">삭제</AppButton></div></template>
+          </div>
         </div>
       </AppCard>
 
-      <AppCard v-if="activeGuildTab === 'weekly'" class="ranking"><div class="section-title"><div><div class="section-title-main">🏆 길드 순위</div><div class="section-title-sub">이번 주 길드 순위</div></div><AppPill v-if="dashboard?.myRank" tone="ok" size="sm">우리 {{ dashboard.myRank }}위</AppPill></div><div v-if="displayRankings.length === 0" class="empty-state">랭킹 데이터가 없습니다.</div><RankRow v-for="rank in displayRankings" :key="String(rank[0])" :row="rank" /></AppCard>
+      <AppCard class="ranking"><div class="section-title"><div><div class="section-title-main">🏆 길드 순위</div><div class="section-title-sub">이번 주 길드 순위</div></div><AppPill v-if="dashboard?.myRank" tone="ok" size="sm">우리 {{ dashboard.myRank }}위</AppPill></div><div v-if="displayRankings.length === 0" class="empty-state">랭킹 데이터가 없습니다.</div><RankRow v-for="rank in displayRankings" :key="String(rank[0])" :row="rank" /></AppCard>
 
-      <AppCard v-if="activeGuildTab === 'members'" class="members"><div class="section-title"><div><div class="section-title-main">👥 레이드 파티</div><div class="section-title-sub">길드원을 눌러 장비와 기여도를 확인하세요</div></div><AppPill tone="accent" size="sm">{{ members.length }}명</AppPill></div><div v-if="members.length === 0" class="empty-state">길드원 정보가 없습니다.</div><div class="member-grid"><button v-for="member in members" :key="member.memberId" @click="openMember(member)"><span><img v-if="resolveImageUrl(member.profileImageUrl) && !failedMemberImages.has(member.memberId)" :src="resolveImageUrl(member.profileImageUrl)" :alt="`${member.nickname} 프로필`" @error="markMemberImageFailed(member.memberId)"><template v-else>{{ member.nickname[0] || '?' }}</template></span><strong>{{ member.nickname }} <small>LV.{{ member.characterLevel ?? '-' }}</small></strong><em>{{ roleLabel(member.role) }}</em><i>상세 보기 →</i></button></div></AppCard>
+      <AppCard class="members"><div class="section-title"><div><div class="section-title-main">👥 레이드 파티</div><div class="section-title-sub">길드원을 눌러 장비와 기여도를 확인하세요</div></div><AppPill tone="accent" size="sm">{{ members.length }}명</AppPill></div><div v-if="members.length === 0" class="empty-state">길드원 정보가 없습니다.</div><div class="member-grid"><button v-for="member in members" :key="member.memberId" @click="openMember(member)"><span><img v-if="resolveImageUrl(member.profileImageUrl) && !failedMemberImages.has(member.memberId)" :src="resolveImageUrl(member.profileImageUrl)" :alt="`${member.nickname} 프로필`" @error="markMemberImageFailed(member.memberId)"><template v-else>{{ member.nickname[0] || '?' }}</template></span><strong>{{ member.nickname }} <small>LV.{{ member.characterLevel ?? '-' }}</small></strong><em>{{ roleLabel(member.role) }}</em><i>상세 보기 →</i></button></div></AppCard>
 
-      <AppCard v-if="activeGuildTab === 'weekly'" class="stats"><div class="section-title-main">📊 길드 통계</div><div class="stat-grid"><StatBlock label="기록률" :value="dashboard ? `${dashboard.recordRate}%` : '-'" /><StatBlock label="보스 데미지" :value="dashboard ? `${dashboard.bossDamage} HP` : '-'" /><StatBlock label="주간 점수" :value="dashboard ? `${dashboard.weeklyScore.toLocaleString()} pt` : '-'" accent /><StatBlock label="퀘스트 완료" :value="dashboard ? `${dashboard.questCompletedCount}/${dashboard.questTotalCount}` : '-'" /></div><div v-if="chartStats.length" class="guild-chart"><div v-for="(stat, index) in chartStats" :key="stat.date"><b :style="{ height: stat.heightPercent > 0 ? `${stat.heightPercent}%` : '6px' }" :class="{ zero: stat.value === 0, today: index === chartStats.length - 1 }"></b><small>{{ dayLabel(stat.dayOfWeek) }}</small></div></div><p v-else>아직 주간 리포트가 없습니다.</p></AppCard>
+      <AppCard class="stats"><div class="section-title-main">📊 길드 통계</div><div class="stat-grid"><StatBlock label="기록률" :value="dashboard ? `${dashboard.recordRate}%` : '-'" /><StatBlock label="보스 데미지" :value="dashboard ? `${dashboard.bossDamage} HP` : '-'" /><StatBlock label="주간 점수" :value="dashboard ? `${dashboard.weeklyScore.toLocaleString()} pt` : '-'" accent /><StatBlock label="퀘스트 완료" :value="dashboard ? `${dashboard.questCompletedCount}/${dashboard.questTotalCount}` : '-'" /></div><div v-if="chartStats.length" class="guild-chart"><div v-for="(stat, index) in chartStats" :key="stat.date"><b :style="{ height: stat.heightPercent > 0 ? `${stat.heightPercent}%` : '6px' }" :class="{ zero: stat.value === 0, today: index === chartStats.length - 1 }"></b><small>{{ dayLabel(stat.dayOfWeek) }}</small></div></div><p v-else>아직 주간 리포트가 없습니다.</p></AppCard>
     </div>
   </section>
 </template>
@@ -195,7 +191,6 @@ import RankRow from './parts/RankRow.vue'
 import StatBlock from './parts/StatBlock.vue'
 
 const joined = ref(false)
-const activeGuildTab = ref<'members' | 'chat' | 'notice' | 'weekly'>('members')
 const joinMode = ref<'list' | 'create'>('list')
 const isLoading = ref(true)
 const errorMessage = ref('')
@@ -220,6 +215,7 @@ const pageSize = 10
 const code = ref('')
 const message = ref('')
 const chatMessagesRef = ref<HTMLElement | null>(null)
+const noticeListRef = ref<HTMLElement | null>(null)
 const selectedMember = ref<GuildMemberDetail | null>(null)
 const selectedProfileImageFailed = ref(false)
 const selectedHandImageFailed = ref(false)
@@ -292,6 +288,12 @@ async function scrollChatToBottom() {
   await nextTick()
   const element = chatMessagesRef.value
   if (element) element.scrollTop = element.scrollHeight
+}
+
+async function focusLatestNotice() {
+  await nextTick()
+  const element = noticeListRef.value
+  if (element) element.scrollTop = 0
 }
 
 async function runAction(key: string, task: () => Promise<void>, success?: string) {
@@ -523,6 +525,7 @@ async function saveNotice() {
     else if (typeof editingNoticeId.value === 'number') await guildApi.updateGuildNotice(guildId.value!, editingNoticeId.value, payload)
     notices.value = await guildApi.getGuildNotices(guildId.value!)
     cancelNoticeEdit()
+    await focusLatestNotice()
   }, '공지사항을 저장했습니다.')
 }
 
@@ -531,6 +534,7 @@ async function deleteNotice(noticeId: number) {
   await runAction(`notice-delete-${noticeId}`, async () => {
     await guildApi.deleteGuildNotice(guildId.value!, noticeId)
     notices.value = await guildApi.getGuildNotices(guildId.value!)
+    await focusLatestNotice()
   }, '공지사항을 삭제했습니다.')
 }
 
@@ -571,22 +575,23 @@ onMounted(() => { void loadPage() })
 .generated-code strong { font-family: var(--mono); font-size: 16px; }
 .grow { flex: 1; } h3, h1 { margin: 0; } h3 { font-size: 16px; } h1 { font-size: 24px; font-weight: 900; }
 .code-card { position: sticky; top: 88px; } .join-btn { margin-top: 12px; } .code-card small { display: block; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--ink-3); font-size: 11px; line-height: 1.7; }
-.guild-header { margin-bottom: 0; background: linear-gradient(135deg,#fff1cf 0%,#fff 52%,#ffe1cb 100%); display: flex; align-items: center; gap: 18px; border-color: #e4b88f; position: relative; overflow: hidden; } .guild-header:after { content: "GUILD LOBBY"; position: absolute; right: 20px; bottom: -8px; color: rgba(190,78,31,.08); font: 900 44px var(--mono); pointer-events: none; } .guild-header strong { color: var(--accent); } .pill-row, .header-actions { display: flex; gap: 8px; }
-.guild-tabs { position: sticky; top: 80px; z-index: 20; backdrop-filter: blur(14px); }
-.board { display: grid; grid-template-columns: 1fr; gap: 14px; }
-.chat-card { display: flex; flex-direction: column; height: 620px; min-height: 620px; overflow: hidden; } .notice,.ranking,.members,.stats { width: 100%; }
+.guild-header { margin-bottom: 18px; background: #fff6e6; display: flex; align-items: center; gap: 18px; border-color: #e4b88f; position: relative; overflow: hidden; } .guild-header:after { content: "GUILD LOBBY"; position: absolute; right: 20px; bottom: -8px; color: rgba(190,78,31,.08); font: 900 44px var(--mono); pointer-events: none; } .guild-header strong { color: var(--accent); } .pill-row, .header-actions { display: flex; gap: 8px; }
+.board { display: grid; grid-template-columns: repeat(12,1fr); grid-auto-rows: 96px; gap: 14px; align-items: stretch; }
+.chat-card { grid-column: span 7; grid-row: span 6; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; } .notice,.ranking,.members { grid-column: span 5; grid-row: span 3; min-height: 0; overflow: hidden; } .stats { grid-column: span 7; grid-row: span 3; min-height: 0; }
 .chat-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; background: var(--surface-alt); } .chat-head span { width: 8px; height: 8px; border-radius: 4px; background: var(--ok); }
-.feed { flex: 1 1 auto; min-height: 0; max-height: 540px; padding: 14px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 6px; }
+.feed { flex: 1 1 auto; min-height: 0; padding: 14px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 6px; }
 .chat-input { flex: 0 0 auto; padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); } .chat-input label { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--border-strong); border-radius: 12px; padding: 8px 12px; } .chat-input input { flex: 1; min-width: 0; border: 0; outline: 0; font-size: 14px; }
 .chat-submit { border: 0; border-radius: 10px; padding: 6px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--accent); color: #fff; box-shadow: 0 1px 0 var(--accent-dark); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .chat-submit:disabled { opacity: .5; cursor: not-allowed; }
-.notice-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.notice { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.notice-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.notice-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 2px; }
 .notice-box { padding: 12px; border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; } .notice-box small { float: right; font-family: var(--mono); color: var(--ink-3); font-size: 10px; }
 .notice-box label { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 12px; font-weight: 800; color: var(--ink); }
 .notice-box input, .notice-box textarea { width: 100%; border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; background: var(--surface); color: var(--ink); outline: 0; font-size: 13px; }
 .notice-box textarea { min-height: 90px; resize: vertical; }
 .notice-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
-.member-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 14px; } .member-grid button { display: grid; grid-template-columns: 52px 1fr; column-gap: 12px; padding: 14px; border-radius: 14px; background: linear-gradient(145deg,#fff,#fff4e7); border: 1px solid var(--border); text-align: left; cursor: pointer; box-shadow: 0 3px 0 rgba(116,75,49,.08); } .member-grid button:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: var(--shadow); } .member-grid span { width: 52px; height: 52px; border-radius: 50%; background: var(--yolk); display: flex; align-items: center; justify-content: center; font-weight: 900; overflow: hidden; grid-row: span 3; } .member-grid span img { width: 100%; height: 100%; object-fit: cover; display: block; } .member-grid strong { font-size: 14px; } .member-grid small, .member-grid em { font-family: var(--mono); font-size: 10px; color: var(--ink-3); font-style: normal; } .member-grid i { font-size: 10px; color: var(--accent-dark); font-style: normal; margin-top: 6px; }
+.member-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; } .member-grid button { display: grid; grid-template-columns: 28px 1fr; column-gap: 8px; padding: 7px 9px; border-radius: 8px; background: var(--surface-alt); border: 1px solid var(--border); text-align: left; cursor: pointer; box-shadow: 0 3px 0 rgba(116,75,49,.08); } .member-grid button:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: var(--shadow); } .member-grid span { width: 28px; height: 28px; border-radius: 14px; background: var(--yolk); display: flex; align-items: center; justify-content: center; font-weight: 900; overflow: hidden; grid-row: span 3; } .member-grid span img { width: 100%; height: 100%; object-fit: cover; display: block; } .member-grid strong { font-size: 11px; } .member-grid small, .member-grid em { font-family: var(--mono); font-size: 9px; color: var(--ink-3); font-style: normal; } .member-grid i { font-size: 10px; color: var(--accent-dark); font-style: normal; margin-top: 6px; }
 .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin: 10px 0 14px; } .guild-chart { display: flex; align-items: flex-end; gap: 8px; height: 90px; } .guild-chart div { flex: 1; align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; } .guild-chart b { width: 100%; background: var(--ink); border-radius: 4px 4px 0 0; } .guild-chart b.today { background: var(--accent); } .guild-chart b.zero { background: var(--surface-alt); border: 1px dashed var(--border); } .guild-chart small { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
 .modal-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(31,28,23,.32); display: flex; align-items: center; justify-content: center; padding: 24px; }
 .member-modal, .request-modal { width: min(460px, 100%); max-height: 90vh; overflow: auto; background: var(--surface); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 24px; position: relative; }
@@ -595,9 +600,9 @@ onMounted(() => { void loadPage() })
 .member-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .member-profile-small { width: 38px; height: 38px; border-radius: 19px; overflow: hidden; background: var(--yolk); display: flex; align-items: center; justify-content: center; flex: 0 0 38px; font-weight: 800; }
 .member-profile-small img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.member-character { width: 116px; height: 116px; border-radius: 58px; background: radial-gradient(circle at 50% 40%, #fff5e0 0%, #fbe5d3 100%); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex: 0 0 116px; position: relative; }
-.member-hand-item { position: absolute; right: -16px; top: 23px; width: 26px; height: 84px; z-index: 2; pointer-events: none; }
-.member-hand-item :deep(svg), .member-hand-item img { width: 26px; height: 84px; object-fit: contain; }
+.member-character { width: 76px; height: 76px; border-radius: 38px; padding-bottom: 8px; background: radial-gradient(circle at 50% 40%, #fff5e0 0%, #fbe5d3 100%); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex: 0 0 76px; position: relative; }
+.member-hand-item { position: absolute; right: 10px; top: 25px; width: 15px; height: 46px; z-index: 2; pointer-events: none; }
+.member-hand-item :deep(svg), .member-hand-item img { width: 15px; height: 46px; object-fit: contain; }
 .member-modal h2, .request-modal h2 { margin: 0; font-size: 22px; }
 .member-modal p, .request-modal > p { margin-bottom: 16px; color: var(--ink-2); }
 .modal-info { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
@@ -614,6 +619,6 @@ onMounted(() => { void loadPage() })
 .setting-members div:first-of-type { border-top: 0; }
 .setting-members span { font-size: 12px; color: var(--ink-2); }
 .request-modal > .app-button + .app-button { margin-top: 8px; }
-@media (max-width: 900px) { .pre-grid { grid-template-columns: 1fr; } .code-card { position: static; } .chat-card,.notice,.ranking,.members,.stats { grid-column: 1 / -1; } }
+@media (max-width: 900px) { .pre-grid { grid-template-columns: 1fr; } .code-card { position: static; } .board { grid-auto-rows: auto; } .chat-card,.notice,.ranking,.members,.stats { grid-column: 1 / -1; grid-row: auto; } .chat-card { height: 520px; min-height: 520px; } }
 @media (max-width: 560px) { .pre-head,.guild-header { align-items: flex-start; flex-direction: column; } .guild-row { align-items: flex-start; flex-wrap: wrap; } .guild-row .grow { min-width: calc(100% - 70px); } .form-grid,.stat-grid { grid-template-columns: 1fr 1fr; } .member-grid { grid-template-columns: 1fr; } }
 </style>

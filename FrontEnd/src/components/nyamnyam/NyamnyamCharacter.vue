@@ -83,6 +83,7 @@ export default { name: 'NyamnyamCharacter' }
 <style scoped>
 .nyam-character {
   position: relative;
+  z-index: 2;
   display: inline-grid;
   place-items: center;
   overflow: visible;
@@ -94,11 +95,11 @@ export default { name: 'NyamnyamCharacter' }
   height: 100%;
   object-fit: contain;
   display: block;
-  mix-blend-mode: multiply;
 }
 
 .hat-image {
   position: absolute;
+  z-index: 3;
   top: -8%;
   left: 25%;
   width: 50%;
@@ -109,6 +110,7 @@ export default { name: 'NyamnyamCharacter' }
 
 .hat {
   position: absolute;
+  z-index: 3;
   top: -12%;
   left: 24%;
   width: 52%;

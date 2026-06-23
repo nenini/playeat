@@ -75,7 +75,7 @@ watch([name, email, password], () => {
 <style scoped>
 .auth-page {
   min-height: 100vh;
-  background: radial-gradient(circle at 18% 25%,rgba(243,211,111,.34),transparent 24rem),radial-gradient(circle at 82% 70%,rgba(56,169,104,.12),transparent 25rem),linear-gradient(160deg,#fffaf3,#fff0e2);
+  background: linear-gradient(180deg,#fffaf3,#fff0e2);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -97,7 +97,7 @@ watch([name, email, password], () => {
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: linear-gradient(180deg,#ff995e,var(--accent));
+  background: linear-gradient(180deg,#B8DB80,var(--accent-dark));
   color: #fff;
   display: flex;
   align-items: center;
@@ -159,19 +159,19 @@ input {
 }
 input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(240,120,60,.12);
+  box-shadow: 0 0 0 3px rgba(143,207,85,.12);
 }
 .submit {
   width: 100%;
   height: 48px;
   border: 0;
   border-radius: 12px;
-  background: linear-gradient(180deg,#ff995e,var(--accent));
+  background: linear-gradient(180deg,#B8DB80,var(--accent-dark));
   color: #fff;
   font-weight: 900;
   cursor: pointer;
   margin-top: 8px;
-  box-shadow: 0 4px 0 var(--accent-dark),0 10px 20px rgba(240,120,60,.2);
+  box-shadow: 0 4px 0 var(--accent-dark),0 10px 20px rgba(143,207,85,.2);
 }
 .password-guide {
   margin: -8px 0 14px;

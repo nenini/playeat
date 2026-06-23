@@ -44,7 +44,7 @@ export default { name: 'AppButton' }
 .sm { padding: 6px 12px; font-size: 12px; }
 .md { padding: 9px 16px; font-size: 13px; }
 .lg { padding: 12px 22px; font-size: 15px; }
-.primary { background: linear-gradient(180deg, #ff995e, var(--accent)); color: #fff; box-shadow: 0 3px 0 var(--accent-dark), 0 8px 16px rgba(240,120,60,.22); }
+.primary { background: linear-gradient(180deg, #B8DB80, var(--accent-dark)); color: #fff; box-shadow: 0 3px 0 var(--accent-dark), 0 8px 16px rgba(143,207,85,.22); }
 .secondary { background: linear-gradient(180deg, #fff, #fff7ed); color: var(--ink); border: 1px solid var(--border-strong); box-shadow: 0 2px 0 rgba(116,75,49,.12); }
 .ghost { background: transparent; color: var(--ink-2); }
 .danger { background: linear-gradient(180deg, #fff, var(--bad-soft)); color: var(--bad); border: 1px solid var(--bad); }
