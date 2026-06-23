@@ -62,7 +62,7 @@ export default { name: "BossMonster" };
   position: absolute;
   z-index: 2;
   left: 0;
-  top: 0;
+  top: 25%;
   width: 95%;
   height: 95%;
   object-fit: contain;
