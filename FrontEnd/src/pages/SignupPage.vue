@@ -3,10 +3,11 @@
     <button class="auth-brand" type="button" @click="$emit('back')">
       <span>냠</span><strong>냠냠코치</strong>
     </button>
+    <div class="auth-companion"><div class="companion-ring"><NyamnyamCharacter stage="egg" :size="145" /></div><b>새로운 파트너가 기다려요</b><span>계정을 만들고 첫 성장 퀘스트를 시작하세요.</span></div>
     <form class="auth-card" @submit.prevent="submit">
       <div class="auth-head">
-        <p>START NYAMNYAM</p>
-        <h1>회원가입</h1>
+        <p>CREATE YOUR ADVENTURER</p>
+        <h1>모험가 등록</h1>
         <span>기본 계정을 만든 뒤 온보딩에서 목표 데이터를 설정해요.</span>
       </div>
       <label>이름<input v-model="name" /></label>
@@ -29,6 +30,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
 defineProps<{ apiError?: string }>();
 const emit = defineEmits<{
   onboarding: [payload: { name: string; email: string; password: string }];
@@ -73,11 +75,13 @@ watch([name, email, password], () => {
 <style scoped>
 .auth-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #fff1e8 0%, #faf7f0 60%);
+  background: linear-gradient(180deg,#fffaf3,#fff0e2);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 46px 20px;
+  padding: 42px 20px 70px;
+  position: relative;
+  overflow: hidden;
 }
 .auth-brand {
   display: inline-flex;
@@ -86,18 +90,20 @@ watch([name, email, password], () => {
   border: 0;
   background: transparent;
   cursor: pointer;
-  margin-bottom: 44px;
+  margin-bottom: 34px;
+  z-index: 2;
 }
 .auth-brand span {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  background: #f7d34b;
+  border-radius: 12px;
+  background: linear-gradient(180deg,#B8DB80,var(--accent-dark));
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
+  box-shadow: 0 3px 0 var(--accent-dark);
 }
 .auth-brand strong {
   font-size: 20px;
@@ -106,9 +112,13 @@ watch([name, email, password], () => {
   width: min(440px, 100%);
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 22px;
   box-shadow: var(--shadow-lg);
-  padding: 34px;
+  padding: 38px;
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(160deg,rgba(255,255,255,.98),rgba(255,249,241,.98));
+  border-color: #e5c5a8;
 }
 .auth-head {
   text-align: center;
@@ -123,7 +133,7 @@ watch([name, email, password], () => {
 }
 .auth-head h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 30px;
 }
 .auth-head span {
   display: block;
@@ -140,26 +150,28 @@ label {
   margin-bottom: 16px;
 }
 input {
-  height: 46px;
+  height: 50px;
   border: 1.5px solid var(--border-strong);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0 14px;
   font-size: 14px;
   outline: 0;
 }
 input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(143,207,85,.12);
 }
 .submit {
   width: 100%;
   height: 48px;
   border: 0;
-  border-radius: 10px;
-  background: var(--accent);
+  border-radius: 12px;
+  background: linear-gradient(180deg,#B8DB80,var(--accent-dark));
   color: #fff;
   font-weight: 900;
   cursor: pointer;
   margin-top: 8px;
+  box-shadow: 0 4px 0 var(--accent-dark),0 10px 20px rgba(143,207,85,.2);
 }
 .password-guide {
   margin: -8px 0 14px;
@@ -186,4 +198,7 @@ input:focus {
   font-weight: 900;
   cursor: pointer;
 }
+.auth-companion { position: absolute; left: max(40px,calc(50% - 490px)); top: 50%; transform: translateY(-42%); width: 270px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; } .companion-ring { width: 250px; height: 250px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle,#fff,#fff0cf 60%,#ffc89f); border: 4px solid #fff; box-shadow: 0 0 0 8px rgba(240,120,60,.12),var(--shadow-lg); animation: auth-float 4s ease-in-out infinite; } .auth-companion b { margin-top: 22px; font-size: 17px; } .auth-companion span { color: var(--ink-2); font-size: 12px; }
+@keyframes auth-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@media (max-width: 1040px) { .auth-companion { display: none; } }
 </style>

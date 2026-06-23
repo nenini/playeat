@@ -13,8 +13,8 @@
       <div class="start-box"><AppButton size="lg" :disabled="!isLeader || !selectedBoss || creatingBattle" @click="startBattle">⚔️ {{ creationStepMessage || '전투 시작!' }}</AppButton><div v-if="!isLeader" class="leader-help">길드장만 전투를 시작할 수 있어요</div><div v-else-if="creationStepMessage" class="creation-step">{{ creationStepMessage }}</div></div>
     </div>
     <div class="boss-lobby">
-      <div class="boss-art"><BossMonster :size="220" :hp="100" /><strong>{{ selectedBoss?.name || '보스 데이터 없음' }}</strong><p>{{ selectedBoss?.description || '현재 시즌에 등록된 보스가 없습니다.' }}</p></div>
-      <div><div class="mono-label diff-label">보스 선택</div><div v-if="bosses.length" class="diff-grid"><button v-for="item in bosses" :key="item.bossId" :class="[item.difficulty.toLowerCase(), { active: selectedBossId === item.bossId }]" @click="selectedBossId = item.bossId"><strong>{{ difficultyLabel(item.difficulty) }}</strong><p>{{ item.name }}</p><AppPill :tone="difficultyTone(item.difficulty)" size="sm">{{ item.rewardExp.toLocaleString() }} XP</AppPill></button></div><div v-else class="empty-state">현재 시즌 보스가 없습니다.</div></div>
+      <div class="boss-art" :style="{ backgroundImage: `url(${selectedBossAssets.background})` }"><BossMonster :size="275" :hp="100" :boss-type="selectedBossType" :boss-name="selectedBoss?.name || '보스'" /><strong>{{ selectedBoss?.name || '보스 데이터 없음' }}</strong></div>
+      <div><div class="mono-label diff-label">보스 선택</div><p class="diff-help">난이도를 선택해 길드원과 함께 전투를 시작하세요</p><div v-if="bosses.length" class="diff-grid"><button v-for="item in bosses" :key="item.bossId" :class="[item.difficulty.toLowerCase(), { active: selectedBossId === item.bossId }]" @click="selectedBossId = item.bossId"><strong>{{ difficultyLabel(item.difficulty) }}</strong><p>{{ item.name }}</p><AppPill :tone="difficultyTone(item.difficulty)" size="sm">{{ item.rewardExp.toLocaleString() }} XP</AppPill></button></div><div v-else class="empty-state">현재 시즌 보스가 없습니다.</div></div>
       <AppCard v-if="selectedBoss" :padding="14" class="diff-summary"><div><div><small>BOSS HP</small><strong>{{ selectedBoss.maxHp.toLocaleString() }}</strong></div><div><small>보상 코인</small><strong>{{ selectedBoss.rewardCoin.toLocaleString() }}</strong></div><div><small>격파 XP</small><strong>{{ selectedBoss.rewardExp.toLocaleString() }}</strong></div></div></AppCard>
     </div>
   </section>
@@ -28,18 +28,23 @@
     </div>
     <div class="battle-grid">
       <main class="battle-left">
-        <div v-if="isBattleCleared" class="clear-banner">
-          <div class="clear-badge">CLEAR</div>
-          <div>
-            <h2>보스 격파 성공!</h2>
+        <div class="arena" :class="{ cleared: isBattleCleared }" :style="{ backgroundImage: `url(${battleBossAssets.background})` }">
+          <BossMonster :size="300" :hp="hpPercent" :boss-type="battleBossType" :boss-name="battle?.bossName || bossDetail?.name || '보스'" :cleared="isBattleCleared" />
+          <div v-if="isBattleCleared" class="boss-clear-overlay">
+            <span class="sparkle sparkle-a">✦</span>
+            <span class="sparkle sparkle-b">✧</span>
+            <span class="sparkle sparkle-c">✦</span>
+            <div class="clear-kicker">BOSS CLEAR!</div>
+            <h2>{{ battle?.bossName || '당분 드래곤' }} 격파 성공</h2>
             <p>길드원들과 함께 보스를 쓰러뜨렸어요. 보상을 수령해 주세요.</p>
+            <AppButton v-if="!battle?.rewardClaimed" size="lg" :disabled="pendingActionId === 'battle-reward'" @click="claimBattleReward">보상 수령하기</AppButton>
+            <AppPill v-else tone="ok" size="sm">보상 수령 완료</AppPill>
           </div>
         </div>
-        <div class="arena"><div class="grid-bg"></div><BossMonster :size="300" :hp="hpPercent" /></div>
         <AppCard :padding="16"><div class="hp-row"><span>BOSS HP</span><ProgressBar :value="hp?.currentHp ?? 0" :max="hp?.maxHp || 1" :tone="hpPercent < 30 ? 'accent' : 'bad'" :height="18" /><b>{{ hp?.currentHp?.toLocaleString() ?? '-' }} / {{ hp?.maxHp?.toLocaleString() ?? '-' }}</b></div><div class="damage-row"><span>누적 데미지: <strong>−{{ hp?.totalDamage?.toLocaleString() ?? '-' }}</strong> HP</span><span>퀘스트 완료: <strong>{{ dashboard ? `${dashboard.questCompletedCount}/${dashboard.questTotalCount}` : '-' }}</strong></span></div></AppCard>
         <div class="condition-grid">
-          <AppCard :padding="16"><div class="condition-head"><div class="section-title-main">격파 조건</div></div><div v-if="battle?.commonConditions?.length" class="checks"><p v-for="condition in battle.commonConditions" :key="condition.battleConditionId">{{ condition.completed ? '✓' : '□' }} {{ condition.title }} — {{ condition.currentValue ?? '-' }}/{{ condition.targetValue ?? '-' }} {{ condition.unit || '' }}</p></div><p v-else>격파 조건 데이터가 없습니다.</p></AppCard>
-          <AppCard :padding="16" class="reward"><div class="section-title-main">격파 보상</div><div><small>+ 경험치</small><strong>{{ bossDetail?.rewardExp?.toLocaleString() ?? '-' }} XP</strong><small>+ 코인</small><strong>{{ bossDetail?.rewardCoin?.toLocaleString() ?? '-' }}</strong></div><AppPill v-if="isBattleCleared && battle?.rewardClaimed" tone="ok" size="sm">보상 수령 완료</AppPill><AppButton v-else-if="isBattleCleared" full size="sm" :disabled="pendingActionId === 'battle-reward'" @click="claimBattleReward">보스 보상 받기</AppButton></AppCard>
+          <AppCard :padding="20"><div class="condition-head"><div class="section-title-main">길드 공통 격파 조건</div><AppPill :tone="isBattleCleared ? 'ok' : 'accent'" size="sm">{{ isBattleCleared ? '완료' : '진행 중' }}</AppPill></div><div v-if="battle?.commonConditions?.length" class="checks"><p v-for="condition in battle.commonConditions" :key="condition.battleConditionId" :class="{ completed: condition.completed }"><b>{{ condition.completed ? '✓' : '□' }}</b><span>{{ condition.title }}</span><strong>{{ condition.currentValue ?? '-' }}/{{ condition.targetValue ?? '-' }} {{ condition.unit || '' }}</strong></p></div><p v-else>격파 조건 데이터가 없습니다.</p></AppCard>
+          <AppCard :padding="22" class="reward"><div class="section-title-main">레이드 클리어 보상</div><div class="reward-loot"><span>✨<small>경험치</small><strong>+{{ bossDetail?.rewardExp?.toLocaleString() ?? '-' }} XP</strong></span><span>🪙<small>코인</small><strong>+{{ bossDetail?.rewardCoin?.toLocaleString() ?? '-' }}</strong></span></div><AppPill v-if="isBattleCleared && battle?.rewardClaimed" tone="ok" size="sm">보상 수령 완료</AppPill><p v-else-if="isBattleCleared" class="reward-lock">상단 클리어 화면에서 보상을 수령할 수 있어요.</p><p v-else class="reward-lock">보스를 격파하면 보상 상자가 열립니다.</p></AppCard>
         </div>
       </main>
       <aside class="members">
@@ -63,6 +68,7 @@ import AppIcon from '../components/common/AppIcon.vue'
 import AppPill from '../components/common/AppPill.vue'
 import ProgressBar from '../components/common/ProgressBar.vue'
 import BossMonster from '../components/nyamnyam/BossMonster.vue'
+import { bossAssetsFor, resolveBossType } from '../utils/bossAssets'
 import { bossApi } from '../services/api/bossApi'
 import { bossBattleApi } from '../services/api/bossBattleApi'
 import { ApiError } from '../services/api/client'
@@ -101,8 +107,12 @@ const contributions = ref<QuestContribution[]>([])
 
 const isLeader = computed(() => guildRole.value === 'OWNER')
 const selectedBoss = computed(() => bosses.value.find((item) => item.bossId === selectedBossId.value) ?? bosses.value[0] ?? null)
+const selectedBossType = computed(() => resolveBossType(selectedBoss.value?.imageUrl, selectedBoss.value?.difficulty, selectedBoss.value?.name))
+const selectedBossAssets = computed(() => bossAssetsFor(selectedBoss.value?.imageUrl, selectedBoss.value?.difficulty, selectedBoss.value?.name))
+const battleBossType = computed(() => resolveBossType(battle.value?.bossImageUrl || battle.value?.imageUrl || bossDetail.value?.imageUrl, battle.value?.difficulty || bossDetail.value?.difficulty, battle.value?.bossName || bossDetail.value?.name))
+const battleBossAssets = computed(() => bossAssetsFor(battle.value?.bossImageUrl || battle.value?.imageUrl || bossDetail.value?.imageUrl, battle.value?.difficulty || bossDetail.value?.difficulty, battle.value?.bossName || bossDetail.value?.name))
 const hpPercent = computed(() => hp.value?.maxHp ? hp.value.currentHp / hp.value.maxHp * 100 : 0)
-const isBattleCleared = computed(() => ['DEFEATED', 'CLEARED', 'COMPLETED'].includes(String(battle.value?.status || '')))
+const isBattleCleared = computed(() => ['DEFEATED', 'CLEARED', 'COMPLETED'].includes(String(battle.value?.status || '')) || Number(hp.value?.currentHp ?? 1) <= 0)
 const displayQuests = computed<QuestSummary[]>(() => {
   if (!myQuest.value) return quests.value
 
@@ -350,24 +360,33 @@ onMounted(() => { void loadBossPage() })
 .quest-empty p { margin-bottom: 10px; }
 .pill-row { display: flex; gap: 8px; margin-bottom: 6px; } .title-xl span { color: var(--ink-3); } p { margin: 4px 0 0; color: var(--ink-2); font-size: 13px; }
 .boss-lobby { display: flex; flex-direction: column; gap: 14px; }
-.boss-art { border-radius: 18px; overflow: hidden; padding: 36px 32px; background: linear-gradient(135deg,#fff5e0 0%,#fbe5d3 50%,#f6c098 100%); border: 1.5px solid var(--border); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.boss-art strong { font-size: 20px; font-weight: 900; } .boss-art p { max-width: 400px; text-align: center; line-height: 1.6; font-size: 12px; }
-.diff-label { margin-bottom: 10px; } .diff-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.boss-art { border-radius: 18px; overflow: hidden; padding: 36px 32px; background-color: transparent; background-size: cover; background-position: center; background-repeat: no-repeat; border: 1.5px solid var(--border); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; align-items: center; gap: 12px; position: relative; }
+.boss-art:before { content: ""; position: absolute; inset: 0; background: rgba(32, 22, 14, .12); z-index: 0; pointer-events: none; } .boss-art :deep(.boss-monster), .boss-art strong, .boss-art p { position: relative; z-index: 1; } .boss-art strong { font-size: 20px; font-weight: 900; } .boss-art p { max-width: 400px; text-align: center; line-height: 1.6; font-size: 12px; }
+.diff-label { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 7px 13px; border: 1px solid var(--accent); border-radius: 999px; background: linear-gradient(180deg, #f8ffe8, var(--accent-soft)); color: var(--accent-dark); font-family: var(--sans); font-size: 18px; font-weight: 900; letter-spacing: -0.2px; box-shadow: 0 3px 0 rgba(143,207,85,.18), 0 10px 20px rgba(143,207,85,.12); } .diff-label:before { content: "✦"; color: var(--accent); text-shadow: 0 0 10px rgba(184,219,128,.9); } .diff-help { margin: 0 0 16px; padding-left: 4px; color: var(--ink-2); font-size: 14px; font-weight: 700; line-height: 1.55; } .diff-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
 .diff-grid button { padding: 18px 14px; text-align: center; border: 2px solid var(--border); background: var(--surface); border-radius: 14px; cursor: pointer; } .diff-grid strong { font-family: var(--mono); font-size: 14px; display: block; margin-bottom: 6px; } .diff-grid .easy strong { color: var(--ok); } .diff-grid .normal strong { color: var(--accent); } .diff-grid .hard strong { color: var(--bad); } .diff-grid .easy.active { background: var(--ok-soft); border-color: var(--ok); } .diff-grid .normal.active { background: var(--accent-soft); border-color: var(--accent); } .diff-grid .hard.active { background: var(--bad-soft); border-color: var(--bad); }
 .diff-summary { background: var(--surface-alt); } .diff-summary :deep(> div) { display: flex; gap: 16px; } .diff-summary div div { flex: 1; text-align: center; } .diff-summary small { font-family: var(--mono); color: var(--ink-3); font-size: 10px; } .diff-summary strong { display: block; font-family: var(--mono); font-size: 22px; margin-top: 4px; }
 .battle-actions { display: flex; gap: 8px; } .leader-help,.creation-step { margin-top: 6px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); text-align: right; }
-.battle-grid { display: grid; grid-template-columns: 1fr 440px; gap: 20px; } .battle-left, .members { display: flex; flex-direction: column; gap: 14px; }
-.clear-banner { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 2px solid var(--accent); border-radius: 16px; background: linear-gradient(135deg,#fff5e0 0%,#ffe4c4 100%); box-shadow: var(--shadow-lg); }
-.clear-badge { width: 76px; height: 76px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 900; letter-spacing: 1px; box-shadow: inset 0 -4px 0 rgba(0,0,0,.12); flex: 0 0 76px; }
-.clear-banner h2 { margin: 0; font-size: 28px; color: var(--accent-dark); }
-.clear-banner p { margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--ink); }
-.arena { position: relative; height: 380px; border-radius: 18px; overflow: hidden; background: linear-gradient(135deg,#fff5e0 0%,#fbe5d3 50%,#f6c098 100%); border: 1.5px solid var(--border); box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center; } .grid-bg { position: absolute; inset: 0; opacity: .16; background-image: linear-gradient(var(--ink) 1px, transparent 1px), linear-gradient(90deg,var(--ink) 1px, transparent 1px); background-size: 40px 40px; }
+.battle-grid { display: grid; grid-template-columns: 1fr 440px; gap: 20px; align-items: start; } .battle-left, .members { display: flex; flex-direction: column; gap: 14px; }
+.arena { position: relative; height: 380px; border-radius: 18px; overflow: hidden; background-color: transparent; background-size: cover; background-position: center; background-repeat: no-repeat; border: 1.5px solid var(--border); box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center; } .arena :deep(.boss-monster) { z-index: 2; }
+.arena.cleared:before { content: ""; position: absolute; inset: 0; z-index: 3; background: radial-gradient(circle at 50% 44%, rgba(255, 229, 122, .2) 0%, rgba(18, 12, 8, .28) 42%, rgba(18, 12, 8, .72) 100%); pointer-events: none; }
+.boss-clear-overlay { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; padding: 48px 30px 30px; text-align: center; color: #fff; animation: clear-overlay-pop .58s cubic-bezier(.2,1.35,.38,1); }
+.clear-kicker { padding: 8px 16px; border: 1px solid rgba(255, 229, 122, .82); border-radius: 999px; background: rgba(31, 24, 15, .46); color: #ffe57a; font-family: var(--mono); font-size: 22px; font-weight: 900; letter-spacing: 2px; text-shadow: 0 2px 10px rgba(0,0,0,.7), 0 0 18px rgba(255,229,122,.72); box-shadow: 0 0 24px rgba(255,229,122,.35); }
+.boss-clear-overlay h2 { margin: 0; color: #fff8d8; font-size: 32px; font-weight: 900; text-shadow: 0 3px 16px rgba(0,0,0,.82), 0 0 24px rgba(255,229,122,.48); }
+.boss-clear-overlay p { max-width: 420px; margin: 0 0 4px; color: rgba(255,255,255,.92); font-size: 14px; font-weight: 800; line-height: 1.55; text-shadow: 0 2px 10px rgba(0,0,0,.78); }
+.sparkle { position: absolute; color: #ffe57a; font-size: 24px; text-shadow: 0 0 18px rgba(255,229,122,.9); animation: clear-sparkle 1.8s ease-in-out infinite; }
+.sparkle-a { left: 18%; top: 22%; }
+.sparkle-b { right: 22%; top: 28%; animation-delay: .45s; }
+.sparkle-c { left: 62%; bottom: 22%; animation-delay: .9s; }
+@keyframes clear-overlay-pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+@keyframes clear-sparkle { 0%,100% { opacity: .35; transform: translateY(0) scale(.82) rotate(0deg); } 50% { opacity: 1; transform: translateY(-8px) scale(1.18) rotate(18deg); } }
 .hp-row { display: flex; align-items: center; gap: 14px; } .hp-row span { font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-weight: 700; letter-spacing: 1px; } .hp-row :deep(.bar-wrap) { flex: 1; } .hp-row b { font-family: var(--mono); font-size: 18px; color: var(--accent); min-width: 130px; text-align: right; }
 .damage-row { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--ink-3); } .damage-row strong { color: var(--accent); }
-.condition-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; } .condition-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .checks p { font-size: 12px; color: var(--ink-2); }
-.reward { background: var(--accent-soft); border-color: var(--accent); } .reward small { display: block; font-family: var(--mono); color: var(--ink-2); font-size: 10px; margin-top: 8px; } .reward strong { display: block; font-family: var(--mono); color: var(--accent-dark); font-size: 13px; margin-bottom: 8px; }
+.condition-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: stretch; } .condition-grid :deep(.app-card) { height: 100%; } .condition-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .checks { display: grid; gap: 8px; margin-top: 14px; } .checks p { margin: 0; display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-alt); font-size: 13px; color: var(--ink-2); } .checks p.completed { background: var(--ok-soft); border-color: var(--ok); } .checks p b { color: var(--accent); font-size: 18px; } .checks p.completed b { color: var(--ok); } .checks p strong { font-family: var(--mono); color: var(--ink); }
+.reward { background: #fff1c8; border-color: var(--yolk-deep); text-align: center; } .reward-loot { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; } .reward-loot span { padding: 16px; border: 1px solid var(--yolk-deep); border-radius: 14px; background: rgba(255,255,255,.64); font-size: 26px; } .reward small { display: block; font-family: var(--mono); color: var(--ink-2); font-size: 10px; margin-top: 8px; } .reward strong { display: block; font-family: var(--mono); color: var(--accent-dark); font-size: 18px; margin-top: 4px; } .reward-lock { color: var(--ink-2); font-size: 12px; }
 .member-head { display: flex; justify-content: space-between; align-items: baseline; } .member-head strong { font-size: 13px; } .member-head span { font-family: var(--mono); color: var(--ink-3); font-size: 11px; } .tip { background: var(--surface-alt); color: var(--ink-2); font-size: 11px; line-height: 1.6; }
 .quest-entry { display: flex; flex-direction: column; gap: 6px; } .quest-actions { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+@keyframes clear-pop { from { opacity: 0; transform: translateY(12px) scale(.86); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes sparkle-fall { from { transform: translateY(0) rotate(0); } to { transform: translateY(130px) rotate(120deg); } }
 @media (max-width: 960px) { .battle-grid { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .page-title-row { align-items: flex-start; flex-direction: column; } .diff-grid,.condition-grid { grid-template-columns: 1fr; } .hp-row,.damage-row { align-items: flex-start; flex-direction: column; } .hp-row :deep(.bar-wrap) { width: 100%; } }
 </style>

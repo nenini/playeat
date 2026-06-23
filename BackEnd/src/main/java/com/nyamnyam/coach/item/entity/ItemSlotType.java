@@ -5,7 +5,9 @@ import com.nyamnyam.coach.global.exception.errorcode.ItemErrorCode;
 
 public enum ItemSlotType {
     HAND,
-    HEAD;
+    HEAD,
+    CHARACTER,
+    BACKGROUND;
 
     public static ItemSlotType from(String slotType) {
         if (slotType == null) {

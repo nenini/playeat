@@ -1,5 +1,6 @@
 <template>
-  <svg v-if="id === 'crown'" viewBox="0 0 60 36" width="60" height="36" class="weapon">
+  <img v-if="assetSrc" class="weapon weapon-image" :src="assetSrc" :alt="id || 'item'" draggable="false">
+  <svg v-else-if="id === 'crown'" viewBox="0 0 60 36" width="60" height="36" class="weapon">
     <path d="M3 24 L 15 5 L 27 24 Z" fill="#f5c83a" stroke="#7a4a08" stroke-width="1.6" stroke-linejoin="round" />
     <path d="M18 24 L 30 1 L 42 24 Z" fill="#f5c83a" stroke="#7a4a08" stroke-width="1.6" stroke-linejoin="round" />
     <path d="M33 24 L 45 5 L 57 24 Z" fill="#f5c83a" stroke="#7a4a08" stroke-width="1.6" stroke-linejoin="round" />
@@ -31,7 +32,12 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{ id?: string }>(), { id: 'stick' })
+import { computed } from 'vue'
+import { resolveItemAssetByKey } from '../../utils/itemAssets'
+
+const props = withDefaults(defineProps<{ id?: string | null }>(), { id: 'stick' })
+
+const assetSrc = computed(() => resolveItemAssetByKey(props.id))
 </script>
 
 <script lang="ts">
@@ -40,4 +46,9 @@ export default { name: 'WeaponIcon' }
 
 <style scoped>
 .weapon { overflow: visible; display: block; }
+.weapon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 </style>

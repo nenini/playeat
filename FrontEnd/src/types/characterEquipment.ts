@@ -1,4 +1,4 @@
-export type CharacterEquipmentSlot = 'HAND' | 'HEAD' | string
+export type CharacterEquipmentSlot = 'HAND' | 'HEAD' | 'CHARACTER' | 'BACKGROUND' | string
 
 export interface CharacterEquipment {
   slotType: CharacterEquipmentSlot
@@ -8,6 +8,7 @@ export interface CharacterEquipment {
   name: string | null
   description: string | null
   imageUrl: string | null
+  effectValue?: string | null
   equippedAt: string | null
 }
 

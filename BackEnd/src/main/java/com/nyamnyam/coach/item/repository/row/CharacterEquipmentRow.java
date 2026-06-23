@@ -17,5 +17,6 @@ public class CharacterEquipmentRow {
     private String name;
     private String description;
     private String imageUrl;
+    private String effectValue;
     private LocalDateTime equippedAt;
 }

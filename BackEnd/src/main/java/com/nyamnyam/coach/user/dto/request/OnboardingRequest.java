@@ -12,6 +12,12 @@ public record OnboardingRequest(
         @Schema(description = "Health profile")
         @Valid
         @NotNull(message = "Health profile is required.")
-        HealthProfileRequest healthProfile
+        HealthProfileRequest healthProfile,
+
+        @Schema(description = "Character appearance type", example = "PENGUIN")
+        String characterAppearanceType
 ) {
+    public OnboardingRequest(Long selectedCoachId, HealthProfileRequest healthProfile) {
+        this(selectedCoachId, healthProfile, null);
+    }
 }

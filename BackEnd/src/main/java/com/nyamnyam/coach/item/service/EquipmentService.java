@@ -1,5 +1,6 @@
 package com.nyamnyam.coach.item.service;
 
+import com.nyamnyam.coach.character.entity.CharacterAppearanceType;
 import com.nyamnyam.coach.character.entity.CharacterEntity;
 import com.nyamnyam.coach.character.repository.CharacterRepository;
 import com.nyamnyam.coach.global.exception.BusinessException;
@@ -53,6 +54,9 @@ public class EquipmentService {
                 userItem.getSlotType(),
                 userItem.getUserItemId()
         );
+        if (ItemSlotType.CHARACTER.name().equals(userItem.getSlotType())) {
+            characterRepository.updateAppearanceType(userId, CharacterAppearanceType.normalize(userItem.getEffectValue()));
+        }
         return toListResponse(character.getCharacterId(), characterEquipmentRepository.findByCharacterId(character.getCharacterId()));
     }
 
@@ -66,6 +70,9 @@ public class EquipmentService {
                 character.getCharacterId(),
                 slot.name()
         );
+        if (slot == ItemSlotType.CHARACTER) {
+            characterRepository.updateAppearanceType(userId, CharacterAppearanceType.NYAMNYAM.name());
+        }
 
         return toListResponse(
                 character.getCharacterId(),
@@ -83,10 +90,18 @@ public class EquipmentService {
         if (!Boolean.TRUE.equals(userItem.getActive())) {
             throw new BusinessException(ItemErrorCode.ITEM_NOT_EQUIPPABLE);
         }
-        if (!ItemType.EQUIPMENT.name().equals(userItem.getItemType())) {
+        ItemSlotType slotType = ItemSlotType.from(userItem.getSlotType());
+        if (!ItemType.EQUIPMENT.name().equals(userItem.getItemType())
+                && !ItemType.CHARACTER.name().equals(userItem.getItemType())
+                && !ItemType.BACKGROUND.name().equals(userItem.getItemType())) {
             throw new BusinessException(ItemErrorCode.ITEM_NOT_EQUIPPABLE);
         }
-        ItemSlotType.from(userItem.getSlotType());
+        if (ItemType.CHARACTER.name().equals(userItem.getItemType()) && slotType != ItemSlotType.CHARACTER) {
+            throw new BusinessException(ItemErrorCode.ITEM_NOT_EQUIPPABLE);
+        }
+        if (ItemType.BACKGROUND.name().equals(userItem.getItemType()) && slotType != ItemSlotType.BACKGROUND) {
+            throw new BusinessException(ItemErrorCode.ITEM_NOT_EQUIPPABLE);
+        }
     }
 
     private CharacterEquipmentListResponse toListResponse(Long characterId, List<CharacterEquipmentRow> rows) {
@@ -114,6 +129,7 @@ public class EquipmentService {
                 row.getName(),
                 row.getDescription(),
                 row.getImageUrl(),
+                row.getEffectValue(),
                 row.getEquippedAt()
         );
     }
@@ -127,11 +143,15 @@ public class EquipmentService {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }
 
     private int slotOrder(String slotType) {
-        return ItemSlotType.HAND.name().equals(slotType) ? 1 : 2;
+        if (ItemSlotType.CHARACTER.name().equals(slotType)) return 0;
+        if (ItemSlotType.HEAD.name().equals(slotType)) return 1;
+        if (ItemSlotType.HAND.name().equals(slotType)) return 2;
+        return ItemSlotType.BACKGROUND.name().equals(slotType) ? 3 : 9;
     }
 }

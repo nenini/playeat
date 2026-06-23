@@ -873,7 +873,12 @@ public class GuildService {
                             () -> responses.add(emptyCharacterEquipmentResponse(slotType))
                     );
         }
-        responses.sort(Comparator.comparingInt(response -> ItemSlotType.HAND.name().equals(response.slotType()) ? 1 : 2));
+        responses.sort(Comparator.comparingInt(response -> {
+            if (ItemSlotType.CHARACTER.name().equals(response.slotType())) return 0;
+            if (ItemSlotType.HEAD.name().equals(response.slotType())) return 1;
+            if (ItemSlotType.HAND.name().equals(response.slotType())) return 2;
+            return ItemSlotType.BACKGROUND.name().equals(response.slotType()) ? 3 : 9;
+        }));
         return responses;
     }
 
@@ -886,6 +891,7 @@ public class GuildService {
                 row.getName(),
                 row.getDescription(),
                 row.getImageUrl(),
+                row.getEffectValue(),
                 row.getEquippedAt()
         );
     }
@@ -894,6 +900,7 @@ public class GuildService {
         return new CharacterEquipmentResponse(
                 slotType.name(),
                 false,
+                null,
                 null,
                 null,
                 null,

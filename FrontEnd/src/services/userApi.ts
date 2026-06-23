@@ -83,6 +83,7 @@ export const userApi = {
       method: 'POST',
       body: {
         selectedCoachId: 1,
+        characterAppearanceType: typeof payload.characterAppearanceType === 'string' ? payload.characterAppearanceType : 'NYAMNYAM',
         healthProfile: mapOnboardingPayload(payload)
       }
     })

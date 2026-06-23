@@ -14,6 +14,7 @@ public class ShopItemRow {
     private String slotType;
     private Integer price;
     private String imageUrl;
+    private String effectValue;
     private Boolean defaultItem;
     private Boolean purchasable;
     private Boolean active;

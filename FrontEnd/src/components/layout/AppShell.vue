@@ -51,23 +51,25 @@ export default { name: 'AppShell' }
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  background: var(--bg);
+  background: transparent;
   color: var(--ink);
   display: flex;
   flex-direction: column;
 }
 .topbar {
-  height: 64px;
-  flex: 0 0 64px;
-  background: var(--surface);
+  height: 72px;
+  flex: 0 0 72px;
+  background: rgba(255,255,255,.88);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 32px;
+  padding: 0 34px;
   gap: 28px;
   position: sticky;
   top: 0;
   z-index: 50;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 4px 18px rgba(100,61,35,.06);
 }
 .brand {
   border: 0;
@@ -95,7 +97,7 @@ export default { name: 'AppShell' }
   cursor: pointer;
   background: transparent;
   padding: 8px 16px;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -104,10 +106,11 @@ export default { name: 'AppShell' }
   color: var(--ink-2);
   position: relative;
 }
-.nav-tab.active { font-weight: 800; color: var(--ink); }
+.nav-tab:hover { background: var(--surface-alt); transform: translateY(-1px); }
+.nav-tab.active { font-weight: 900; color: var(--ink); background: #f3fdd8; }
 .active-line {
   position: absolute;
-  bottom: -10px;
+  bottom: -8px;
   left: 16px;
   right: 16px;
   height: 3px;
@@ -122,10 +125,10 @@ export default { name: 'AppShell' }
 .profile {
   width: 36px;
   height: 36px;
-  border-radius: 18px;
+  border-radius: 50%;
   padding: 0;
   background: var(--yolk);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -133,16 +136,15 @@ export default { name: 'AppShell' }
   cursor: pointer;
   overflow: hidden;
   flex: 0 0 36px;
+  box-shadow: none;
 }
-.profile.active {
-  background: var(--accent);
-  border-color: var(--accent-dark);
-}
-.profile img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
-.profile span { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-weight: 800; }
+.profile.active { border-color: var(--accent); }
+.profile img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
+.profile span { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-weight: 800; background: var(--yolk); color: var(--ink); }
+.profile.active span { background: var(--accent); color: #fff; }
 .page-container {
   flex: 1;
-  padding: 24px 32px 48px;
+  padding: 30px 32px 56px;
   max-width: 1320px;
   width: 100%;
   margin: 0 auto;
