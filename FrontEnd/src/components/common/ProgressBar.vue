@@ -49,15 +49,20 @@ export default { name: 'ProgressBar' }
   color: var(--ink-2);
 }
 .bar-track {
-  background: var(--surface-alt);
+  background: #eadfd4;
   overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(72,43,24,.12);
 }
 .bar-fill {
   height: 100%;
-  transition: width .3s ease;
+  transition: width .8s cubic-bezier(.2,.8,.2,1);
+  position: relative;
+  overflow: hidden;
 }
-.accent { background: var(--accent); }
-.ok { background: var(--ok); }
-.bad { background: var(--bad); }
+.bar-fill:after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.46), transparent); animation: bar-shine 2.2s infinite; }
+.accent { background: linear-gradient(90deg,#ffad65,var(--accent)); }
+.ok { background: linear-gradient(90deg,#76d995,var(--ok)); }
+.bad { background: linear-gradient(90deg,#ff826d,var(--bad)); }
 .dark, .neutral { background: var(--ink); }
+@keyframes bar-shine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 </style>

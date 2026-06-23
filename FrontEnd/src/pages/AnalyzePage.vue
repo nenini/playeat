@@ -44,6 +44,7 @@
             <div>
               <div class="mono-label">DAILY REPORT · 선택 날짜 기준</div>
               <h2>{{ selectedDateLabel }} 리포트</h2>
+              <div class="score-loot"><AppPill tone="accent">{{ scoreGrade }}</AppPill><AppPill v-if="dailyAnalysis" tone="ok">✨ HEALTH XP +{{ score }}</AppPill></div>
               <div class="report-sections">
                 <div v-for="section in dailyReportSections" :key="section.title" class="report-section">
                   <strong>{{ section.title }}</strong>
@@ -208,6 +209,13 @@ const todayDate = toDateInputValue(new Date())
 const canGoForward = computed(() => selectedDate.value < todayDate)
 const selectedDateLabel = computed(() => formatDateLabel(selectedDate.value))
 const score = computed(() => dailyAnalysis.value?.healthScore ?? 0)
+const scoreGrade = computed(() => {
+  if (!dailyAnalysis.value) return '분석 대기'
+  if (score.value >= 90) return 'S · 완벽한 하루'
+  if (score.value >= 80) return 'A · 훌륭해요'
+  if (score.value >= 70) return 'B · 좋은 흐름'
+  return 'C · 성장 중'
+})
 const coach = computed(() => npcCoaches.find((npc) => npc.id === coachId.value))
 const mealRecorded = computed<Record<MealKindId, boolean>>(() => {
   const initial: Record<MealKindId, boolean> = { breakfast: false, lunch: false, snack: false, dinner: false }
@@ -419,25 +427,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.analyze-layout { display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; }
+.analyze-layout { display: grid; grid-template-columns: 1.25fr .75fr; gap: 20px; }
 .date-box { position: relative; display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px 6px; box-shadow: var(--shadow); }
 .date-open { border: 0; background: transparent; padding: 6px 14px; font-family: var(--mono); font-size: 13px; font-weight: 800; min-width: 200px; text-align: center; cursor: pointer; color: var(--ink); }
 .calendar-pop { position: absolute; right: 44px; top: 44px; z-index: 10; border: 1px solid var(--border-strong); border-radius: 10px; padding: 8px; box-shadow: var(--shadow-lg); }
-.tabs { padding: 14px 22px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-end; gap: 4px; }
-.tabs button { padding: 12px 20px 14px; border: 0; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; display: flex; flex-direction: column; gap: 2px; text-align: left; }
-.tabs button.active { border-bottom-color: var(--accent); }
+.tabs { padding: 8px; margin: 14px; border: 1px solid var(--border); border-radius: 14px; display: flex; gap: 6px; background: var(--surface-alt); }
+.tabs button { flex: 1; padding: 12px 20px; border: 1px solid transparent; border-radius: 10px; background: transparent; cursor: pointer; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.tabs button.active { border-color: var(--accent); background: #fff; box-shadow: 0 3px 0 rgba(190,78,31,.14); }
 .tabs strong { font-size: 14px; }
 .tabs small { font-family: var(--mono); color: var(--ink-3); font-size: 10px; }
 .tabs .active small { color: var(--accent); }
 .report-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
-.score-card { display: flex; align-items: center; gap: 22px; padding: 20px; border-radius: 14px; background: linear-gradient(135deg,#fff5e6 0%,#fff 100%); border: 1px solid var(--border); }
+.score-card { display: flex; align-items: center; gap: 22px; padding: 24px; border-radius: 18px; background: radial-gradient(circle at 10% 20%,#fff 0%,#fff2cf 30%,#ffe4cf 100%); border: 1px solid #e8bb91; box-shadow: var(--shadow); }
+.score-loot { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .empty-score { width: 120px; height: 120px; border: 10px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 28px; font-weight: 800; color: var(--ink-3); flex: 0 0 120px; }
 h2 { margin: 6px 0; font-size: 22px; }
 h3 { font-size: 13px; margin: 0 0 10px; }
 p { margin: 0; color: var(--ink-2); line-height: 1.6; font-size: 12px; }
 .empty-text { padding: 12px; border: 1px dashed var(--border); border-radius: 10px; background: var(--surface-alt); }
 .report-sections { display: grid; gap: 8px; margin-top: 10px; }
-.report-section { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,.72); }
+.report-section { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.76); box-shadow: 0 2px 0 rgba(116,75,49,.06); }
 .report-section strong { display: block; margin-bottom: 4px; font-size: 13px; color: var(--ink); }
 .report-section p { color: var(--ink); font-size: 15px; line-height: 1.65; font-weight: 400; word-break: keep-all; }
 .meal-status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -466,7 +475,7 @@ p { margin: 0; color: var(--ink-2); line-height: 1.6; font-size: 12px; }
 .week-chart { display: flex; align-items: flex-end; gap: 10px; height: 140px; }
 .week-chart div { flex: 1; align-self: stretch; display: flex; flex-direction: column; align-items: center; gap: 6px; justify-content: flex-end; }
 .week-chart span, .week-chart small { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
-.week-chart b { width: 100%; background: var(--ink); border-radius: 6px 6px 0 0; }
+.week-chart b { width: 100%; background: linear-gradient(180deg,#8f7ee5,var(--purple)); border-radius: 6px 6px 0 0; transition: height .8s cubic-bezier(.2,.8,.2,1); box-shadow: 0 0 12px rgba(117,100,216,.18); }
 .week-chart b.today { background: var(--accent); }
 .ai-head { display: flex; justify-content: space-between; margin-bottom: 10px; }
 .strategy { background: var(--accent-soft); border-color: var(--accent); }

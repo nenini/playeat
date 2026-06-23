@@ -22,10 +22,12 @@ export default { name: 'AppCard' }
 
 <style scoped>
 .app-card {
-  background: var(--surface);
+  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,252,247,.98));
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 18px;
   box-shadow: var(--shadow);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
+.app-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--border-strong); }
 .app-card.accent { border-color: var(--accent); }
 </style>
