@@ -14,9 +14,9 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import nbody from "../../assets/nbody.png";
-import nwing from "../../assets/nwing.png";
-import dragonClear from "../../assets/dragon_clear.png";
+import nbody from "../../assets/dragon/nbody.png";
+import nwing from "../../assets/dragon/nwing.png";
+import dragonClear from "../../assets/dragon/dragon_clear.png";
 
 const props = withDefaults(defineProps<{ size?: number; hp?: number }>(), {
   size: 240,
