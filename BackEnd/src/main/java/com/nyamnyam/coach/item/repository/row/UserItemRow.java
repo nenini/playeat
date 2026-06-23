@@ -17,6 +17,7 @@ public class UserItemRow {
     private String itemType;
     private String slotType;
     private String imageUrl;
+    private String effectValue;
     private String acquiredType;
     private LocalDateTime acquiredAt;
     private Boolean equipped;

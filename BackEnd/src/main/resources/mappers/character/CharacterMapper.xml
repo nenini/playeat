@@ -77,7 +77,7 @@
             COALESCE(#{stage}, 'EGG'),
             COALESCE(#{mood}, 'NORMAL'),
             COALESCE(#{moodMessage}, '냠냠이가 식단 기록과 함께 자랄 준비를 마쳤어요.'),
-            COALESCE(#{appearanceType}, 'NORMAL'),
+            COALESCE(#{appearanceType}, 'NYAMNYAM'),
             COALESCE(#{streakDays}, 0),
             COALESCE(#{bestStreakDays}, 0)
         )
@@ -102,6 +102,14 @@
             best_streak_days = #{bestStreakDays},
             updated_at = CURRENT_TIMESTAMP
         WHERE character_id = #{characterId}
+    </update>
+
+    <update id="updateAppearanceType">
+        UPDATE characters
+        SET
+            appearance_type = #{appearanceType},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
     </update>
 
     <update id="updateMood">

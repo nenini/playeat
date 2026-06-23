@@ -10,6 +10,7 @@ public record CharacterEquipmentResponse(
         String name,
         String description,
         String imageUrl,
+        String effectValue,
         LocalDateTime equippedAt
 ) {
 }

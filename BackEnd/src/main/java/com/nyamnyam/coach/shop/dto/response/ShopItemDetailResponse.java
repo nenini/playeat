@@ -8,6 +8,7 @@ public record ShopItemDetailResponse(
         String slotType,
         Integer price,
         String imageUrl,
+        String effectValue,
         Boolean defaultItem,
         Boolean purchasable,
         Boolean owned,

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nyamnyam.coach.auth.repository.RefreshTokenRepository;
+import com.nyamnyam.coach.character.entity.CharacterAppearanceType;
+import com.nyamnyam.coach.character.repository.CharacterRepository;
+import com.nyamnyam.coach.character.service.CharacterGrowthService;
 import com.nyamnyam.coach.global.exception.BusinessException;
 import com.nyamnyam.coach.global.exception.errorcode.AuthErrorCode;
 import com.nyamnyam.coach.global.exception.errorcode.CommonErrorCode;
@@ -27,6 +30,7 @@ import com.nyamnyam.coach.user.entity.User;
 import com.nyamnyam.coach.user.repository.HealthProfileRepository;
 import com.nyamnyam.coach.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +53,10 @@ public class UserService {
     private final ObjectMapper objectMapper;
     private final ProfileImageStorageService profileImageStorageService;
     private final NutritionTargetCalculator nutritionTargetCalculator;
+    @Autowired
+    private CharacterGrowthService characterGrowthService;
+    @Autowired
+    private CharacterRepository characterRepository;
 
     @Transactional(readOnly = true)
     public UserMeResponse getMe(Long userId) {
@@ -154,6 +162,13 @@ public class UserService {
             healthProfile = findHealthProfile(userId);
         } else {
             healthProfileRepository.save(healthProfile);
+        }
+
+        if (characterGrowthService != null) {
+            characterGrowthService.createDefaultCharacterIfMissing(userId, user.getNickname());
+        }
+        if (characterRepository != null && request.characterAppearanceType() != null && !request.characterAppearanceType().isBlank()) {
+            characterRepository.updateAppearanceType(userId, CharacterAppearanceType.normalize(request.characterAppearanceType()));
         }
 
         userRepository.completeOnboarding(userId, request.selectedCoachId());

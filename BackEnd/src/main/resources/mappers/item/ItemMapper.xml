@@ -13,6 +13,7 @@
         <result property="slotType" column="slot_type"/>
         <result property="price" column="price"/>
         <result property="imageUrl" column="image_url"/>
+        <result property="effectValue" column="effect_value"/>
         <result property="defaultItem" column="default_item"/>
         <result property="purchasable" column="purchasable"/>
         <result property="active" column="active"/>
@@ -29,6 +30,7 @@
         <result property="slotType" column="slot_type"/>
         <result property="price" column="price"/>
         <result property="imageUrl" column="image_url"/>
+        <result property="effectValue" column="effect_value"/>
         <result property="defaultItem" column="default_item"/>
         <result property="purchasable" column="purchasable"/>
         <result property="active" column="active"/>
@@ -47,6 +49,7 @@
         <result property="itemType" column="item_type"/>
         <result property="slotType" column="slot_type"/>
         <result property="imageUrl" column="image_url"/>
+        <result property="effectValue" column="effect_value"/>
         <result property="acquiredType" column="acquired_type"/>
         <result property="acquiredAt" column="acquired_at"/>
         <result property="equipped" column="equipped"/>
@@ -61,6 +64,7 @@
         slot_type,
         price,
         image_url,
+        effect_value,
         default_item,
         purchasable,
         active,
@@ -77,6 +81,7 @@
         i.slot_type,
         i.price,
         i.image_url,
+        i.effect_value,
         i.default_item,
         i.purchasable,
         i.active,
@@ -144,6 +149,7 @@
                i.item_type,
                i.slot_type,
                i.image_url,
+               i.effect_value,
                ui.acquired_type,
                ui.acquired_at,
                i.active,
@@ -167,6 +173,7 @@
                i.item_type,
                i.slot_type,
                i.image_url,
+               i.effect_value,
                ui.acquired_type,
                ui.acquired_at,
                i.active,
@@ -216,6 +223,7 @@
                i.item_type,
                i.slot_type,
                i.image_url,
+               i.effect_value,
                ui.acquired_type,
                ui.acquired_at,
                i.active,

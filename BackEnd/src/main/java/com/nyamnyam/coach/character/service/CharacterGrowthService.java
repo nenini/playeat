@@ -44,7 +44,7 @@ public class CharacterGrowthService {
                 .stage(CharacterStage.EGG.name())
                 .mood(CharacterMood.NORMAL.name())
                 .moodMessage("냠냠이가 식단 기록과 함께 자랄 준비를 마쳤어요.")
-                .appearanceType(CharacterAppearanceType.NORMAL.name())
+                .appearanceType(CharacterAppearanceType.NYAMNYAM.name())
                 .streakDays(0)
                 .bestStreakDays(0)
                 .build();

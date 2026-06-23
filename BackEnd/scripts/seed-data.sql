@@ -79,12 +79,13 @@ INSERT INTO items (
     slot_type,
     price,
     image_url,
+    effect_value,
     default_item,
     purchasable,
     active,
     sort_order
 )
-SELECT '나무막대기', '그냥 주운 나뭇가지', 'EQUIPMENT', 'HAND', 0, '/images/items/wood-stick.png', TRUE, FALSE, TRUE, 1
+SELECT '나무막대기', '그냥 주운 나뭇가지', 'EQUIPMENT', 'HAND', 0, '/images/items/wood-stick.png', NULL, TRUE, FALSE, TRUE, 1
     WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '나무막대기');
 INSERT INTO items (
     name,
@@ -93,12 +94,13 @@ INSERT INTO items (
     slot_type,
     price,
     image_url,
+    effect_value,
     default_item,
     purchasable,
     active,
     sort_order
 )
-SELECT '칼', '번쩍이는 강철 검', 'EQUIPMENT', 'HAND', 500, '/images/items/sword.png', FALSE, TRUE, TRUE, 2
+SELECT '칼', '번쩍이는 강철 검', 'EQUIPMENT', 'HAND', 500, '/images/items/sword.png', NULL, FALSE, TRUE, TRUE, 2
     WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '칼');
 INSERT INTO items (
     name,
@@ -107,12 +109,13 @@ INSERT INTO items (
     slot_type,
     price,
     image_url,
+    effect_value,
     default_item,
     purchasable,
     active,
     sort_order
 )
-SELECT '지팡이', '마법의 기운이 흐른다', 'EQUIPMENT', 'HAND', 900, '/images/items/staff.png', FALSE, TRUE, TRUE, 3
+SELECT '지팡이', '마법의 기운이 흐른다', 'EQUIPMENT', 'HAND', 900, '/images/items/staff.png', NULL, FALSE, TRUE, TRUE, 3
     WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '지팡이');
 INSERT INTO items (
     name,
@@ -121,13 +124,104 @@ INSERT INTO items (
     slot_type,
     price,
     image_url,
+    effect_value,
     default_item,
     purchasable,
     active,
     sort_order
 )
-SELECT '왕관', '길드 최고의 명예', 'EQUIPMENT', 'HEAD', 1500, '/images/items/crown.png', FALSE, TRUE, TRUE, 4
+SELECT '왕관', '길드 최고의 명예', 'EQUIPMENT', 'HEAD', 1500, '/images/items/crown.png', NULL, FALSE, TRUE, TRUE, 4
     WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '왕관');
+INSERT INTO items (
+    name,
+    description,
+    item_type,
+    slot_type,
+    price,
+    image_url,
+    effect_value,
+    default_item,
+    purchasable,
+    active,
+    sort_order
+)
+SELECT '냠냠이 캐릭터', '기본으로 함께하는 든든한 냠냠이 모험가', 'CHARACTER', 'CHARACTER', 0, 'NYAMNYAM', 'NYAMNYAM', TRUE, FALSE, TRUE, 19
+    WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '냠냠이 캐릭터');
+INSERT INTO items (
+    name,
+    description,
+    item_type,
+    slot_type,
+    price,
+    image_url,
+    effect_value,
+    default_item,
+    purchasable,
+    active,
+    sort_order
+)
+SELECT '펭귄 캐릭터', '차분한 펭귄 모험가', 'CHARACTER', 'CHARACTER', 5000, 'PENGUIN', 'PENGUIN', FALSE, TRUE, TRUE, 20
+    WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '펭귄 캐릭터');
+INSERT INTO items (
+    name,
+    description,
+    item_type,
+    slot_type,
+    price,
+    image_url,
+    effect_value,
+    default_item,
+    purchasable,
+    active,
+    sort_order
+)
+SELECT '강아지 캐릭터', '활발한 강아지 모험가', 'CHARACTER', 'CHARACTER', 5000, 'DOG', 'DOG', FALSE, TRUE, TRUE, 21
+    WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '강아지 캐릭터');
+INSERT INTO items (
+    name,
+    description,
+    item_type,
+    slot_type,
+    price,
+    image_url,
+    effect_value,
+    default_item,
+    purchasable,
+    active,
+    sort_order
+)
+SELECT '푸른 숲 배경', '냠냠이가 모험을 시작하는 싱그러운 숲 배경', 'BACKGROUND', 'BACKGROUND', 3000, 'BACKGROUND_1', 'BACKGROUND_1', FALSE, TRUE, TRUE, 30
+    WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '푸른 숲 배경');
+INSERT INTO items (
+    name,
+    description,
+    item_type,
+    slot_type,
+    price,
+    image_url,
+    effect_value,
+    default_item,
+    purchasable,
+    active,
+    sort_order
+)
+SELECT '달콤한 월드 배경', '보스전의 달콤한 분위기를 담은 배경', 'BACKGROUND', 'BACKGROUND', 4000, 'BACKGROUND_2', 'BACKGROUND_2', FALSE, TRUE, TRUE, 31
+    WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '달콤한 월드 배경');
+INSERT INTO items (
+    name,
+    description,
+    item_type,
+    slot_type,
+    price,
+    image_url,
+    effect_value,
+    default_item,
+    purchasable,
+    active,
+    sort_order
+)
+SELECT '모험 캠프 배경', '길드 모험을 준비하는 따뜻한 캠프 배경', 'BACKGROUND', 'BACKGROUND', 5000, 'BACKGROUND_3', 'BACKGROUND_3', FALSE, TRUE, TRUE, 32
+    WHERE NOT EXISTS (SELECT 1 FROM items WHERE name = '모험 캠프 배경');
 -- Boss season, quest templates, and sample foods follow.
 -- Boss season, quest templates, and sample foods follow.
 
@@ -181,10 +275,10 @@ INSERT INTO bosses (
       (
           @sugar_season_id,
           '당분 드래곤',
-          '난이도를 선택해 길드원과 함께 전투를 시작하세요.',
+          '당류를 줄이는 식습관을 방해하는 달콤한 드래곤',
           'EASY',
           500,
-          '/images/boss/sugar-dragon.png',
+          'DRAGON',
           800,
           100,
           'ACTIVE',
@@ -193,11 +287,11 @@ INSERT INTO bosses (
       ),
       (
           @sugar_season_id,
-          '당분 드래곤',
-          '난이도를 선택해 길드원과 함께 전투를 시작하세요.',
+          '염분 골렘',
+          '짠맛으로 식단 균형을 무너뜨리는 염분 골렘',
           'NORMAL',
           1000,
-          '/images/boss/sugar-dragon.png',
+          'GOLEM',
           1200,
           150,
           'ACTIVE',
@@ -206,11 +300,11 @@ INSERT INTO bosses (
       ),
       (
           @sugar_season_id,
-          '당분 드래곤',
-          '난이도를 선택해 길드원과 함께 전투를 시작하세요.',
+          '단백질 해골기사',
+          '단백질 목표 달성을 시험하는 해골기사',
           'HARD',
           1800,
-          '/images/boss/sugar-dragon.png',
+          'KNIGHT',
           2400,
           300,
           'ACTIVE',
@@ -274,138 +368,9 @@ INSERT INTO boss_common_conditions (
     unit,
     sort_order
 ) VALUES
-      (
-          @sugar_season_id,
-          @sugar_easy_boss_id,
-          '당류 20g 이하 식사 공동 달성',
-          '길드원들이 당류 20g 이하 식사를 총 3회 기록하면 완료됩니다.',
-          'SUGAR_UNDER_LIMIT',
-          'NUTRITION',
-          'SUGAR',
-          'LESS_THAN_OR_EQUAL',
-          'TOTAL_COUNT',
-          'GUILD_BATTLE_PERIOD',
-          20,
-          NULL,
-          NULL,
-          'GRAM',
-          3,
-          NULL,
-          TRUE,
-          TRUE,
-          'COUNT',
-          1
-      ),
-      (
-          @sugar_season_id,
-          @sugar_normal_boss_id,
-          '당류 20g 이하 식사 공동 달성',
-          '길드원들이 당류 20g 이하 식사를 총 5회 기록하면 완료됩니다.',
-          'SUGAR_UNDER_LIMIT',
-          'NUTRITION',
-          'SUGAR',
-          'LESS_THAN_OR_EQUAL',
-          'TOTAL_COUNT',
-          'GUILD_BATTLE_PERIOD',
-          20,
-          NULL,
-          NULL,
-          'GRAM',
-          5,
-          NULL,
-          TRUE,
-          TRUE,
-          'COUNT',
-          1
-      ),
-      (
-          @sugar_season_id,
-          @sugar_normal_boss_id,
-          '단백질 25g 이상 식사 공동 달성',
-          '길드원들이 단백질 25g 이상 식사를 총 3회 기록하면 완료됩니다.',
-          'PROTEIN_OVER_TARGET',
-          'NUTRITION',
-          'PROTEIN',
-          'GREATER_THAN_OR_EQUAL',
-          'TOTAL_COUNT',
-          'GUILD_BATTLE_PERIOD',
-          25,
-          NULL,
-          NULL,
-          'GRAM',
-          3,
-          NULL,
-          TRUE,
-          TRUE,
-          'COUNT',
-          2
-      ),
-      (
-          @sugar_season_id,
-          @sugar_hard_boss_id,
-          '당류 20g 이하 식사 공동 달성',
-          '길드원들이 당류 20g 이하 식사를 총 7회 기록하면 완료됩니다.',
-          'SUGAR_UNDER_LIMIT',
-          'NUTRITION',
-          'SUGAR',
-          'LESS_THAN_OR_EQUAL',
-          'TOTAL_COUNT',
-          'GUILD_BATTLE_PERIOD',
-          20,
-          NULL,
-          NULL,
-          'GRAM',
-          7,
-          NULL,
-          TRUE,
-          TRUE,
-          'COUNT',
-          1
-      ),
-      (
-          @sugar_season_id,
-          @sugar_hard_boss_id,
-          '단백질 25g 이상 식사 공동 달성',
-          '길드원들이 단백질 25g 이상 식사를 총 5회 기록하면 완료됩니다.',
-          'PROTEIN_OVER_TARGET',
-          'NUTRITION',
-          'PROTEIN',
-          'GREATER_THAN_OR_EQUAL',
-          'TOTAL_COUNT',
-          'GUILD_BATTLE_PERIOD',
-          25,
-          NULL,
-          NULL,
-          'GRAM',
-          5,
-          NULL,
-          TRUE,
-          TRUE,
-          'COUNT',
-          2
-      ),
-      (
-          @sugar_season_id,
-          @sugar_hard_boss_id,
-          '나트륨 800mg 이하 식사 공동 달성',
-          '길드원들이 나트륨 800mg 이하 식사를 총 5회 기록하면 완료됩니다.',
-          'SODIUM_UNDER_LIMIT',
-          'NUTRITION',
-          'SODIUM',
-          'LESS_THAN_OR_EQUAL',
-          'TOTAL_COUNT',
-          'GUILD_BATTLE_PERIOD',
-          800,
-          NULL,
-          NULL,
-          'MG',
-          5,
-          NULL,
-          TRUE,
-          TRUE,
-          'COUNT',
-          3
-      );
+      (@sugar_season_id, @sugar_easy_boss_id, '당류 20g 이하 식사 공동 달성', '길드원들이 당류 20g 이하 식사를 총 3회 기록하면 완료됩니다.', 'SUGAR_UNDER_LIMIT', 'NUTRITION', 'SUGAR', 'LESS_THAN_OR_EQUAL', 'TOTAL_COUNT', 'GUILD_BATTLE_PERIOD', 20, NULL, NULL, 'GRAM', 3, NULL, TRUE, TRUE, 'COUNT', 1),
+      (@sugar_season_id, @sugar_normal_boss_id, '나트륨 800mg 이하 식사 공동 달성', '길드원들이 나트륨 800mg 이하 식사를 총 5회 기록하면 완료됩니다.', 'SODIUM_UNDER_LIMIT', 'NUTRITION', 'SODIUM', 'LESS_THAN_OR_EQUAL', 'TOTAL_COUNT', 'GUILD_BATTLE_PERIOD', 800, NULL, NULL, 'MG', 5, NULL, TRUE, TRUE, 'COUNT', 1),
+      (@sugar_season_id, @sugar_hard_boss_id, '단백질 25g 이상 식사 공동 달성', '길드원들이 단백질 25g 이상 식사를 총 7회 기록하면 완료됩니다.', 'PROTEIN_OVER_TARGET', 'NUTRITION', 'PROTEIN', 'GREATER_THAN_OR_EQUAL', 'TOTAL_COUNT', 'GUILD_BATTLE_PERIOD', 25, NULL, NULL, 'GRAM', 7, NULL, TRUE, TRUE, 'COUNT', 1);
 
 INSERT INTO quest_templates (
     title, description, quest_type, condition_category, metric_type, comparison_type,
@@ -888,6 +853,7 @@ SELECT
 FROM bosses b
 WHERE b.season_id = @sugar_test_season_id
   AND b.name = '당분 드래곤_테스트';
+
 
 -- Development sample food seed. Full seed is stored at BackEnd/scripts/full/10-foods-seed-full.sql.
 SET NAMES utf8mb4;

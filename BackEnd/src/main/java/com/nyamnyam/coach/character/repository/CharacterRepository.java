@@ -35,6 +35,11 @@ public interface CharacterRepository {
             @Param("bestStreakDays") int bestStreakDays
     );
 
+    int updateAppearanceType(
+            @Param("userId") Long userId,
+            @Param("appearanceType") String appearanceType
+    );
+
     int updateMood(
             @Param("userId") Long userId,
             @Param("mood") String mood,
