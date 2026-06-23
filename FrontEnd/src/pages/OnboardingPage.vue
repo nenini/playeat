@@ -24,6 +24,24 @@
 
         <div class="question-list">
           <p v-if="formError" class="form-error">{{ formError }}</p>
+          <div v-if="props.mode === 'signup' && currentIndex === 0" class="character-picker">
+            <div class="character-picker-head">
+              <strong>함께 성장할 캐릭터를 선택해주세요</strong>
+              <span>선택한 캐릭터는 홈, 상점, 길드에서 바로 보여요.</span>
+            </div>
+            <div class="character-options">
+              <button
+                v-for="character in characterChoices"
+                :key="character.value"
+                type="button"
+                :class="{ selected: form.characterAppearanceType === character.value }"
+                @click="form.characterAppearanceType = character.value"
+              >
+                <NyamnyamCharacter stage="egg" mood="normal" :size="68" :appearance-type="character.value" />
+                <b>{{ character.label }}</b>
+              </button>
+            </div>
+          </div>
           <div v-for="question in currentStep.questions" :key="question.id" class="question">
             <label>{{ question.label }}</label>
             <input v-if="question.type === 'date'" v-model="form[question.id]" type="date">
@@ -57,6 +75,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
 import { onboardingSteps } from '../services/mock/nyamnyamMock'
 import { userApi, type HealthProfileResponse } from '../services/userApi'
 
@@ -86,8 +105,15 @@ const form = reactive<Record<string, string | string[]>>({
   restrictedFoods: [],
   allergies: [],
   recordFrequency: '',
-  calorieTrackingExperience: ''
+  calorieTrackingExperience: '',
+  characterAppearanceType: 'NYAMNYAM'
 })
+
+const characterChoices = [
+  { value: 'NYAMNYAM', label: '냠냠이' },
+  { value: 'PENGUIN', label: '펭귄' },
+  { value: 'DOG', label: '강아지' }
+]
 
 const currentStep = computed(() => onboardingSteps[currentIndex.value])
 const completeButtonText = computed(() => props.mode === 'edit' ? '수정 내용 저장하기' : '완료하고 시작하기')
@@ -128,12 +154,18 @@ function prev() {
   if (currentIndex.value > 0) currentIndex.value -= 1
 }
 
+function withoutCharacterAppearance(payload: Record<string, string | string[]>) {
+  const { characterAppearanceType, ...rest } = payload
+  void characterAppearanceType
+  return rest
+}
+
 function next() {
   if (currentIndex.value < onboardingSteps.length - 1) {
     currentIndex.value += 1
     return
   }
-  emit('done', { ...form })
+  emit('done', props.mode === 'signup' ? { ...form } : withoutCharacterAppearance(form))
 }
 
 async function loadHealthProfile() {
@@ -221,13 +253,24 @@ onMounted(() => {
 .bar { height: 9px; background: #eadfd4; box-shadow: inset 0 2px 4px rgba(72,43,24,.1); } .bar span { display: block; height: 100%; background: linear-gradient(90deg,#ffad65,var(--accent)); transition: width .7s cubic-bezier(.2,.8,.2,1); position: relative; overflow: hidden; } .bar span:after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation: quest-shine 2.2s infinite; }
 .step-head { padding: 32px 34px 18px; } .quest-chip { display: inline-flex; padding: 5px 9px; margin-bottom: 14px; border: 1px solid var(--accent); border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); font: 900 9px var(--mono); } .step-head p { margin: 0 0 8px; color: var(--accent-dark); font-family: var(--mono); font-size: 11px; letter-spacing: 1.2px; font-weight: 800; } .step-head h1 { margin: 0; font-size: 32px; letter-spacing: -0.6px; } .step-head span { display: block; margin-top: 8px; color: var(--ink-2); font-size: 14px; }
 .question-list { padding: 8px 34px 28px; display: flex; flex-direction: column; gap: 18px; }
+
+.character-picker { padding: 18px; border: 1.5px solid var(--accent); border-radius: 18px; background: linear-gradient(145deg,#fffef7,#f5ffe4); box-shadow: 0 4px 0 rgba(143,207,85,.14); }
+.character-picker-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
+.character-picker-head strong { font-size: 16px; font-weight: 900; }
+.character-picker-head span { color: var(--ink-2); font-size: 12px; }
+.character-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.character-options button { min-height: 124px; border: 1.5px solid var(--border); border-radius: 16px; background: #fff; cursor: pointer; display: grid; place-items: center; gap: 4px; color: var(--ink); box-shadow: 0 3px 0 rgba(116,75,49,.08); }
+.character-options button:hover { transform: translateY(-2px); border-color: var(--accent); }
+.character-options button.selected { border-color: var(--accent); background: linear-gradient(180deg,#fbfff1,#eaffc7); box-shadow: 0 0 0 3px rgba(184,219,128,.22), 0 4px 0 var(--accent-dark); }
+.character-options b { font-size: 14px; padding-top: 8px; display: block; }
+
 .form-error { margin: 0; padding: 12px 14px; border: 1px solid #ffd0c2; border-radius: 12px; background: #fff0e2; color: var(--bad); font-size: 13px; font-weight: 800; }
 .question { position: relative; padding: 19px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,.82); box-shadow: 0 3px 0 rgba(116,75,49,.06); } .question:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(143,207,85,.1); } .question label { display: block; font-size: 14px; font-weight: 900; margin-bottom: 12px; } .question > small { position: absolute; right: 32px; bottom: 31px; color: var(--ink-3); font-family: var(--mono); font-size: 12px; }
 .question input { width: 100%; height: 46px; border: 1.5px solid var(--border-strong); border-radius: 12px; padding: 0 14px; outline: 0; font-size: 14px; background: #fff; } .question input:focus { border-color: var(--accent); }
 .choice-grid { display: flex; flex-wrap: wrap; gap: 8px; } .choice-grid button { padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: #fff; color: var(--ink-2); cursor: pointer; font-weight: 800; box-shadow: 0 2px 0 rgba(116,75,49,.08); } .choice-grid button:hover { transform: translateY(-2px); border-color: var(--accent); } .choice-grid button.selected { border-color: var(--accent); background: linear-gradient(180deg,#B8DB80,var(--accent-dark)); color: #fff; box-shadow: 0 3px 0 var(--accent-dark); }
-.custom-input { display: inline-flex; gap: 6px; align-items: center; width: 260px; max-width: 100%; } .custom-input input { flex: 1; min-width: 0; } .custom-input button { border-radius: 10px; background: var(--surface-alt); }
-.custom-tags { width: 100%; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; } .custom-tags button { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
+.custom-input { display: inline-flex; gap: 4px; align-items: center; width: 260px; max-width: 100%; } .custom-input input { flex: 1; min-width: 0; } .custom-input button { border-radius: 10px; background: var(--surface-alt); }
+.custom-tags { width: 100%; display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; } .custom-tags button { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
 .step-actions { border-top: 1px solid var(--border); padding: 18px 34px 22px; display: flex; justify-content: space-between; gap: 12px; background: rgba(255,255,255,.78); } .step-actions button { height: 46px; padding: 0 24px; border-radius: 12px; font-weight: 900; cursor: pointer; } .step-actions .ghost { border: 1px solid var(--border-strong); background: #fff; color: var(--ink-2); box-shadow: 0 3px 0 rgba(116,75,49,.1); } .step-actions .ghost:disabled,.step-actions .primary:disabled { opacity: .4; cursor: not-allowed; } .step-actions .primary { border: 0; background: linear-gradient(180deg,#B8DB80,var(--accent-dark)); color: #fff; min-width: 180px; box-shadow: 0 4px 0 var(--accent-dark),0 10px 20px rgba(143,207,85,.18); }
 @keyframes quest-shine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-@media (max-width: 860px) { .onboarding-shell { grid-template-columns: 1fr; padding: 24px 18px; } .step-list { position: static; display: grid; grid-template-columns: repeat(2, 1fr); } .onboarding-top { padding: 0 20px; } }
+@media (max-width: 860px) { .character-options { grid-template-columns: 1fr; } .character-picker-head { align-items: flex-start; flex-direction: column; }  .onboarding-shell { grid-template-columns: 1fr; padding: 24px 18px; } .step-list { position: static; display: grid; grid-template-columns: repeat(2, 1fr); } .onboarding-top { padding: 0 20px; } }
 </style>

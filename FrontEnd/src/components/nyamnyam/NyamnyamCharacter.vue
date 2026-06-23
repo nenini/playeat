@@ -1,5 +1,5 @@
 <template>
-  <div class="nyam-character" :style="sizeStyle" :class="`appearance-${appearanceType}`">
+  <div class="nyam-character" :style="sizeStyle" :class="[`appearance-${normalizedAppearance}`, `stage-${normalizedStage}`]">
     <img
       class="nyam-image"
       :src="imageSrc"
@@ -7,9 +7,9 @@
       @error="imageLoadFailed = true"
     >
     <img
-      v-if="hatImageUrl && !hatImageFailed"
+      v-if="resolvedHatImageUrl && !hatImageFailed"
       class="hat-image"
-      :src="hatImageUrl"
+      :src="resolvedHatImageUrl"
       alt=""
       @error="hatImageFailed = true"
     >
@@ -21,6 +21,7 @@
 import { computed, ref, watch } from 'vue'
 import WeaponIcon from './WeaponIcon.vue'
 import type { NyamnyamMood, Stage } from '../../services/mock/nyamnyamMock'
+import { resolveItemAssetByKey } from '../../utils/itemAssets'
 
 const props = withDefaults(defineProps<{
   stage?: Stage
@@ -38,40 +39,57 @@ const props = withDefaults(defineProps<{
   hatImageUrl: null
 })
 
-const nyamnyamImages = import.meta.glob('../../assets/nyamnyam/*.png', {
-  eager: true,
-  query: '?url',
-  import: 'default'
-}) as Record<string, string>
+const imageModules = {
+  NYAMNYAM: import.meta.glob('../../assets/nyamnyam/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>,
+  PENGUIN: import.meta.glob('../../assets/penguin/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>,
+  DOG: import.meta.glob('../../assets/dog/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
+}
+
+type AppearanceType = keyof typeof imageModules
 
 const validStages: Stage[] = ['egg', 'baby', 'child', 'adult']
 const validMoods: NyamnyamMood[] = ['normal', 'hungry', 'chubby', 'muscle']
 const imageLoadFailed = ref(false)
 const hatImageFailed = ref(false)
 
-const normalizedStage = computed<Stage>(() => validStages.includes(props.stage) ? props.stage : 'baby')
-const normalizedMood = computed<NyamnyamMood>(() => validMoods.includes(props.mood) ? props.mood : 'normal')
+const normalizedStage = computed<Stage>(() => normalizeOption(props.stage, validStages, 'baby'))
+const normalizedMood = computed<NyamnyamMood>(() => normalizeOption(props.mood, validMoods, 'normal'))
+const normalizedAppearance = computed<AppearanceType>(() => normalizeAppearance(props.appearanceType))
 const imageKey = computed(() => `${normalizedStage.value}-${normalizedMood.value}`)
 const fallbackKey = 'baby-normal'
 const imageSrc = computed(() => {
   const key = imageLoadFailed.value ? fallbackKey : imageKey.value
-  return imageForKey(key) || imageForKey(fallbackKey) || ''
+  return imageForKey(key, normalizedAppearance.value) || imageForKey('egg-normal', normalizedAppearance.value) || imageForKey(fallbackKey, normalizedAppearance.value) || imageForKey(fallbackKey, 'NYAMNYAM') || ''
 })
 const sizeStyle = computed(() => ({
   width: `${props.size}px`,
   height: `${props.size}px`
 }))
+const resolvedHatImageUrl = computed(() => resolveItemAssetByKey(props.hatImageUrl) || props.hatImageUrl || null)
 
-watch(imageKey, () => {
+watch([imageKey, normalizedAppearance], () => {
   imageLoadFailed.value = false
 })
 
-watch(() => props.hatImageUrl, () => {
+watch(resolvedHatImageUrl, () => {
   hatImageFailed.value = false
 })
 
-function imageForKey(key: string) {
-  const entry = Object.entries(nyamnyamImages).find(([path]) => path.endsWith(`${key}.png`))
+function normalizeOption<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  const normalized = typeof value === 'string' ? value.toLowerCase() : ''
+  return allowed.includes(normalized as T) ? normalized as T : fallback
+}
+
+function normalizeAppearance(value: unknown): AppearanceType {
+  const key = typeof value === 'string' ? value.trim().toUpperCase() : ''
+  if (key === 'PENGUIN' || key === 'DOG') return key
+  return 'NYAMNYAM'
+}
+
+function imageForKey(key: string, appearance: AppearanceType) {
+  const modules = imageModules[appearance] || imageModules.NYAMNYAM
+  const underscoreKey = key.replace(/-/g, '_')
+  const entry = Object.entries(modules).find(([path]) => path.endsWith(`${key}.png`) || path.endsWith(`${underscoreKey}.png`))
   return entry?.[1]
 }
 </script>
@@ -95,6 +113,11 @@ export default { name: 'NyamnyamCharacter' }
   height: 100%;
   object-fit: contain;
   display: block;
+}
+
+.appearance-PENGUIN .nyam-image {
+  transform: scale(.95);
+  transform-origin: center center;
 }
 
 .hat-image {

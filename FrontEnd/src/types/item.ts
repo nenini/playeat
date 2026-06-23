@@ -1,4 +1,4 @@
-export type ItemType = 'EQUIPMENT' | 'CONSUMABLE' | string
+export type ItemType = 'EQUIPMENT' | 'CHARACTER' | 'BACKGROUND' | 'CONSUMABLE' | string
 export interface UserItem {
   userItemId: number
   itemId: number

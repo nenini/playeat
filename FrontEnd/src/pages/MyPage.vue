@@ -86,11 +86,6 @@
           <AppButton variant="danger" full @click="deleteOpen = true">회원 탈퇴</AppButton>
         </div>
       </AppCard>
-      <AppCard class="pet-card">
-        <div class="section-title-main">냠냠이</div>
-        <div class="pet-stage"><NyamnyamCharacter :stage="stage" :size="150" /></div>
-        <p>{{ characterText }}</p>
-      </AppCard>
     </aside>
   </section>
 </template>
@@ -99,15 +94,13 @@
 import AppButton from '../components/common/AppButton.vue'
 import AppCard from '../components/common/AppCard.vue'
 import AppIcon from '../components/common/AppIcon.vue'
-import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
-import { type Stage } from '../services/mock/nyamnyamMock'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { myPageApi } from '../services/myPageApi'
 import { userApi } from '../services/userApi'
 import { resolveImageUrl } from '../utils/imageUrl'
 import { genderLabel, healthGoalLabel } from '../utils/labels'
 
-const props = defineProps<{ stage: Stage }>()
+defineProps<{ stage: string }>()
 const emit = defineEmits<{ restartOnboarding: [], profileUpdated: [profile: { nickname: string; profileImageUrl: string }], logout: [] }>()
 
 const editing = ref(false)
@@ -134,7 +127,6 @@ const info = computed(() => [
   ['가입일', profile.joinedAt || '-'],
   ['생년월일', profile.birthDate || '-']
 ])
-const characterText = computed(() => `${props.stage} 단계`)
 
 function closeModals() {
   passwordOpen.value = false

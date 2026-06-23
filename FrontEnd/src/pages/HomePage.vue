@@ -16,7 +16,7 @@
       </AppButton>
     </div>
 
-    <AppCard :padding="32" class="hero">
+    <AppCard :padding="32" class="hero" :class="{ 'has-background': Boolean(equippedBackgroundImage) }" :style="heroBackgroundStyle">
       <div class="hero-grid">
         <div class="hero-side right">
           <HeroStat label="HEALTH SCORE" :value="scoreText" unit="점" tone="accent" :sub="dailyAnalysis ? '오늘 분석 기준' : '분석 데이터 없음'" />
@@ -24,18 +24,14 @@
         </div>
         <div class="mascot-wrap">
           <div class="mascot-stage">
-            <NyamnyamCharacter
+            <CharacterAvatar
               :stage="characterStage"
-              :size="165"
+              :size="280"
               :mood="characterMood"
               :appearance-type="character?.appearanceType || 'DEFAULT'"
-              :hat-id="equipmentIconId(equippedHead)"
-              :hat-image-url="equipmentImageUrl(equippedHead)"
+              :equipments="equipments"
+              :show-background="false"
             />
-            <div v-if="equippedHand" class="weapon-on-hand">
-              <img v-if="equippedHandImage && !handImageFailed" :src="equippedHandImage" :alt="equippedHand.name || '손 장비'" @error="handImageFailed = true">
-              <WeaponIcon v-else-if="equipmentIconId(equippedHand)" :id="equipmentIconId(equippedHand) || undefined" />
-            </div>
             <div class="speech">{{ characterMessage }}</div>
           </div>
           <ProgressBar :value="characterXp" :max="requiredXp" label="XP" :sub="`${characterXp} / ${requiredXp} XP`" tone="accent" :height="10" class="xp" />
@@ -86,7 +82,7 @@
       <AppCard>
         <div class="banner-row">
           <div class="boss-card-icon" aria-hidden="true">
-            <BossMonster v-if="activeBattle" :size="58" :hp="bossHpPercent" />
+            <BossMonster v-if="activeBattle" :size="58" :hp="bossHpPercent" :boss-type="homeBossType" :boss-name="activeBattle.bossName" />
             <span v-else>{{ inGuild ? '👾' : '🔒' }}</span>
           </div>
           <div class="grow">
@@ -111,15 +107,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AppButton from '../components/common/AppButton.vue'
 import AppCard from '../components/common/AppCard.vue'
 import AppIcon from '../components/common/AppIcon.vue'
 import AppPill from '../components/common/AppPill.vue'
 import ProgressBar from '../components/common/ProgressBar.vue'
 import BossMonster from '../components/nyamnyam/BossMonster.vue'
-import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
-import WeaponIcon from '../components/nyamnyam/WeaponIcon.vue'
+import CharacterAvatar from '../components/nyamnyam/CharacterAvatar.vue'
+import { resolveBossType } from '../utils/bossAssets'
+import { resolveBackgroundAsset } from '../utils/backgroundAssets'
 import { mealKinds, type MealKindId, type NyamnyamMood, type PageId, type Stage } from '../services/mock/nyamnyamMock'
 import HeroStat from './parts/HeroStat.vue'
 import { analysisApi, type AnalysisDailyResponse } from '../services/analysisApi'
@@ -127,7 +124,7 @@ import { characterApi, moodFromBackend, stageFromBackend, type CharacterResponse
 import { userApi, type UserMeResponse } from '../services/userApi'
 import { bossBattleApi } from '../services/api/bossBattleApi'
 import { ApiError } from '../services/api/client'
-import { characterEquipmentApi, equipmentIconId, equipmentImageUrl } from '../services/api/characterEquipmentApi'
+import { characterEquipmentApi } from '../services/api/characterEquipmentApi'
 import { guildApi } from '../services/api/guildApi'
 import { coinApi } from '../services/api/coinApi'
 import { questApi } from '../services/api/questApi'
@@ -151,7 +148,6 @@ const battleHp = ref<BossBattleHp | null>(null)
 const myQuest = ref<QuestDetail | null>(null)
 const homeError = ref('')
 const isLoading = ref(true)
-const handImageFailed = ref(false)
 
 const today = toDateInputValue(new Date())
 const todayLabel = computed(() => formatDateLabel(today))
@@ -177,9 +173,9 @@ const calorieSubText = computed(() => {
   if (!dailyAnalysis.value) return '칼로리 데이터 없음'
   return `목표 ${Math.round(Number(calorie.value?.target || 0)).toLocaleString()} · ${Math.round(Number(calorie.value?.achievementRate || 0))}%`
 })
-const equippedHand = computed(() => equipments.value.find((item) => item.slotType === 'HAND' && item.equipped && item.itemId !== null) ?? null)
-const equippedHead = computed(() => equipments.value.find((item) => item.slotType === 'HEAD' && item.equipped && item.itemId !== null) ?? null)
-const equippedHandImage = computed(() => equipmentImageUrl(equippedHand.value))
+const equippedBackground = computed(() => equipments.value.find((item) => item.slotType === 'BACKGROUND' && item.equipped && item.itemId !== null) ?? null)
+const equippedBackgroundImage = computed(() => resolveBackgroundAsset(equippedBackground.value))
+const heroBackgroundStyle = computed(() => equippedBackgroundImage.value ? { backgroundImage: `url(${equippedBackgroundImage.value})` } : undefined)
 const guildId = computed(() => guildStatus.value?.guild?.guildId ?? guildStatus.value?.guildId ?? null)
 const guildName = computed(() => guildStatus.value?.guild?.name || '길드 미가입')
 const coinText = computed(() => coinBalance.value === null ? '코인 -' : `코인 ${coinBalance.value.toLocaleString()}`)
@@ -188,6 +184,7 @@ const activeBattle = computed(() => battleDetail.value ?? currentBattle.value)
 const bossCurrentHp = computed(() => Math.max(0, safeNumber(battleHp.value?.currentHp ?? activeBattle.value?.currentHp)))
 const bossMaxHp = computed(() => Math.max(1, safeNumber(battleHp.value?.maxHp ?? activeBattle.value?.maxHp, 1)))
 const bossHpPercent = computed(() => bossCurrentHp.value / bossMaxHp.value * 100)
+const homeBossType = computed(() => resolveBossType(activeBattle.value?.bossImageUrl || activeBattle.value?.imageUrl || activeBattle.value?.boss?.imageUrl, activeBattle.value?.difficulty, activeBattle.value?.bossName))
 const questStatusLabel = computed(() => {
   if (myQuest.value?.status === 'COMPLETED') return '보상 수령 가능'
   if (myQuest.value?.status === 'REWARDED') return '보상 수령 완료'
@@ -224,10 +221,6 @@ const mealByKind = computed(() => {
     if (key) result[key] = meal
   }
   return result
-})
-
-watch(equippedHandImage, () => {
-  handImageFailed.value = false
 })
 
 function mealSummary(kindId: MealKindId) {
@@ -350,17 +343,16 @@ section { display: flex; flex-direction: column; }
 .greeting { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
 .hello { font-size: 28px; font-weight: 800; margin-top: 4px; }
 .hub-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.hero { margin-bottom: 20px; background: linear-gradient(145deg, #fff8e8 0%, #fff 48%, #ffe7d4 100%); border-color: #e7bd94; overflow: hidden; position: relative; }
+.hero { margin-bottom: 20px; background: linear-gradient(145deg, #fff8e8 0%, #fff 48%, #ffe7d4 100%); background-size: cover; background-position: center; background-repeat: no-repeat; border-color: #e7bd94; overflow: hidden; position: relative; }
 .hero:before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .08; background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); z-index: 0; }
+.hero.has-background:before { opacity: 1; background: linear-gradient(90deg, rgba(255,248,236,.18), rgba(255,248,236,.08), rgba(255,248,236,.16)); }
+.hero > * { position: relative; z-index: 1; }
 .hero-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 32px; align-items: center; }
 .hero-side { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
 .hero-side.right { align-items: flex-end; }
 .mascot-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; position: relative; z-index: 2; }
-.mascot-stage { width: 280px; height: 280px; z-index: 1; padding-bottom: 18px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, #fff 0%, #fff2d8 52%, #ffcfa9 100%); border: 3px solid #fff; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 0 0 6px rgba(240,120,60,.12), inset 0 -8px 24px rgba(232,138,77,0.10); animation: hero-float 4s ease-in-out infinite; }
+.mascot-stage { width: 280px; height: 280px; z-index: 1; display: flex; align-items: center; justify-content: center; position: relative; animation: hero-float 4s ease-in-out infinite; }
 .speech { position: absolute; z-index: 5; bottom: -18px; max-width: 280px; background: var(--surface); padding: 8px 16px; border: 1.5px solid var(--border); border-radius: 18px; font-size: 14px; font-weight: 700; line-height: 1.35; text-align: center; box-shadow: var(--shadow); }
-.weapon-on-hand { position: absolute; right: 2px; top: 30%; width: 38px; height: 124px; z-index: 2; pointer-events: none; }
-.weapon-on-hand :deep(svg) { width: 38px; height: 124px; }
-.weapon-on-hand img { width: 38px; height: 124px; object-fit: contain; }
 .xp { width: 280px; margin-top: 8px; }
 .meal-strip { margin-bottom: 20px; order: 4; }
 .meal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -375,11 +367,12 @@ section { display: flex; flex-direction: column; }
 .banners { display: grid; grid-template-columns: 1fr 1.15fr; gap: 16px; order: 3; margin-bottom: 20px; }
 .banners :deep(.app-card) { min-height: 158px; display: flex; align-items: center; }
 .quest-card { background: #fff8e5; }
-.banner-row { display: flex; align-items: center; gap: 14px; }
+.banner-row { display: flex; align-items: center; gap: 14px; width: 100%; }
 .quest-scroll-icon, .boss-card-icon { width: 76px; height: 76px; border-radius: 18px; background: var(--surface); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 38px; flex-shrink: 0; overflow: hidden; box-shadow: 0 4px 0 rgba(143,207,85,.18); }
 .quest-scroll-icon { background: linear-gradient(145deg, #fffaf0, #fff1d8); }
 .boss-card-icon :deep(.boss-monster) { flex: 0 0 auto; z-index: 2; }
-.grow { flex: 1; }
+.grow { flex: 1 1 auto; min-width: 0; }
+.banner-row > :deep(.app-button) { margin-left: auto; flex: 0 0 auto; }
 h3 { margin: 6px 0 0; font-size: 15px; }
 p { margin: 4px 0 0; font-size: 11px; color: var(--ink-2); }
 .banner-meta { margin-top: 9px; display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--ink-2); }

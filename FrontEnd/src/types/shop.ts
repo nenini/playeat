@@ -8,6 +8,7 @@ export interface EquippedShopItem {
   name: string | null
   description: string | null
   imageUrl: string | null
+  effectValue?: string | null
   equippedAt: string | null
 }
 
@@ -19,6 +20,7 @@ export interface ShopItem {
   slotType: string | null
   price: number
   imageUrl: string | null
+  effectValue?: string | null
   defaultItem: boolean
   purchasable: boolean
   owned: boolean

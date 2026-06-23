@@ -71,20 +71,14 @@
       <div class="member-modal" @click.stop>
         <button class="modal-close" @click="selectedMember = null">×</button>
         <div class="member-detail-head">
-          <div class="member-character">
-            <NyamnyamCharacter
-              :stage="stageFromBackend(selectedMember.characterStage)"
-              :size="50"
-              :mood="selectedMemberMood"
-              :appearance-type="selectedMember.characterAppearanceType || 'DEFAULT'"
-              :hat-id="equipmentIconId(selectedHeadEquipment)"
-              :hat-image-url="equipmentImageUrl(selectedHeadEquipment)"
-            />
-            <div v-if="selectedHandEquipment" class="member-hand-item">
-              <img v-if="selectedHandImage && !selectedHandImageFailed" :src="selectedHandImage" :alt="selectedHandEquipment.name || '손 장비'" @error="selectedHandImageFailed = true">
-              <WeaponIcon v-else-if="equipmentIconId(selectedHandEquipment)" :id="equipmentIconId(selectedHandEquipment) || undefined" />
-            </div>
-          </div>
+          <CharacterAvatar
+            class="member-character"
+            :stage="stageFromBackend(selectedMember.characterStage)"
+            :size="86"
+            :mood="selectedMemberMood"
+            :appearance-type="selectedMember.characterAppearanceType || 'DEFAULT'"
+            :equipments="selectedEquipments"
+          />
           <div class="member-identity">
             <div class="member-profile-small">
               <img v-if="resolveImageUrl(selectedMember.profileImageUrl) && !selectedProfileImageFailed" :src="resolveImageUrl(selectedMember.profileImageUrl)" :alt="`${selectedMember.nickname} 프로필`" @error="selectedProfileImageFailed = true">
@@ -173,10 +167,8 @@ import AppButton from '../components/common/AppButton.vue'
 import AppCard from '../components/common/AppCard.vue'
 import AppIcon from '../components/common/AppIcon.vue'
 import AppPill from '../components/common/AppPill.vue'
-import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
-import WeaponIcon from '../components/nyamnyam/WeaponIcon.vue'
+import CharacterAvatar from '../components/nyamnyam/CharacterAvatar.vue'
 import { ApiError } from '../services/api/client'
-import { equipmentIconId, equipmentImageUrl } from '../services/api/characterEquipmentApi'
 import { guildApi } from '../services/api/guildApi'
 import { guildChatApi } from '../services/api/guildChatApi'
 import { rankingApi } from '../services/api/rankingApi'
@@ -218,7 +210,6 @@ const chatMessagesRef = ref<HTMLElement | null>(null)
 const noticeListRef = ref<HTMLElement | null>(null)
 const selectedMember = ref<GuildMemberDetail | null>(null)
 const selectedProfileImageFailed = ref(false)
-const selectedHandImageFailed = ref(false)
 const failedMemberImages = ref(new Set<number>())
 const showRequests = ref(false)
 const showSettings = ref(false)
@@ -229,13 +220,7 @@ const noticeDraft = reactive({ title: '', body: '' })
 
 const isLeader = computed(() => guild.value?.myRole === 'OWNER')
 const selectedEquipments = computed(() => selectedMember.value?.equippedItems ?? [])
-const selectedHeadEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HEAD' && item.equipped && item.itemId !== null) ?? null)
-const selectedHandEquipment = computed(() => selectedEquipments.value.find((item) => item.slotType === 'HAND' && item.equipped && item.itemId !== null) ?? null)
-const selectedHandImage = computed(() => equipmentImageUrl(selectedHandEquipment.value))
 const selectedMemberMood = computed<NyamnyamMood>(() => moodFromBackend(selectedMember.value?.characterMood))
-watch(selectedHandImage, () => {
-  selectedHandImageFailed.value = false
-})
 const pages = computed(() => Array.from({ length: Math.max(lastKnownPage.value, currentPage.value + (hasNextPage.value ? 1 : 0)) }, (_, index) => index + 1))
 const kickableMembers = computed(() => members.value.filter((member) => !member.isMe && member.role !== 'OWNER'))
 const displayChats = computed(() => chats.value.map((chatItem) => ({ id: chatItem.chatId, name: chatItem.nickname, time: formatDate(chatItem.createdAt), text: chatItem.message, mine: Boolean(chatItem.isMe), system: chatItem.messageType === 'SYSTEM', profileImageUrl: chatItem.profileImageUrl })))
@@ -423,7 +408,6 @@ function guardComposingEnter(event: KeyboardEvent) {
 async function openMember(member: GuildMember) {
   if (!guildId.value) return
   selectedProfileImageFailed.value = false
-  selectedHandImageFailed.value = false
   await runAction(`member-${member.memberId}`, async () => {
     selectedMember.value = await guildApi.getGuildMember(guildId.value!, member.memberId)
   })
@@ -600,9 +584,7 @@ onMounted(() => { void loadPage() })
 .member-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .member-profile-small { width: 38px; height: 38px; border-radius: 19px; overflow: hidden; background: var(--yolk); display: flex; align-items: center; justify-content: center; flex: 0 0 38px; font-weight: 800; }
 .member-profile-small img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.member-character { width: 76px; height: 76px; border-radius: 38px; padding-bottom: 8px; background: radial-gradient(circle at 50% 40%, #fff5e0 0%, #fbe5d3 100%); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex: 0 0 76px; position: relative; }
-.member-hand-item { position: absolute; right: 10px; top: 25px; width: 15px; height: 46px; z-index: 2; pointer-events: none; }
-.member-hand-item :deep(svg), .member-hand-item img { width: 15px; height: 46px; object-fit: contain; }
+.member-character { flex: 0 0 86px; }
 .member-modal h2, .request-modal h2 { margin: 0; font-size: 22px; }
 .member-modal p, .request-modal > p { margin-bottom: 16px; color: var(--ink-2); }
 .modal-info { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }

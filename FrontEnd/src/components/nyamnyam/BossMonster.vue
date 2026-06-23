@@ -1,29 +1,32 @@
 <template>
   <div
     class="boss-monster"
-    :class="{ defeated: hp === 0 }"
+    :class="{ defeated: isDefeated, dragon: currentAssets.type === 'DRAGON' }"
     :style="{ width: `${size}px`, height: `${height}px` }"
   >
-    <img v-if="isDefeated" class="boss-clear" :src="dragonClear" alt="격파된 당분 드래곤" draggable="false" />
-    <template v-else>
-      <img class="boss-wing" :src="nwing" alt="" draggable="false" />
-      <img class="boss-body" :src="nbody" alt="당분 드래곤" draggable="false" />
+    <img v-if="isDefeated" class="boss-clear" :src="currentAssets.clear" :alt="`${bossName} 격파`" draggable="false" />
+    <template v-else-if="currentAssets.type === 'DRAGON'">
+      <img class="boss-wing" :src="currentAssets.wing" alt="" draggable="false" />
+      <img class="boss-body" :src="currentAssets.alive" :alt="bossName" draggable="false" />
     </template>
+    <img v-else class="boss-single" :src="currentAssets.alive" :alt="bossName" draggable="false" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import nbody from "../../assets/dragon/nbody.png";
-import nwing from "../../assets/dragon/nwing.png";
-import dragonClear from "../../assets/dragon/dragon_clear.png";
+import { bossAssetsFor } from '../../utils/bossAssets'
 
-const props = withDefaults(defineProps<{ size?: number; hp?: number }>(), {
+const props = withDefaults(defineProps<{ size?: number; hp?: number; bossType?: string | null; bossName?: string; cleared?: boolean }>(), {
   size: 240,
   hp: 60,
+  bossType: 'DRAGON',
+  bossName: '보스',
+  cleared: false
 });
 const height = computed(() => Math.round(props.size * (428 / 540)));
-const isDefeated = computed(() => props.hp === 0);
+const currentAssets = computed(() => bossAssetsFor(props.bossType, props.bossType, props.bossName))
+const isDefeated = computed(() => props.cleared || props.hp === 0);
 </script>
 
 <script lang="ts">
@@ -58,6 +61,15 @@ export default { name: "BossMonster" };
   object-fit: contain;
   user-select: none;
 }
+.boss-single {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
 .boss-clear {
   position: absolute;
   z-index: 2;
@@ -67,6 +79,11 @@ export default { name: "BossMonster" };
   height: 95%;
   object-fit: contain;
   user-select: none;
+}
+.boss-monster:not(.dragon) .boss-clear {
+  top: 4%;
+  width: 100%;
+  height: 100%;
 }
 .defeated {
   transform: none;

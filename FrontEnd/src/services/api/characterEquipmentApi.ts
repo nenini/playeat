@@ -1,4 +1,5 @@
 import type { CharacterEquipment, CharacterEquipmentListResponse, EquipCharacterItemRequest } from '../../types/characterEquipment'
+import { resolveItemAsset, normalizeItemKey } from '../../utils/itemAssets'
 import { apiRequest } from './client'
 
 export const characterEquipmentApi = {
@@ -13,16 +14,19 @@ export const characterEquipmentApi = {
   }
 }
 
-export function equipmentIconId(item: Pick<CharacterEquipment, 'name' | 'imageUrl'> | null | undefined) {
-  const source = `${item?.name ?? ''} ${item?.imageUrl ?? ''}`.toLowerCase()
-  if (source.includes('crown') || source.includes('왕관')) return 'crown'
-  if (source.includes('sword') || source.includes('칼')) return 'sword'
-  if (source.includes('staff') || source.includes('지팡이')) return 'staff'
-  if (source.includes('wood-stick') || source.includes('나무막대기')) return 'stick'
-  return null
+type EquipmentDisplayCandidate = Pick<CharacterEquipment, 'name' | 'imageUrl'> & {
+  itemId?: number | null
+  effectValue?: string | null
 }
 
-export function equipmentImageUrl(item: Pick<CharacterEquipment, 'name' | 'imageUrl'> | null | undefined) {
+export function equipmentIconId(item: EquipmentDisplayCandidate | null | undefined) {
+  return normalizeItemKey(item?.imageUrl) || normalizeItemKey(item?.effectValue) || normalizeItemKey(item?.name)
+}
+
+export function equipmentImageUrl(item: EquipmentDisplayCandidate | null | undefined) {
   const imageUrl = item?.imageUrl?.trim()
-  return imageUrl || null
+  if (imageUrl && ['NYAMNYAM', 'PENGUIN', 'DOG'].includes(imageUrl.toUpperCase())) return null
+  const asset = resolveItemAsset(item)
+  if (asset) return asset
+  return null
 }
