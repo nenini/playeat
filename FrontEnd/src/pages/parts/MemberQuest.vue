@@ -1,6 +1,6 @@
 <template>
-  <div class="member" :class="{ mine: member.mine, done: member.done, idle: member.idle }">
-    <div class="top"><div class="avatar">{{ member.name[0] }}</div><div class="who"><strong>{{ member.name }}</strong><small>LV.{{ member.lv }} · {{ member.role }}</small></div><AppPill :tone="member.done ? 'ok' : member.over ? 'bad' : member.idle ? 'neutral' : 'accent'" size="sm">{{ member.done ? '✓ 완료' : member.over ? '↑ 초과' : member.idle ? '대기' : '진행' }}</AppPill></div>
+  <div class="member" :class="{ mine: member.mine, done: member.done, rewarded: member.rewarded, idle: member.idle }">
+    <div class="top"><div class="avatar">{{ member.name[0] }}</div><div class="who"><strong>{{ member.name }}</strong><small>LV.{{ member.lv }} · {{ member.role }}</small></div><AppPill :tone="member.done ? 'ok' : member.over ? 'bad' : member.idle ? 'neutral' : 'accent'" size="sm">{{ member.done ? '퀘스트 완료' : member.over ? '↑ 초과' : member.idle ? '대기' : '진행' }}</AppPill></div>
     <div><div class="quest"><span>{{ member.quest }}</span><small>{{ member.progress }}/{{ member.total }} {{ member.unit }}</small></div><ProgressBar :value="Math.min(member.progress, member.total)" :max="member.total" :tone="member.done ? 'ok' : member.over ? 'bad' : 'accent'" :height="5" /></div>
   </div>
 </template>

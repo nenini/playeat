@@ -21,7 +21,7 @@
 
   <section v-else class="boss-battle-screen" :style="{ backgroundImage: `url(${battleBossAssets.background})` }">
     <div v-if="errorMessage" class="api-message">{{ errorMessage }}</div>
-    <div v-if="successMessage" class="api-message success">{{ successMessage }}</div>
+    <div v-if="successMessage" class="api-message success" :class="{ 'quest-toast': successMessagePlacement === 'quest' }">{{ successMessage }}</div>
     <div class="page-title-row">
       <div><div class="pill-row"><AppPill tone="bad" size="sm">GUILD BOSS · {{ battle?.difficulty || '-' }}</AppPill><AppPill size="sm">{{ statusLabel(battle?.status) }}</AppPill><AppPill size="sm">{{ battle?.guildName || guildName }}</AppPill></div><div class="title-xl">{{ battle?.bossName || '보스전' }}</div><p>시작 {{ formatDate(battle?.startedAt) }} · 종료 {{ formatDate(battle?.endsAt) }} · 길드원 {{ battle?.participantCount ?? '-' }}명 참전</p></div>
       <div class="battle-actions">
@@ -53,35 +53,48 @@
             <AppPill v-else tone="ok" size="sm">보상 수령 완료</AppPill>
           </div>
         </div>
-        <AppCard :padding="12" class="hp-card"><div class="hp-row"><span>BOSS HP</span><ProgressBar :value="hp?.currentHp ?? 0" :max="hp?.maxHp || 1" :tone="hpPercent < 30 ? 'accent' : 'bad'" :height="12" /><b>{{ hp?.currentHp?.toLocaleString() ?? '-' }} / {{ hp?.maxHp?.toLocaleString() ?? '-' }}</b></div><div class="damage-row"><span>누적 데미지: <strong>−{{ hp?.totalDamage?.toLocaleString() ?? '-' }}</strong> HP</span><span>퀘스트 완료: <strong>{{ dashboard ? `${dashboard.questCompletedCount}/${dashboard.questTotalCount}` : '-' }}</strong></span></div></AppCard>
+        <div class="hp-hud">
+          <span class="hp-fill" :style="{ width: `${hpPercent}%` }" />
+          <strong>{{ hp?.currentHp?.toLocaleString() ?? '-' }} / {{ hp?.maxHp?.toLocaleString() ?? '-' }}</strong>
+        </div>
         <button v-if="recentAttack" type="button" class="recent-attack-card" @click="replayRecentAttack">
           <span>최근 공격</span>
           <strong>{{ recentAttack.attackerName }}님이 {{ recentAttack.damage.toLocaleString() }} HP 피해!</strong>
           <small>클릭하면 공격 연출을 다시 볼 수 있어요</small>
         </button>
-        <div class="condition-grid">
-          <AppCard :padding="10" class="condition-card"><div class="condition-head"><div class="section-title-main">길드 공통 격파 조건</div><AppPill :tone="isBattleCleared ? 'ok' : 'accent'" size="sm">{{ isBattleCleared ? '완료' : '진행 중' }}</AppPill></div><div v-if="battle?.commonConditions?.length" class="checks"><p v-for="condition in battle.commonConditions" :key="condition.battleConditionId" :class="{ completed: condition.completed }"><b>{{ condition.completed ? '✓' : '□' }}</b><span>{{ condition.title }}</span><strong>{{ condition.currentValue ?? '-' }}/{{ condition.targetValue ?? '-' }} {{ condition.unit || '' }}</strong></p></div><p v-else>격파 조건 데이터가 없습니다.</p></AppCard>
-          <AppCard :padding="10" class="reward"><div class="section-title-main">레이드 클리어 보상</div><div class="reward-loot"><span>✨<small>경험치</small><strong>+{{ bossDetail?.rewardExp?.toLocaleString() ?? '-' }} XP</strong></span><span>🪙<small>코인</small><strong>+{{ bossDetail?.rewardCoin?.toLocaleString() ?? '-' }}</strong></span></div><AppPill v-if="isBattleCleared && battle?.rewardClaimed" tone="ok" size="sm">보상 수령 완료</AppPill><p v-else-if="isBattleCleared" class="reward-lock">상단 클리어 화면에서 보상을 수령할 수 있어요.</p><p v-else class="reward-lock">보스를 격파하면 보상 상자가 열립니다.</p></AppCard>
+        <div v-if="bottomPanel === 'summary'" class="bottom-panel summary-panel">
+          <div class="bottom-panel-tabs">
+            <button type="button" class="active">격파 조건 · 보상</button>
+            <button type="button" @click="bottomPanel = 'quests'">퀘스트</button>
+          </div>
+          <div class="condition-grid">
+            <AppCard :padding="10" class="condition-card"><div class="condition-head"><div class="section-title-main">길드 공통 격파 조건</div><AppPill :tone="isBattleCleared ? 'ok' : 'accent'" size="sm">{{ isBattleCleared ? '완료' : '진행 중' }}</AppPill></div><div v-if="battle?.commonConditions?.length" class="checks"><p v-for="condition in battle.commonConditions" :key="condition.battleConditionId" :class="{ completed: condition.completed }"><b>{{ condition.completed ? '✓' : '□' }}</b><span>{{ condition.title }}</span><strong>{{ condition.currentValue ?? '-' }}/{{ condition.targetValue ?? '-' }}{{ conditionUnitLabel(condition.unit) }}</strong></p></div><p v-else>격파 조건 데이터가 없습니다.</p></AppCard>
+            <AppCard :padding="10" class="reward"><div class="section-title-main">레이드 클리어 보상</div><div class="reward-loot"><span>✨<small>경험치</small><strong>+{{ bossDetail?.rewardExp?.toLocaleString() ?? '-' }} XP</strong></span><span>🪙<small>코인</small><strong>+{{ bossDetail?.rewardCoin?.toLocaleString() ?? '-' }}</strong></span></div><AppPill v-if="isBattleCleared && battle?.rewardClaimed" tone="ok" size="sm">보상 수령 완료</AppPill></AppCard>
+          </div>
         </div>
       </main>
-      <aside class="members">
-        <div class="member-head">
-          <strong>길드원 개인 퀘스트 · {{ displayQuests.length }}명</strong>
-          <span>{{ dashboard ? `완료 ${dashboard.questCompletedCount} · 전체 ${dashboard.questTotalCount}` : '-' }}</span>
+      <aside v-if="bottomPanel === 'quests'" class="members bottom-panel">
+        <div class="bottom-panel-tabs">
+          <button type="button" @click="bottomPanel = 'summary'">격파 조건 · 보상</button>
+          <button type="button" class="active">퀘스트</button>
         </div>
         <div v-if="displayQuests.length === 0" class="quest-empty"><p>생성된 퀘스트가 없습니다.</p><AppButton v-if="isLeader" size="sm" :disabled="pendingActionId === 'generate-quests'" @click="generateQuests">퀘스트 생성</AppButton></div>
         <div v-else class="quest-board">
           <section class="my-quest-panel">
-            <div class="quest-panel-title">본인 퀘스트</div>
+            <div class="quest-panel-title quest-panel-title-row">
+              <strong>본인 퀘스트</strong>
+            </div>
             <template v-if="myDisplayQuest">
-              <MemberQuest :member="questMember(myDisplayQuest)" />
-              <div class="quest-actions"><AppButton v-if="myDisplayQuest.status === 'COMPLETED'" size="sm" :disabled="pendingActionId === `reward-${myDisplayQuest.questId}`" @click="claimQuestReward(myDisplayQuest.questId)">보상 수령</AppButton><AppPill v-if="myDisplayQuest.status === 'REWARDED'" tone="ok" size="sm">보상 수령 완료</AppPill></div>
+              <div class="my-quest-card">
+                <MemberQuest :member="questMember(myDisplayQuest)" />
+                <AppButton v-if="myDisplayQuest.status === 'COMPLETED'" class="quest-claim-overlay" size="sm" :disabled="pendingActionId === `reward-${myDisplayQuest.questId}`" @click="claimQuestReward(myDisplayQuest.questId)">보상 수령</AppButton>
+              </div>
             </template>
             <p v-else class="quest-missing">내 퀘스트가 아직 없습니다.</p>
           </section>
           <section class="guild-quest-panel">
             <div class="quest-slider-head">
-              <div class="quest-panel-title">길드원 퀘스트</div>
+              <div class="quest-panel-title">길드원 퀘스트 <span>{{ dashboard ? `(완료 ${dashboard.questCompletedCount} / 전체 ${dashboard.questTotalCount})` : '' }}</span></div>
               <div class="quest-slider-controls">
                 <button type="button" :disabled="guildQuestPage <= 0" aria-label="이전 길드원 퀘스트" @click="prevGuildQuestPage">‹</button>
                 <span>{{ guildQuestPageCount ? guildQuestCurrentPage + 1 : 0 }} / {{ guildQuestPageCount }}</span>
@@ -96,7 +109,6 @@
             <p v-else class="quest-missing">다른 길드원 퀘스트가 없습니다.</p>
           </section>
         </div>
-        <AppCard :padding="12" class="tip">💡 길드원이 자기 퀘스트를 깰 때마다 보스 HP가 감소해요.</AppCard>
       </aside>
     </div>
   </section>
@@ -134,9 +146,11 @@ const screen = ref<'no-guild' | 'lobby' | 'battle'>('no-guild')
 const isLoading = ref(true)
 const errorMessage = ref('')
 const successMessage = ref('')
+const successMessagePlacement = ref<'global' | 'quest'>('global')
 const pendingActionId = ref<string | null>(null)
 const creatingBattle = ref(false)
 const creationStepMessage = ref('')
+const bottomPanel = ref<'summary' | 'quests'>('summary')
 const guildId = ref<number | null>(null)
 const guildName = ref('내 길드')
 const guildRole = ref<'OWNER' | 'MEMBER' | null>(null)
@@ -297,14 +311,18 @@ function setError(error: unknown) {
 function clearFeedback() {
   errorMessage.value = ''
   successMessage.value = ''
+  successMessagePlacement.value = 'global'
 }
 
-async function runAction(key: string, task: () => Promise<void>, success?: string) {
+async function runAction(key: string, task: () => Promise<void>, success?: string, placement: 'global' | 'quest' = 'global') {
   clearFeedback()
   pendingActionId.value = key
   try {
     await task()
-    if (success) successMessage.value = success
+    if (success) {
+      successMessage.value = success
+      successMessagePlacement.value = placement
+    }
   } catch (error) {
     setError(error)
   } finally {
@@ -419,7 +437,6 @@ async function startBattle() {
     await loadBattleData(currentBattleId)
     battleId.value = currentBattleId
     screen.value = 'battle'
-    successMessage.value = '보스전과 길드원 퀘스트를 생성했습니다.'
   } catch (error) {
     setError(error)
   } finally {
@@ -469,7 +486,7 @@ async function claimQuestReward(questId: number) {
     quests.value = questList.quests ?? []
     setBossHp(hpData)
     dashboard.value = dashboardData
-  }, '퀘스트 보상을 수령했습니다.')
+  }, '퀘스트 보상을 수령했습니다.', 'quest')
 }
 
 async function verifyConditions() {
@@ -511,6 +528,7 @@ function questMember(quest: QuestSummary) {
     unit: quest.unit || '',
     mine: Boolean(quest.isMe),
     done: quest.status === 'COMPLETED' || quest.status === 'REWARDED',
+    rewarded: quest.status === 'REWARDED',
     idle: quest.status === 'EXPIRED'
   }
 }
@@ -518,6 +536,7 @@ function questMember(quest: QuestSummary) {
 function difficultyLabel(value: BossDifficulty) { return ({ EASY: '쉬움', NORMAL: '보통', HARD: '어려움' } as Record<BossDifficulty, string>)[value] }
 function difficultyTone(value: BossDifficulty): 'ok' | 'accent' | 'bad' { return value === 'EASY' ? 'ok' : value === 'HARD' ? 'bad' : 'accent' }
 function statusLabel(value?: string) { return ({ IN_PROGRESS: '진행 중', DEFEATED: '격파 성공', CLEARED: '격파 성공', COMPLETED: '격파 성공', EXPIRED: '기간 종료', FAILED: '실패' } as Record<string, string>)[value || ''] || '데이터 없음' }
+function conditionUnitLabel(value?: string) { return value && value !== 'COUNT' ? ` ${value}` : '' }
 function formatDate(value?: string) { return value ? new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value)) : '-' }
 
 onMounted(() => {
@@ -543,23 +562,26 @@ onMounted(() => {
 .sound-toggle { min-height: 34px; padding: 0 12px; border: 1.5px solid rgba(143,207,85,.64); border-radius: 999px; background: linear-gradient(180deg, #f8ffe8, var(--accent-soft)); color: var(--accent-dark); font-size: 11px; font-weight: 900; box-shadow: 0 3px 0 rgba(143,207,85,.18); cursor: pointer; transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease; }
 .sound-toggle:hover { transform: translateY(-1px); box-shadow: 0 5px 0 rgba(143,207,85,.14); }
 .sound-toggle.off { border-color: rgba(116,75,49,.24); background: rgba(255,255,255,.7); color: var(--ink-3); box-shadow: none; }
-.boss-battle-screen { position: relative; width: 100vw; min-height: calc(100vh - 72px); margin: -30px calc(50% - 50vw) -56px; padding: clamp(18px, 2.5vw, 34px) clamp(16px, 4vw, 52px) 56px; overflow: hidden; background-size: cover; background-position: 50% 50%; background-repeat: no-repeat; background-attachment: fixed; box-sizing: border-box; }
-.boss-battle-screen:before { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, rgba(18, 12, 8, .48), rgba(18, 12, 8, .2) 35%, rgba(18, 12, 8, .56)), radial-gradient(circle at 50% 36%, rgba(255, 229, 122, .16), transparent 35%); pointer-events: none; }
+.boss-battle-screen { position: relative; width: 100vw; height: calc(100vh - 72px); min-height: 0; margin: -30px calc(50% - 50vw) -56px; padding: 18px clamp(16px, 4vw, 52px) 24px; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 7px; background-size: cover; background-position: 50% 50%; background-repeat: no-repeat; background-attachment: fixed; box-sizing: border-box; }
+.boss-battle-screen:before { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, rgba(18, 12, 8, .3), rgba(18, 12, 8, .08) 38%, rgba(18, 12, 8, .34)), radial-gradient(circle at 50% 36%, rgba(255, 232, 146, .2), transparent 36%); pointer-events: none; }
 .boss-battle-screen > * { position: relative; z-index: 1; }
-.boss-battle-screen .api-message { width: min(80%, 1440px); margin: 0 auto 14px; background: rgba(255,255,255,.84); backdrop-filter: blur(12px); box-shadow: 0 18px 46px rgba(0,0,0,.16); }
-.boss-battle-screen .page-title-row { width: min(80%, 1440px); margin: 0 auto 20px; padding: 16px 18px; border: 1px solid rgba(255,255,255,.48); border-radius: 18px; background: rgba(255,255,255,.78); backdrop-filter: blur(12px); box-shadow: 0 18px 52px rgba(0,0,0,.22); box-sizing: border-box; }
-.boss-battle-screen .page-title-row p { color: rgba(50, 35, 26, .8); font-weight: 700; }
+.boss-battle-screen .api-message { position: absolute; top: 18px; right: max(24px, 10vw); z-index: 8; width: min(420px, 42vw); margin: 0; background: rgba(255,255,255,.88); backdrop-filter: blur(12px); box-shadow: 0 18px 46px rgba(0,0,0,.16); }
+.boss-battle-screen .api-message.success.quest-toast { top: auto; right: auto; left: 50%; bottom: 232px; width: auto; max-width: min(420px, 80vw); transform: translateX(-50%); padding: 9px 16px; border-color: rgba(143,207,85,.72); border-radius: 999px; background: rgba(24, 34, 19, .82); color: #f7ffe7; box-shadow: 0 12px 30px rgba(0,0,0,.24); backdrop-filter: blur(8px); text-align: center; white-space: nowrap; pointer-events: none; }
+.boss-battle-screen .page-title-row { width: min(80%, 1440px); margin: 0 auto; padding: 10px 14px; border: 1px solid rgba(255,255,255,.52); border-radius: 14px; background: rgba(255,255,255,.82); backdrop-filter: blur(12px); box-shadow: 0 12px 36px rgba(0,0,0,.18); box-sizing: border-box; }
+.boss-battle-screen .page-title-row > div:first-child { flex: 1 1 auto; min-width: 0; }
+.boss-battle-screen .page-title-row .pill-row { flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+.boss-battle-screen .page-title-row p { max-width: 100%; color: rgba(50, 35, 26, .8); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .boss-battle-screen .title-xl { color: var(--ink); text-shadow: 0 1px 0 rgba(255,255,255,.7); }
-.battle-grid { width: min(80%, 1440px); margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage" "conditions" "members"; gap: 18px; align-items: start; position: relative; z-index: 1; }
+.battle-grid { width: min(80%, 1440px); height: 100%; min-height: 0; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 204px; grid-template-areas: "stage" "bottom"; gap: 7px; align-items: stretch; position: relative; z-index: 1; }
 .battle-left { display: contents; }
-.members { grid-area: members; display: flex; flex-direction: column; gap: 14px; }
-.boss-battle-screen :deep(.app-card), .members, .quest-empty { background: rgba(255,255,255,.78); border: 1px solid rgba(255,255,255,.48); box-shadow: 0 18px 48px rgba(0,0,0,.18); backdrop-filter: blur(12px); }
-.boss-battle-screen :deep(.app-card:hover) { border-color: rgba(255,255,255,.72); box-shadow: 0 22px 54px rgba(0,0,0,.22); }
+.members { display: flex; flex-direction: column; gap: 8px; }
+.boss-battle-screen :deep(.app-card), .quest-empty { background: rgba(255,255,255,.66); border: 1px solid rgba(255,255,255,.42); box-shadow: 0 10px 28px rgba(0,0,0,.14); backdrop-filter: blur(10px); }
+.boss-battle-screen :deep(.app-card:hover) { border-color: rgba(255,255,255,.68); box-shadow: 0 14px 34px rgba(0,0,0,.18); }
 .boss-battle-screen .reward { background: rgba(255,241,200,.82); border-color: rgba(255,199,64,.72); }
 .boss-battle-screen .tip { background: rgba(255,255,255,.7); }
 .boss-battle-screen .checks p, .boss-battle-screen .reward-loot span { background: rgba(255,255,255,.62); border-color: rgba(116,75,49,.18); }
 .boss-battle-screen .checks p.completed { background: rgba(232,247,200,.74); border-color: rgba(98,167,62,.52); }
-.arena { grid-area: stage; position: relative; min-height: clamp(430px, 52vh, 620px); overflow: visible; background: transparent; border: 0; box-shadow: none; display: flex; align-items: center; justify-content: center; padding: 42px 16px 10px; } .arena :deep(.boss-monster) { z-index: 2; width: clamp(320px, 32vw, 440px) !important; height: clamp(254px, 25.4vw, 349px) !important; filter: drop-shadow(0 28px 34px rgba(0,0,0,.42)); }
+.arena { grid-area: stage; position: relative; min-height: 0; overflow: visible; background: transparent; border: 0; box-shadow: none; display: flex; align-items: center; justify-content: center; padding: 34px 16px 0; } .arena :deep(.boss-monster) { z-index: 2; width: clamp(300px, 31vw, 430px) !important; height: clamp(238px, 24.6vw, 341px) !important; filter: drop-shadow(0 28px 34px rgba(0,0,0,.42)); }
 .arena.is-hit :deep(.boss-monster) { animation: boss-hit-shake .44s cubic-bezier(.22,.9,.3,1); }
 .arena.cleared:before { content: ""; position: absolute; inset: 0; z-index: 3; background: radial-gradient(circle at 50% 44%, rgba(255, 229, 122, .2) 0%, rgba(18, 12, 8, .28) 42%, rgba(18, 12, 8, .72) 100%); pointer-events: none; }
 .arena :deep(.boss-attack-effect) { z-index: 3; }
@@ -573,37 +595,62 @@ onMounted(() => {
 .sparkle-c { left: 62%; bottom: 22%; animation-delay: .9s; }
 @keyframes clear-overlay-pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 @keyframes clear-sparkle { 0%,100% { opacity: .35; transform: translateY(0) scale(.82) rotate(0deg); } 50% { opacity: 1; transform: translateY(-8px) scale(1.18) rotate(18deg); } }
-.hp-card { grid-area: stage; align-self: start; justify-self: center; z-index: 5; width: min(520px, 54vw); margin-top: 38px; }
-.hp-row { display: flex; align-items: center; gap: 10px; } .hp-row span { font-family: var(--mono); font-size: 10px; color: var(--ink-3); font-weight: 700; letter-spacing: 1px; white-space: nowrap; } .hp-row :deep(.bar-wrap) { flex: 1; min-width: 110px; } .hp-row b { font-family: var(--mono); font-size: 13px; color: var(--accent); min-width: 106px; text-align: right; }
-.damage-row { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(116,75,49,.2); display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 10px; color: var(--ink-3); } .damage-row strong { color: var(--accent); }
-.recent-attack-card { grid-area: stage; align-self: end; justify-self: center; z-index: 6; width: min(420px, 48vw); margin-bottom: 20px; padding: 12px 16px; border: 1px solid rgba(255,255,255,.54); border-radius: 16px; background: linear-gradient(145deg, rgba(255,255,255,.84), rgba(255,247,224,.76)); box-shadow: 0 16px 38px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.72); backdrop-filter: blur(12px); color: var(--ink); cursor: pointer; text-align: left; transition: transform .18s ease, box-shadow .18s ease; }
+.hp-hud { grid-area: stage; align-self: start; justify-self: center; z-index: 5; position: relative; width: min(500px, 50vw); height: 29px; margin-top: 48px; display: flex; align-items: center; justify-content: center; padding: 0 14px; overflow: hidden; border: 1.5px solid rgba(255,238,188,.74); border-radius: 999px; background: linear-gradient(180deg, rgba(36,16,15,.9), rgba(87,24,22,.82)); box-shadow: 0 10px 22px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -3px 7px rgba(0,0,0,.32); color: #fff8d8; text-shadow: 0 2px 7px rgba(0,0,0,.9), 0 0 12px rgba(255,229,122,.32); }
+.hp-hud .hp-fill { position: absolute; inset: 0 auto 0 0; z-index: 0; width: 0; background: linear-gradient(90deg, #9c1717, #e13a28 48%, #ffb24b); box-shadow: inset 0 2px 0 rgba(255,255,255,.22), inset 0 -5px 12px rgba(70,0,0,.35); transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.hp-hud strong { position: relative; z-index: 1; font-family: var(--sans); font-size: clamp(14px, 1.18vw, 18px); font-weight: 700; letter-spacing: .1px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.recent-attack-card { grid-area: stage; align-self: end; justify-self: center; z-index: 6; width: min(400px, 46vw); margin-bottom: 6px; padding: 9px 14px; border: 1px solid rgba(255,255,255,.54); border-radius: 14px; background: linear-gradient(145deg, rgba(255,255,255,.8), rgba(255,247,224,.68)); box-shadow: 0 12px 30px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.72); backdrop-filter: blur(12px); color: var(--ink); cursor: pointer; text-align: left; transition: transform .18s ease, box-shadow .18s ease; }
 .recent-attack-card:hover { transform: translateY(-2px); box-shadow: 0 20px 46px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.8); }
 .recent-attack-card span { display: inline-flex; margin-bottom: 4px; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); font-size: 10px; font-weight: 900; }
 .recent-attack-card strong { display: block; font-size: 13px; line-height: 1.35; }
 .recent-attack-card small { display: block; margin-top: 4px; color: var(--ink-3); font-family: var(--mono); font-size: 10px; }
-.condition-grid { grid-area: conditions; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: stretch; } .condition-grid :deep(.app-card) { height: 100%; } .condition-card .section-title-main, .reward .section-title-main { font-size: 13px; } .condition-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .checks { display: grid; gap: 4px; margin-top: 7px; } .checks p { margin: 0; display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 7px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-alt); font-size: 11px; color: var(--ink-2); } .checks p.completed { background: var(--ok-soft); border-color: var(--ok); } .checks p b { color: var(--accent); font-size: 14px; } .checks p.completed b { color: var(--ok); } .checks p strong { font-family: var(--mono); color: var(--ink); font-size: 10px; }
-.reward { background: #fff1c8; border-color: var(--yolk-deep); text-align: center; } .reward-loot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; } .reward-loot span { padding: 8px; border: 1px solid var(--yolk-deep); border-radius: 10px; background: rgba(255,255,255,.64); font-size: 18px; } .reward small { display: block; font-family: var(--mono); color: var(--ink-2); font-size: 9px; margin-top: 4px; } .reward strong { display: block; font-family: var(--mono); color: var(--accent-dark); font-size: 13px; margin-top: 2px; } .reward-lock { color: var(--ink-2); font-size: 10px; }
-.members { grid-area: members; padding: 16px; border-radius: 18px; }
-.members :deep(.member) { background: rgba(255,255,255,.74); border-color: rgba(116,75,49,.18); box-shadow: 0 10px 26px rgba(0,0,0,.1); }
+.bottom-panel { grid-area: bottom; min-height: 0; height: 100%; box-sizing: border-box; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding: 12px 14px 16px; border: 1px solid rgba(255,255,255,.42); border-radius: 14px; background: rgba(255,255,255,.66); box-shadow: 0 10px 28px rgba(0,0,0,.14); backdrop-filter: blur(10px); overflow: hidden; }
+.summary-panel { padding: 12px 14px 18px; }
+.bottom-panel-tabs { display: grid; grid-template-columns: repeat(2, 120px); width: max-content; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(20,13,8,.18); }
+.bottom-panel-tabs button { width: 120px; min-width: 0; min-height: 26px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); font-size: 12px; font-weight: 900; white-space: nowrap; cursor: pointer; }
+.bottom-panel-tabs button.active { background: rgba(255,255,255,.78); color: var(--ink); box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+.condition-grid { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: stretch; } .condition-grid :deep(.app-card) { height: 100%; min-height: 0; box-sizing: border-box; overflow: hidden; } .condition-card .section-title-main, .reward .section-title-main { font-size: 15px; font-weight: 900; } .condition-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .checks { display: grid; gap: 3px; margin-top: 5px; } .checks p { margin: 0; display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 7px; padding: 4px 6px; border: 0; border-radius: 7px; background: rgba(255,255,255,.48); font-size: 13px; font-weight: 800; color: var(--ink); } .checks p.completed { background: rgba(232,247,200,.68); border-color: var(--ok); } .checks p b { color: var(--accent); font-size: 15px; } .checks p.completed b { color: var(--ok); } .checks p strong { font-family: var(--mono); color: var(--ink); font-size: 12px; }
+.reward { background: rgba(255,241,200,.66); border-color: rgba(255,199,64,.58); text-align: center; display: flex; flex-direction: column; } .reward .section-title-main { font-family: var(--sans); font-size: 17px; font-weight: 850; line-height: 1.1; letter-spacing: 0; color: #4a311f; } .reward-loot { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 0; } .reward-loot span { min-height: 0; padding: 6px 8px; border: 1px solid rgba(232,185,67,.42); border-radius: 10px; background: linear-gradient(180deg, rgba(255,255,255,.74), rgba(255,244,205,.58)); box-shadow: inset 0 1px 0 rgba(255,255,255,.62), 0 6px 14px rgba(116,75,49,.08); font-family: var(--sans); font-size: 21px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; } .reward small { display: block; font-family: var(--sans); color: rgba(74,49,31,.72); font-size: 12px; font-weight: 800; line-height: 1; margin: 0; letter-spacing: 0; } .reward strong { display: block; font-family: var(--sans); color: var(--accent-dark); font-size: 16px; font-weight: 850; line-height: 1.05; margin-top: 2px; letter-spacing: 0; font-variant-numeric: tabular-nums; } .reward-lock { margin-top: auto; color: var(--ink-2); font-size: 12px; font-weight: 800; }
+.members { grid-area: bottom; min-height: 0; }
+.members :deep(.member) { box-sizing: border-box; padding: 7px 8px; gap: 4px; background: linear-gradient(180deg, rgba(255,255,255,.58), rgba(255,255,255,.34)); border-color: rgba(255,255,255,.34); border-radius: 10px; box-shadow: 0 7px 18px rgba(0,0,0,.13); backdrop-filter: blur(8px); }
 .members :deep(.member.mine) { background: rgba(244,255,220,.78); border-color: rgba(143,207,85,.62); }
 .members :deep(.member.done:not(.mine)) { background: rgba(232,247,200,.7); }
-.member-head { display: flex; justify-content: space-between; align-items: baseline; } .member-head strong { font-size: 13px; } .member-head span { font-family: var(--mono); color: var(--ink-3); font-size: 11px; } .tip { background: var(--surface-alt); color: var(--ink-2); font-size: 11px; line-height: 1.6; }
-.quest-board { display: grid; grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); gap: 14px; align-items: stretch; }
-.my-quest-panel, .guild-quest-panel { min-width: 0; padding: 12px; border: 1px solid rgba(116,75,49,.16); border-radius: 14px; background: rgba(255,255,255,.44); }
-.my-quest-panel { display: flex; flex-direction: column; gap: 10px; }
-.guild-quest-panel { display: flex; flex-direction: column; gap: 10px; }
-.quest-panel-title { font-size: 12px; font-weight: 900; color: var(--ink); }
-.quest-slider-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.members :deep(.member.rewarded) { position: relative; overflow: hidden; }
+.members :deep(.member.rewarded:after) { content: "보상 수령 완료"; position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; border-radius: inherit; background: rgba(16, 12, 10, .42); color: #fff8d8; font-size: 14px; font-weight: 900; text-shadow: 0 2px 8px rgba(0,0,0,.72); }
+.members :deep(.top) { gap: 7px; }
+.members :deep(.avatar) { width: 28px; height: 28px; border-radius: 14px; }
+.members :deep(.who strong) { font-size: 14px; }
+.members :deep(.who small) { font-size: 10px; }
+.members :deep(.quest span) { font-size: 13px; font-weight: 800; }
+.members :deep(.quest small) { font-size: 11px; }
+.member-head { display: flex; justify-content: space-between; align-items: baseline; } .member-head strong { font-size: 15px; } .member-head span { font-family: var(--mono); color: var(--ink-3); font-size: 12px; font-weight: 800; } .tip { padding: 6px 10px !important; background: rgba(255,255,255,.46); color: var(--ink-2); font-size: 12px; font-weight: 800; line-height: 1.2; }
+.quest-board { height: 100%; min-height: 0; display: grid; grid-template-columns: minmax(230px, 290px) minmax(0, 1fr); gap: 10px; align-items: stretch; }
+.my-quest-panel, .guild-quest-panel { min-width: 0; min-height: 0; box-sizing: border-box; padding: 9px; border: 1px solid rgba(255,255,255,.28); border-radius: 10px; background: rgba(255,255,255,.18); overflow: hidden; }
+.guild-quest-panel { position: relative; }
+.guild-quest-panel:before { content: ""; position: absolute; left: -5px; top: 8px; bottom: 8px; width: 1px; background: rgba(45,33,29,.18); box-shadow: 0 0 8px rgba(255,255,255,.28); }
+.my-quest-panel { display: grid; grid-template-rows: 32px minmax(0, 1fr); gap: 5px; }
+.guild-quest-panel { display: grid; grid-template-rows: 32px minmax(0, 1fr); gap: 5px; }
+.quest-panel-title { font-size: 14px; font-weight: 900; color: var(--ink); }
+.quest-panel-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.quest-panel-title-row strong { font-size: 14px; font-weight: 900; }
+.quest-panel-title-row :deep(button) { min-height: 26px; padding: 0 10px; font-size: 11px; }
+.quest-panel-title > span { margin-left: 6px; color: var(--ink-2); font-family: var(--mono); font-size: 11px; font-weight: 800; }
+.quest-slider-head { min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .quest-slider-controls { display: inline-flex; align-items: center; gap: 8px; }
 .quest-slider-controls button { width: 28px; height: 28px; border: 1px solid rgba(116,75,49,.2); border-radius: 50%; background: rgba(255,255,255,.72); color: var(--ink); font-size: 20px; line-height: 1; font-weight: 900; cursor: pointer; }
 .quest-slider-controls button:disabled { opacity: .36; cursor: not-allowed; }
 .quest-slider-controls span { min-width: 46px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
-.guild-quest-track { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.quest-entry { display: flex; flex-direction: column; gap: 6px; min-width: 0; } .quest-actions { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
-.quest-missing { min-height: 112px; display: flex; align-items: center; justify-content: center; margin: 0; border: 1px dashed rgba(116,75,49,.2); border-radius: 12px; color: var(--ink-3); font-size: 12px; text-align: center; }
+.guild-quest-track { min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.my-quest-card { position: relative; height: 100%; min-height: 0; }
+.my-quest-card :deep(.member) { height: 100%; min-height: 0; }
+.quest-claim-overlay { position: absolute; left: 50%; top: 50%; z-index: 4; transform: translate(-50%, -50%); box-shadow: 0 10px 24px rgba(0,0,0,.22); }
+.quest-claim-overlay:hover:not(:disabled) { transform: translate(-50%, -50%); }
+.quest-claim-overlay:active:not(:disabled) { transform: translate(-50%, -50%) scale(.98); }
+.quest-entry { height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; } .quest-actions { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.quest-entry :deep(.member) { height: 100%; min-height: 0; }
+.quest-missing { min-height: 112px; display: flex; align-items: center; justify-content: center; margin: 0; border: 0; border-radius: 12px; background: rgba(255,255,255,.22); color: var(--ink-3); font-size: 12px; text-align: center; }
 @keyframes clear-pop { from { opacity: 0; transform: translateY(12px) scale(.86); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes sparkle-fall { from { transform: translateY(0) rotate(0); } to { transform: translateY(130px) rotate(120deg); } }
 @keyframes boss-hit-shake { 0%,100% { transform: translate3d(0,0,0) rotate(0); filter: drop-shadow(0 28px 34px rgba(0,0,0,.42)); } 15% { transform: translate3d(-6px,2px,0) rotate(-1.2deg); filter: drop-shadow(0 28px 34px rgba(0,0,0,.42)) brightness(1.16); } 32% { transform: translate3d(7px,-2px,0) rotate(1.2deg); } 48% { transform: translate3d(-4px,1px,0) rotate(-.7deg); } 66% { transform: translate3d(3px,0,0) rotate(.4deg); } }
-@media (max-width: 960px) { .boss-battle-screen { padding-inline: clamp(14px, 3vw, 28px); } .battle-grid { grid-template-columns: 1fr; grid-template-areas: "stage" "conditions" "members"; } .arena { min-height: clamp(360px, 48vh, 520px); } .hp-card { width: min(500px, 72vw); } .quest-board { grid-template-columns: 1fr; } .guild-quest-track { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 640px) { .page-title-row { align-items: flex-start; flex-direction: column; } .boss-battle-screen { margin-top: -30px; padding: 18px 14px 40px; background-attachment: scroll; background-position: 50% 50%; } .boss-battle-screen .api-message, .boss-battle-screen .page-title-row, .battle-grid { width: 100%; } .boss-battle-screen .page-title-row { border-radius: 14px; padding: 14px; } .battle-actions { width: 100%; flex-wrap: wrap; } .battle-actions :deep(button) { flex: 1; justify-content: center; } .sound-toggle { flex: 0 0 auto; } .arena { min-height: 320px; padding: 52px 0 4px; } .arena :deep(.boss-monster) { width: clamp(250px, 82vw, 340px) !important; height: clamp(198px, 65vw, 270px) !important; } .hp-card { width: min(94vw, 420px); margin-top: 24px; } .recent-attack-card { width: min(92vw, 360px); margin-bottom: 4px; } .members { padding: 12px; border-radius: 14px; } .diff-grid,.condition-grid,.guild-quest-track { grid-template-columns: 1fr; } .quest-slider-head { align-items: flex-start; flex-direction: column; } .hp-row,.damage-row { align-items: flex-start; flex-direction: column; } .hp-row :deep(.bar-wrap) { width: 100%; } }
+@media (max-width: 960px) { .boss-battle-screen { padding-inline: clamp(14px, 3vw, 28px); } .battle-grid { grid-template-columns: 1fr; grid-template-areas: "stage" "bottom"; } .arena { min-height: 0; padding-top: 30px; } .hp-hud { width: min(470px, 70vw); } .quest-board { grid-template-columns: 1fr; } .guild-quest-track { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .page-title-row { align-items: flex-start; flex-direction: column; } .boss-battle-screen { margin-top: -30px; padding: 12px 10px 16px; background-attachment: scroll; background-position: 50% 50%; } .boss-battle-screen .api-message { top: 12px; left: 10px; right: 10px; width: auto; } .boss-battle-screen .api-message.success.quest-toast { top: auto; right: auto; left: 50%; bottom: 210px; width: auto; max-width: calc(100vw - 28px); } .boss-battle-screen .page-title-row, .battle-grid { width: 100%; } .boss-battle-screen .page-title-row { border-radius: 12px; padding: 8px 10px; } .battle-grid { height: 100%; grid-template-rows: minmax(0, 1fr) 190px; gap: 6px; } .battle-actions { width: 100%; flex-wrap: wrap; } .battle-actions :deep(button) { flex: 1; justify-content: center; } .sound-toggle { flex: 0 0 auto; } .arena { min-height: 0; padding: 42px 0 0; } .arena :deep(.boss-monster) { width: clamp(230px, 76vw, 320px) !important; height: clamp(182px, 60vw, 254px) !important; } .hp-hud { width: min(86vw, 350px); height: 26px; margin-top: 32px; padding: 0 10px; } .recent-attack-card { width: min(92vw, 360px); margin-bottom: 2px; } .bottom-panel { gap: 6px; padding: 8px 8px 12px; border-radius: 12px; } .summary-panel { padding: 8px 8px 12px; } .bottom-panel-tabs { grid-template-columns: repeat(2, 112px); } .bottom-panel-tabs button { width: 112px; font-size: 11px; } .diff-grid,.condition-grid,.guild-quest-track { grid-template-columns: 1fr; } .quest-slider-head { align-items: flex-start; flex-direction: column; gap: 4px; } }
 </style>
