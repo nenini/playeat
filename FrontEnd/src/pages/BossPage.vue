@@ -96,6 +96,7 @@
   <section
     v-else
     class="boss-battle-screen"
+    :class="{ 'battle-cleared': isBattleCleared }"
     :style="{ backgroundImage: `url(${battleBossAssets.background})` }"
   >
     <div v-if="errorMessage" class="api-message">{{ errorMessage }}</div>
@@ -168,10 +169,9 @@
               @click="claimBattleReward"
               >보상 수령하기</AppButton
             >
-            <AppPill v-else tone="ok" size="sm">보상 수령 완료</AppPill>
           </div>
         </div>
-        <div class="hp-hud">
+        <div v-if="!isBattleCleared" class="hp-hud">
           <span class="hp-fill" :style="{ width: `${hpPercent}%` }" />
           <strong
             >{{ hp?.currentHp?.toLocaleString() ?? "-" }} /
@@ -213,7 +213,7 @@
               </div>
               <p v-else>격파 조건 데이터가 없습니다.</p></AppCard
             >
-            <AppCard :padding="10" class="reward"
+            <AppCard :padding="10" class="reward" :class="{ claimed: isBattleCleared && battle?.rewardClaimed }"
               ><div class="section-title-main">레이드 클리어 보상</div>
               <div class="reward-loot">
                 <span
@@ -232,13 +232,7 @@
                     }}</strong
                   ></span
                 >
-              </div>
-              <AppPill
-                v-if="isBattleCleared && battle?.rewardClaimed"
-                tone="ok"
-                size="sm"
-                >보상 수령 완료</AppPill
-              ></AppCard
+              </div></AppCard
             >
           </div>
         </div>
@@ -408,7 +402,7 @@ type RecentAttack = {
   attackerName: string;
 };
 
-const SHOW_ATTACK_REPLAY_TEST_BUTTON = false;
+const SHOW_ATTACK_REPLAY_TEST_BUTTON = true;
 
 defineEmits<{ navigate: [page: PageId] }>();
 
@@ -795,17 +789,20 @@ async function loadBattleData(id: number) {
 
 async function reloadQuestProgress() {
   if (!battleId.value) return;
-  const [myQuestData, questList, contributionList, hpData, dashboardData] =
+  const [detail, myQuestData, questList, contributionList, hpData, dashboardData] =
     await Promise.all([
+      bossBattleApi.getBossBattle(battleId.value),
       questApi.getMyBattleQuests(battleId.value),
       questApi.getBattleQuests(battleId.value),
       questApi.getBattleQuestContributions(battleId.value),
       bossBattleApi.getBossBattleHp(battleId.value),
       bossBattleApi.getBossBattleDashboard(battleId.value),
     ]);
+  battle.value = detail;
   myQuest.value = myQuestData;
   quests.value = questList.quests ?? [];
   contributions.value = contributionList.contributions ?? [];
+  syncRecentDamageLog(detail.recentDamageLogs);
   setBossHp(hpData);
   dashboard.value = dashboardData;
 }
@@ -896,16 +893,21 @@ async function claimQuestReward(questId: number) {
     async () => {
       await questApi.claimQuestReward(questId);
       if (!battleId.value) return;
-      const [myQuestData, questList, hpData, dashboardData] = await Promise.all(
+      const [detail, myQuestData, questList, contributionList, hpData, dashboardData] = await Promise.all(
         [
+          bossBattleApi.getBossBattle(battleId.value),
           questApi.getMyBattleQuests(battleId.value),
           questApi.getBattleQuests(battleId.value),
+          questApi.getBattleQuestContributions(battleId.value),
           bossBattleApi.getBossBattleHp(battleId.value),
           bossBattleApi.getBossBattleDashboard(battleId.value),
         ],
       );
+      battle.value = detail;
       myQuest.value = myQuestData;
       quests.value = questList.quests ?? [];
+      contributions.value = contributionList.contributions ?? [];
+      syncRecentDamageLog(detail.recentDamageLogs);
       setBossHp(hpData);
       dashboard.value = dashboardData;
     },
@@ -926,6 +928,7 @@ async function verifyConditions() {
         bossBattleApi.getBossBattleDashboard(battleId.value!),
       ]);
       battle.value = detail;
+      syncRecentDamageLog(detail.recentDamageLogs);
       setBossHp(hpData);
       dashboard.value = dashboardData;
     },
@@ -944,7 +947,6 @@ async function claimBattleReward() {
         bossBattleApi.getBossBattleDashboard(battleId.value!),
       ]);
     },
-    "보스전 보상을 수령했습니다.",
   );
 }
 
@@ -958,7 +960,8 @@ function questMember(quest: QuestSummary) {
     role: contribution
       ? `${contribution.totalDamage} HP 기여`
       : quest.questType || "개인 퀘스트",
-    lv: quest.characterLevel ?? "-",
+    lv: contribution?.characterLevel ?? quest.characterLevel ?? "-",
+    profileImageUrl: contribution?.profileImageUrl || quest.profileImageUrl || "",
     quest: quest.title,
     progress: quest.currentValue,
     total: quest.targetValue || 1,
@@ -1008,6 +1011,10 @@ function formatDate(value?: string) {
 }
 
 onMounted(() => {
+  if (sessionStorage.getItem("nyamnyam:boss-panel") === "quests") {
+    bottomPanel.value = "quests";
+    sessionStorage.removeItem("nyamnyam:boss-panel");
+  }
   void loadAttackEquipment();
   void loadBossPage();
 });
@@ -1269,6 +1276,20 @@ p {
     );
   pointer-events: none;
 }
+.boss-battle-screen.battle-cleared:before {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(12, 8, 6, 0.68),
+      rgba(12, 8, 6, 0.46) 38%,
+      rgba(12, 8, 6, 0.78)
+    ),
+    radial-gradient(
+      circle at 50% 36%,
+      rgba(255, 229, 122, 0.18),
+      transparent 42%
+    );
+}
 .boss-battle-screen > * {
   position: relative;
   z-index: 1;
@@ -1405,19 +1426,6 @@ p {
 }
 .arena.is-hit :deep(.boss-monster) {
   animation: boss-hit-shake 0.44s cubic-bezier(0.22, 0.9, 0.3, 1);
-}
-.arena.cleared:before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  background: radial-gradient(
-    circle at 50% 44%,
-    rgba(255, 229, 122, 0.2) 0%,
-    rgba(18, 12, 8, 0.28) 42%,
-    rgba(18, 12, 8, 0.72) 100%
-  );
-  pointer-events: none;
 }
 .arena :deep(.boss-attack-effect) {
   z-index: 3;
@@ -1675,6 +1683,23 @@ p {
   text-align: center;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.reward.claimed:after {
+  content: "보상 수령 완료";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: rgba(16, 12, 10, 0.46);
+  color: #fff8d8;
+  font-size: 15px;
+  font-weight: 900;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.72);
 }
 .reward .section-title-main {
   font-family: var(--sans);

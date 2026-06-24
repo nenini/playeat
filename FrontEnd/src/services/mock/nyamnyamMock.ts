@@ -219,7 +219,7 @@ export const onboardingSteps: OnboardingStep[] = [
     id: 'goal',
     eyebrow: 'STEP 3 · 목표 설정',
     title: '가장 중요한 목표를 정해요',
-    description: '냠냠이가 어떤 방향으로 응원할지 정하는 단계예요.',
+    description: '캐릭터가 어떤 방향으로 응원할지 정하는 단계예요.',
     questions: [
       { id: 'mainGoal', label: '가장 큰 목표는 무엇인가요?', type: 'single', options: ['감량', '유지', '증량'] },
       { id: 'improveTarget', label: '무엇을 개선하고 싶나요?', type: 'single', options: ['건강', '에너지', '식습관 개선'] },
@@ -316,7 +316,7 @@ export function coachSpeak(coachId: string, logs: MealLog[]) {
   if (coachId === 'warrior') return lowProtein ? `"P ${Math.round(totals.p)}g. 부족. ${Math.max(0, 60 - Math.round(totals.p))}g 더. 닭가슴살 1팩 ㄱ.💪"` : '"오늘 평균. 더 가즈아. 단백질 우선."'
   if (coachId === 'healer') return recordsToday >= 2 ? '"이미 두 끼나 챙기셨네요. 정말 잘하셨어요 🌷 무리하지 마세요."' : '"천천히, 한 입씩만 챙겨보세요."'
   if (coachId === 'wizard') return `"오늘 ${Math.round(totals.kcal)}kcal · P${Math.round(totals.p)} C${Math.round(totals.c)} F${Math.round(totals.f)}. 목표 대비 ${Math.round(totals.kcal / 2000 * 100)}%. ${overSodium ? '나트륨 초과.' : '균형 양호.'}"`
-  if (coachId === 'rogue') return recordsToday === 0 ? '"오~ 아직도 기록 안 했지? 냠냠이가 다 봤다 ㅋㅋ"' : '"오케이! 잘하고 있네 ㅎㅎ 저녁엔 뭐 먹을 거임? 궁금~"'
+  if (coachId === 'rogue') return recordsToday === 0 ? '"오~ 아직도 기록 안 했지? 캐릭터가 다 봤다 ㅋㅋ"' : '"오케이! 잘하고 있네 ㅎㅎ 저녁엔 뭐 먹을 거임? 궁금~"'
   if (coachId === 'village-npc') return veggies < 1 ? '"채소도 좀 챙겨야 혀. 시금치 무침이라도 한 술 어떠?"' : '"우리 지은이 오늘 잘 챙겨먹었네~ 저녁도 푸짐하게 한 상 차려봐~"'
   return lowProtein ? '"그대, 단백질이 부족하구나. 저녁엔 닭가슴살을 곁들이는 게 어떠한가?"' : '"훌륭하도다. 오늘도 정진하라."'
 }

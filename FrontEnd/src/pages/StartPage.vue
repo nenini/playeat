@@ -2,8 +2,7 @@
   <div class="start-page">
     <header class="start-nav">
       <button class="brand" type="button">
-        <span>냠</span>
-        <strong>냠냠코치</strong>
+        <BrandLogo />
       </button>
       <div class="nav-actions">
         <button type="button" @click="$emit('login')">로그인</button>
@@ -26,7 +25,7 @@
           <div class="pet-orbit">
             <NyamnyamCharacter stage="baby" :size="190" />
           </div>
-          <div class="pet-level"><small>YOUR PARTNER</small><strong>LV.1 냠냠이</strong><span>첫 식단을 기록하고 함께 성장해요</span></div>
+          <div class="pet-level"><small>YOUR PARTNER</small><strong>LV.11 짹짹이</strong><span>첫 식단을 기록하고 함께 성장해요</span></div>
         </div>
       </section>
 
@@ -62,7 +61,7 @@
     </main>
 
     <footer>
-      <div class="footer-brand"><span>냠</span><strong>냠냠코치</strong></div>
+      <div class="footer-brand"><BrandLogo /></div>
       <small>© 2026 NyamNyam Coach. All rights reserved.</small>
     </footer>
   </div>
@@ -70,18 +69,19 @@
 
 <script setup lang="ts">
 import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
+import BrandLogo from '../components/common/BrandLogo.vue'
 
 defineEmits<{ start: [], login: [] }>()
 
 const features = [
   { icon: '🍱', title: '스마트 식단 기록', desc: '끼니와 영양소를 손쉽게 기록하고 오늘의 균형을 확인하세요.' },
   { icon: '✨', title: 'AI 코치 메시지', desc: '기록을 바탕으로 지금 필요한 한마디를 받아보세요.' },
-  { icon: '🐥', title: '캐릭터 성장', desc: '건강한 습관이 쌓일수록 냠냠이가 함께 성장합니다.' },
+  { icon: '🐥', title: '캐릭터 성장', desc: '건강한 습관이 쌓일수록 짹짹이가 함께 성장합니다.' },
   { icon: '🛡️', title: '길드 협업', desc: '길드원과 함께 퀘스트를 깨고 보스를 공략하세요.' }
 ]
 
 const steps = [
-  { no: 1, title: '회원가입', desc: '간단한 정보로 계정을 만들고 냠냠이를 만나보세요.' },
+  { no: 1, title: '회원가입', desc: '간단한 정보로 계정을 만들고 짹짹이를 만나보세요.' },
   { no: 2, title: '온보딩 설정', desc: '목표와 식습관을 선택해 나에게 맞는 기준을 세워요.' },
   { no: 3, title: '식단 기록 시작', desc: '매일의 식사를 기록하고 AI 분석과 캐릭터 성장을 확인해요.' }
 ]

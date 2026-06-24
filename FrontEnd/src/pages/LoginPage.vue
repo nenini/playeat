@@ -1,13 +1,13 @@
 <template>
   <section class="auth-page">
     <button class="auth-brand" type="button" @click="$emit('back')">
-      <span>냠</span><strong>냠냠코치</strong>
+      <BrandLogo />
     </button>
     <form class="auth-card" @submit.prevent="submit">
       <div class="auth-head">
         <p>RETURN TO ADVENTURE</p>
         <h1>모험 이어하기</h1>
-        <span>식단 기록과 냠냠이 성장을 이어가세요.</span>
+        <span>식단 기록과 캐릭터 성장을 이어가세요.</span>
       </div>
       <label>이메일<input v-model="email" type="email" /></label>
       <label>비밀번호<input v-model="password" type="password" /></label>
@@ -30,6 +30,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import BrandLogo from "../components/common/BrandLogo.vue";
 defineProps<{ apiError?: string }>();
 const emit = defineEmits<{
   done: [payload: { email: string; password: string }];

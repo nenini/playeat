@@ -13,7 +13,7 @@
           <div class="coin-row"><span>냠냠코인</span><strong>🪙 {{ coins.toLocaleString() }}</strong></div>
         </AppCard>
         <AppCard :padding="32" class="preview" :class="{ 'has-background': Boolean(displayBackgroundImage) }" :style="previewBackgroundStyle">
-          <div class="mono-label">{{ hovered && isOwned(hovered) ? `미리보기 · ${hovered.name}` : `장착 중 · ${equipLabel}` }}</div>
+          <div class="mono-label">{{ hovered && isOwned(hovered) ? `미리보기 · ${displayItemName(hovered)}` : `장착 중 · ${equipLabel}` }}</div>
           <CharacterAvatar
             class="preview-avatar"
             :stage="characterStage"
@@ -59,7 +59,7 @@
               <span v-else class="no-image">이미지 없음</span>
             </div>
             <div class="grow">
-              <div class="item-head"><strong>{{ item.name }}</strong><AppPill size="sm">{{ itemTypeLabel(item.itemType) }}</AppPill><AppPill v-if="shouldShowSlotPill(item)" size="sm">{{ slotLabel(item.slotType) }}</AppPill></div>
+              <div class="item-head"><strong>{{ displayItemName(item) }}</strong><AppPill size="sm">{{ itemTypeLabel(item.itemType) }}</AppPill><AppPill v-if="shouldShowSlotPill(item)" size="sm">{{ slotLabel(item.slotType) }}</AppPill></div>
               <p>{{ item.description || '아이템 설명이 없습니다.' }}</p>
               <AppPill v-if="item.defaultItem" size="sm">무료 기본 아이템</AppPill>
               <b v-else>🪙 {{ item.price.toLocaleString() }} 코인</b>
@@ -92,6 +92,7 @@ import { characterEquipmentApi, equipmentIconId, equipmentImageUrl } from '../se
 import { shopApi } from '../services/api/shopApi'
 import { characterApi, moodFromBackend, stageFromBackend, type CharacterResponse } from '../services/characterApi'
 import { resolveBackgroundAsset } from '../utils/backgroundAssets'
+import { characterDisplayName } from '../utils/characterNames'
 import type { NyamnyamMood, Stage } from '../services/mock/nyamnyamMock'
 import type { CharacterEquipment } from '../types/characterEquipment'
 import type { ShopItem } from '../types/shop'
@@ -113,8 +114,8 @@ const failedItemImages = ref(new Set<number>())
 const equippedItems = computed(() => equipments.value.filter((equipment) => equipment.equipped && equipment.itemId !== null))
 const nyamnyamCharacterItem = computed<ShopItem>(() => ({
   itemId: -1,
-  name: '냠냠이 캐릭터',
-  description: '기본으로 함께하는 든든한 냠냠이 모험가',
+  name: `${characterDisplayName('NYAMNYAM')} 캐릭터`,
+  description: `기본으로 함께하는 든든한 ${characterDisplayName('NYAMNYAM')} 모험가`,
   itemType: 'CHARACTER',
   slotType: 'CHARACTER',
   price: 0,
@@ -141,14 +142,14 @@ const visibleShopItems = computed(() => {
   return itemShopItems.value
 })
 const shopTitle = computed(() => {
-  if (activeShopTab.value === 'characters') return '냠냠 캐릭터 상점'
-  if (activeShopTab.value === 'backgrounds') return '냠냠 배경 상점'
-  return '냠냠 아이템 상점'
+  if (activeShopTab.value === 'characters') return '캐릭터 상점'
+  if (activeShopTab.value === 'backgrounds') return '배경 상점'
+  return '아이템 상점'
 })
 const shopDescription = computed(() => {
-  if (activeShopTab.value === 'characters') return '냠냠이·강아지·펭귄 캐릭터를 선택해 모험 분위기를 바꿔보세요'
+  if (activeShopTab.value === 'characters') return '짹짹이·멍멍이·뒤뚱이 캐릭터를 선택해 모험 분위기를 바꿔보세요'
   if (activeShopTab.value === 'backgrounds') return '메인 캐릭터 카드의 모험 배경을 구매하고 적용해보세요'
-  return '냠냠코인으로 무기·머리 장식을 구매하고 냠냠이에게 입혀보세요'
+  return '냠냠코인으로 무기·머리 장식을 구매하고 캐릭터에게 입혀보세요'
 })
 const equipLabel = computed(() => equippedItems.value.map((equipment) => equipment.name).filter(Boolean).join(' + ') || '장착 안 함')
 const previewItem = computed(() => hovered.value && (isCharacterItem(hovered.value) || isOwned(hovered.value)) ? hovered.value : null)
@@ -260,7 +261,7 @@ async function unequip(slotType: string | null) {
   try {
     await characterEquipmentApi.unequipItem(slotType)
     await refreshShop()
-    successMessage.value = slotType === 'CHARACTER' ? '냠냠이 캐릭터로 변경했습니다.' : slotType === 'BACKGROUND' ? '기본 배경으로 변경했습니다.' : '아이템 장착을 해제했습니다.'
+    successMessage.value = slotType === 'CHARACTER' ? `${characterDisplayName('NYAMNYAM')} 캐릭터로 변경했습니다.` : slotType === 'BACKGROUND' ? '기본 배경으로 변경했습니다.' : '아이템 장착을 해제했습니다.'
   } catch (error) {
     setError(error)
   } finally {
@@ -291,13 +292,18 @@ function isDefaultCharacterItem(item: ShopItem) {
 
 function normalizeAppearance(value: unknown) {
   const key = typeof value === 'string' ? value.trim().toUpperCase() : ''
-  if (key === 'PENGUIN' || key.includes('펭귄')) return 'PENGUIN'
-  if (key === 'DOG' || key.includes('강아지')) return 'DOG'
+  if (key === 'PENGUIN' || key.includes('펭귄') || key.includes('뒤뚱')) return 'PENGUIN'
+  if (key === 'DOG' || key.includes('강아지') || key.includes('멍멍')) return 'DOG'
   return 'NYAMNYAM'
 }
 
 function appearanceFromItem(item: Pick<ShopItem, 'effectValue' | 'imageUrl' | 'name'>) {
   return normalizeAppearance(item.effectValue || item.imageUrl || item.name)
+}
+
+function displayItemName(item: ShopItem) {
+  if (isCharacterItem(item)) return `${characterDisplayName(appearanceFromItem(item))} 캐릭터`
+  return item.name
 }
 
 function equipButtonLabel(item: ShopItem) {

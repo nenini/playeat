@@ -24,6 +24,12 @@ public record UserMeResponse(
         @Schema(description = "User status", example = "ACTIVE")
         String status,
 
+        @Schema(description = "Login provider", example = "GOOGLE")
+        String provider,
+
+        @Schema(description = "Whether local password exists", example = "false")
+        Boolean hasPassword,
+
         @Schema(description = "Onboarding completed", example = "false")
         Boolean onboardingCompleted,
 

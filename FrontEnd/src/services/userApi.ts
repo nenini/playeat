@@ -8,6 +8,11 @@ export interface UserMeResponse {
   profileImagePath?: string
   selectedCoachId?: number
   status?: string
+  provider?: string
+  authProvider?: string
+  loginType?: string
+  socialProvider?: string
+  hasPassword?: boolean
   onboardingCompleted?: boolean
   createdAt?: string
 }

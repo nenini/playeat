@@ -69,11 +69,11 @@
       <AppCard>
         <div class="section-title-main">계정 설정</div>
         <div class="setting-list">
-          <button @click="passwordOpen = true">
-            <span><strong>비밀번호 변경</strong><small>현재 비밀번호 확인 후 변경</small></span>
+          <button type="button" :disabled="isSocialLogin" :class="{ disabled: isSocialLogin }" @click="openPasswordModal">
+            <span><strong>비밀번호 변경</strong><small>{{ isSocialLogin ? '소셜 로그인 계정은 비밀번호 변경을 지원하지 않아요' : '현재 비밀번호 확인 후 변경' }}</small></span>
             <AppIcon name="chev-r" color="var(--ink-3)" />
           </button>
-          <button @click="emit('restartOnboarding')">
+          <button type="button" @click="emit('restartOnboarding')">
             <span><strong>온보딩 다시하기</strong><small>건강 목표와 기본 정보 재설정</small></span>
             <AppIcon name="chev-r" color="var(--ink-3)" />
           </button>
@@ -113,12 +113,19 @@ const deleteError = ref('')
 const passwordError = ref('')
 const profileImageFailed = ref(false)
 const profile = reactive({ nickname: '', email: '', height: '', weight: '', gender: '', goal: '', birthDate: '', joinedAt: '', photoUrl: '' })
+const loginProvider = ref('')
+const hasPassword = ref<boolean | null>(null)
 const savedProfile = reactive({ nickname: '', photoUrl: '' })
 const passwordForm = reactive({ current: '', next: '', confirm: '' })
 const passwordMismatch = computed(() => !!passwordForm.next && !!passwordForm.confirm && passwordForm.next !== passwordForm.confirm)
 const canResetPassword = computed(() => !!passwordForm.current && !!passwordForm.next && !!passwordForm.confirm && !passwordMismatch.value)
 const initial = computed(() => profile.nickname.trim().slice(0, 1) || '?')
 const displayPhotoUrl = computed(() => resolveImageUrl(profile.photoUrl))
+const isSocialLogin = computed(() => {
+  if (hasPassword.value === false) return true
+  const provider = loginProvider.value.trim().toUpperCase()
+  return Boolean(provider && provider !== 'LOCAL' && provider !== 'EMAIL')
+})
 const info = computed(() => [
   ['키', profile.height || '-'],
   ['몸무게', profile.weight || '-'],
@@ -183,6 +190,8 @@ async function loadMyPage() {
     profile.goal = healthGoalLabel(overview.healthProfile.healthGoal)
     profile.birthDate = overview.healthProfile.birthDate || ''
     profile.joinedAt = overview.user.createdAt ? overview.user.createdAt.slice(0, 10) : ''
+    loginProvider.value = overview.user.authProvider || overview.user.provider || overview.user.loginType || overview.user.socialProvider || ''
+    hasPassword.value = typeof overview.user.hasPassword === 'boolean' ? overview.user.hasPassword : null
     savedProfile.nickname = profile.nickname
     savedProfile.photoUrl = profile.photoUrl
     emit('profileUpdated', { nickname: profile.nickname, profileImageUrl: profile.photoUrl })
@@ -191,6 +200,11 @@ async function loadMyPage() {
     console.warn('MyPage overview API failed', error)
     loadError.value = error instanceof Error ? error.message : '마이페이지 정보를 불러오지 못했습니다.'
   }
+}
+
+function openPasswordModal() {
+  if (isSocialLogin.value) return
+  passwordOpen.value = true
 }
 
 async function saveProfile() {
@@ -264,6 +278,7 @@ onMounted(() => {
 .edit-form input:disabled { background: var(--surface-alt); color: var(--ink-3); cursor: not-allowed; }
 .setting-list, .account-buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .setting-list button { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; text-align: left; }
+.setting-list button.disabled, .setting-list button:disabled { opacity: .48; cursor: not-allowed; }
 .setting-list span { display: flex; flex-direction: column; }
 .setting-list strong { font-size: 14px; }
 .setting-list small { font-size: 11px; color: var(--ink-3); margin-top: 2px; }

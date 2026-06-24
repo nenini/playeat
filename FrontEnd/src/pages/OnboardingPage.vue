@@ -1,8 +1,7 @@
 <template>
   <section class="onboarding-page">
     <header class="onboarding-top">
-      <button class="brand" type="button" @click="$emit('cancel')"><span>냠</span><strong>냠냠코치</strong></button>
-      <div class="progress-label"><span>CHARACTER SETUP</span>{{ loadingProfile ? '불러오는 중' : `QUEST ${currentIndex + 1} / ${onboardingSteps.length}` }}</div>
+      <button class="brand" type="button" @click="$emit('cancel')"><BrandLogo /></button>
     </header>
 
     <main class="onboarding-shell">
@@ -76,6 +75,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
+import BrandLogo from '../components/common/BrandLogo.vue'
 import { onboardingSteps } from '../services/mock/nyamnyamMock'
 import { userApi, type HealthProfileResponse } from '../services/userApi'
 
@@ -110,9 +110,9 @@ const form = reactive<Record<string, string | string[]>>({
 })
 
 const characterChoices = [
-  { value: 'NYAMNYAM', label: '냠냠이' },
-  { value: 'PENGUIN', label: '펭귄' },
-  { value: 'DOG', label: '강아지' }
+  { value: 'NYAMNYAM', label: '짹짹이' },
+  { value: 'PENGUIN', label: '뒤뚱이' },
+  { value: 'DOG', label: '멍멍이' }
 ]
 
 const currentStep = computed(() => onboardingSteps[currentIndex.value])
