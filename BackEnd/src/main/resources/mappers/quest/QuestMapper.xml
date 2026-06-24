@@ -1084,7 +1084,6 @@
             source_type,
             source_id,
             xp_amount,
-            badge_id,
             guild_point,
             coin_amount
         )
@@ -1093,7 +1092,6 @@
             #{sourceType},
             #{sourceId},
             COALESCE(#{xpAmount}, 0),
-            #{badgeId},
             COALESCE(#{guildPoint}, 0),
             COALESCE(#{coinAmount}, 0)
         )

@@ -6,7 +6,6 @@ USE nyamnyam;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE IF EXISTS guild_rankings;
 DROP TABLE IF EXISTS guild_score_logs;
 DROP TABLE IF EXISTS character_equipments;
 DROP TABLE IF EXISTS user_items;
@@ -17,7 +16,6 @@ DROP TABLE IF EXISTS reward_claims;
 DROP TABLE IF EXISTS quest_verifications;
 DROP TABLE IF EXISTS quests;
 DROP TABLE IF EXISTS quest_templates;
-DROP TABLE IF EXISTS boss_battle_condition_progress;
 DROP TABLE IF EXISTS boss_battle_damage_logs;
 DROP TABLE IF EXISTS boss_battle_conditions;
 DROP TABLE IF EXISTS boss_battle_participants;
@@ -33,14 +31,11 @@ DROP TABLE IF EXISTS guild_members;
 DROP TABLE IF EXISTS guilds;
 DROP TABLE IF EXISTS ai_reports;
 DROP TABLE IF EXISTS ai_feedbacks;
-DROP TABLE IF EXISTS user_badges;
-DROP TABLE IF EXISTS badges;
 DROP TABLE IF EXISTS xp_histories;
 DROP TABLE IF EXISTS characters;
 DROP TABLE IF EXISTS daily_nutrition_summaries;
 DROP TABLE IF EXISTS diet_items;
 DROP TABLE IF EXISTS diets;
-DROP TABLE IF EXISTS food_favorites;
 DROP TABLE IF EXISTS foods;
 DROP TABLE IF EXISTS health_profiles;
 DROP TABLE IF EXISTS peer_nutrition_statistics;
@@ -173,23 +168,6 @@ CREATE TABLE foods (
     CONSTRAINT uk_foods_external_food_code UNIQUE (external_food_code),
     INDEX idx_foods_name (name),
     INDEX idx_foods_category (category)
-) ENGINE=InnoDB;
-
-CREATE TABLE food_favorites (
-    favorite_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    food_id BIGINT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uk_food_favorites_user_food UNIQUE (user_id, food_id),
-    CONSTRAINT fk_food_favorites_user
-        FOREIGN KEY (user_id)
-        REFERENCES users(user_id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_food_favorites_food
-        FOREIGN KEY (food_id)
-        REFERENCES foods(food_id)
-        ON DELETE CASCADE,
-    INDEX idx_food_favorites_user (user_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE diets (
@@ -410,34 +388,6 @@ CREATE TABLE character_equipments (
         ON DELETE CASCADE,
     INDEX idx_character_equipments_character (character_id),
     INDEX idx_character_equipments_user_item (user_item_id)
-) ENGINE=InnoDB;
-
-CREATE TABLE badges (
-    badge_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description VARCHAR(500),
-    image_url VARCHAR(500),
-    condition_type VARCHAR(50),
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
-CREATE TABLE user_badges (
-    user_badge_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    badge_id BIGINT NOT NULL,
-    source_type VARCHAR(30),
-    source_id BIGINT,
-    earned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uk_user_badges_user_badge UNIQUE (user_id, badge_id),
-    CONSTRAINT fk_user_badges_user
-        FOREIGN KEY (user_id)
-        REFERENCES users(user_id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_user_badges_badge
-        FOREIGN KEY (badge_id)
-        REFERENCES badges(badge_id)
-        ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE ai_feedbacks (
@@ -839,30 +789,6 @@ CREATE TABLE boss_battle_damage_logs (
     INDEX idx_damage_logs_battle_user (battle_id, user_id)
 ) ENGINE=InnoDB;
 
-CREATE TABLE boss_battle_condition_progress (
-    progress_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    battle_condition_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
-    current_streak_days INT NOT NULL DEFAULT 0,
-    best_streak_days INT NOT NULL DEFAULT 0,
-    progress_value DECIMAL(12,4),
-    last_checked_date DATE,
-    status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
-    completed_at DATETIME,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT uk_condition_progress_condition_user UNIQUE (battle_condition_id, user_id),
-    CONSTRAINT fk_condition_progress_battle_condition
-        FOREIGN KEY (battle_condition_id)
-        REFERENCES boss_battle_conditions(battle_condition_id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_condition_progress_user
-        FOREIGN KEY (user_id)
-        REFERENCES users(user_id)
-        ON DELETE CASCADE,
-    INDEX idx_condition_progress_user_status (user_id, status),
-    INDEX idx_condition_progress_condition_status (battle_condition_id, status)
-) ENGINE=InnoDB;
-
 CREATE TABLE quest_templates (
     template_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
@@ -991,7 +917,6 @@ CREATE TABLE reward_claims (
     source_type VARCHAR(30) NOT NULL,
     source_id BIGINT NOT NULL,
     xp_amount INT NOT NULL DEFAULT 0,
-    badge_id BIGINT,
     guild_point INT NOT NULL DEFAULT 0,
     coin_amount INT NOT NULL DEFAULT 0,
     claimed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1000,10 +925,7 @@ CREATE TABLE reward_claims (
         FOREIGN KEY (user_id)
         REFERENCES users(user_id)
         ON DELETE CASCADE,
-    CONSTRAINT fk_reward_claims_badge
-        FOREIGN KEY (badge_id)
-        REFERENCES badges(badge_id)
-        ON DELETE SET NULL
+    INDEX idx_reward_claims_user_claimed (user_id, claimed_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE guild_score_logs (
@@ -1033,30 +955,4 @@ CREATE TABLE guild_score_logs (
     INDEX idx_guild_score_logs_battle (battle_id),
     INDEX idx_guild_score_logs_source (source_type, source_id),
     INDEX idx_guild_score_logs_date (score_date)
-) ENGINE=InnoDB;
-
-CREATE TABLE guild_rankings (
-    ranking_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    guild_id BIGINT NOT NULL,
-    boss_id BIGINT NOT NULL,
-    season_id BIGINT NOT NULL,
-    rank_no INT,
-    score INT NOT NULL DEFAULT 0,
-    clear_count INT NOT NULL DEFAULT 0,
-    total_damage INT NOT NULL DEFAULT 0,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT uk_guild_rankings_guild_boss_season UNIQUE (guild_id, boss_id, season_id),
-    CONSTRAINT fk_guild_rankings_guild
-        FOREIGN KEY (guild_id)
-        REFERENCES guilds(guild_id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_guild_rankings_boss
-        FOREIGN KEY (boss_id)
-        REFERENCES bosses(boss_id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_guild_rankings_season
-        FOREIGN KEY (season_id)
-        REFERENCES boss_seasons(season_id)
-        ON DELETE CASCADE,
-    INDEX idx_guild_rankings_season_rank (season_id, rank_no)
 ) ENGINE=InnoDB;

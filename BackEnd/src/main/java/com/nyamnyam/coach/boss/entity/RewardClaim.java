@@ -9,7 +9,6 @@ public class RewardClaim {
     private String sourceType;
     private Long sourceId;
     private Integer xpAmount;
-    private Long badgeId;
     private Integer guildPoint;
     private Integer coinAmount;
     private LocalDateTime claimedAt;
@@ -24,8 +23,6 @@ public class RewardClaim {
     public void setSourceId(Long sourceId) { this.sourceId = sourceId; }
     public Integer getXpAmount() { return xpAmount; }
     public void setXpAmount(Integer xpAmount) { this.xpAmount = xpAmount; }
-    public Long getBadgeId() { return badgeId; }
-    public void setBadgeId(Long badgeId) { this.badgeId = badgeId; }
     public Integer getGuildPoint() { return guildPoint; }
     public void setGuildPoint(Integer guildPoint) { this.guildPoint = guildPoint; }
     public Integer getCoinAmount() { return coinAmount; }
