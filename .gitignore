@@ -118,3 +118,4 @@ redis-data/
 # =========================
 uploads/
 generated/
+.DS_Store
