@@ -7,7 +7,6 @@
   >
     <div class="hit-flash" />
     <div class="attack-caption">
-      <small v-if="attackerName">{{ attackerName }}님의 공격!</small>
       <strong>-{{ formattedDamage }} HP</strong>
     </div>
 
@@ -45,12 +44,10 @@ import type { AttackEffectType } from '../../utils/attackEffect'
 const props = withDefaults(defineProps<{
   effectType?: AttackEffectType | string
   damage?: number
-  attackerName?: string
   playKey: string | number
 }>(), {
   effectType: 'DEFAULT',
-  damage: 0,
-  attackerName: ''
+  damage: 0
 })
 
 const normalizedEffect = computed<AttackEffectType>(() => {
@@ -117,13 +114,6 @@ export default { name: 'BossAttackEffect' }
     0 5px 12px rgba(0, 0, 0, .58),
     0 0 22px rgba(255,104,54,.9);
   animation: damage-pop 920ms cubic-bezier(.16,.9,.2,1) forwards;
-}
-
-.attack-caption small {
-  color: rgba(255,255,255,.94);
-  font-size: clamp(11px, 1.2vw, 13px);
-  font-weight: 900;
-  text-shadow: 0 2px 8px rgba(0,0,0,.68);
 }
 
 .attack-caption strong {
