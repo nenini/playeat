@@ -12,6 +12,9 @@ public class BossBattleDamageLogRow {
     private String sourceType;
     private Long sourceId;
     private String description;
+    private String weaponName;
+    private String weaponEffectValue;
+    private String weaponImageUrl;
     private LocalDateTime createdAt;
 
     public Long getDamageLogId() { return damageLogId; }
@@ -30,6 +33,12 @@ public class BossBattleDamageLogRow {
     public void setSourceId(Long sourceId) { this.sourceId = sourceId; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getWeaponName() { return weaponName; }
+    public void setWeaponName(String weaponName) { this.weaponName = weaponName; }
+    public String getWeaponEffectValue() { return weaponEffectValue; }
+    public void setWeaponEffectValue(String weaponEffectValue) { this.weaponEffectValue = weaponEffectValue; }
+    public String getWeaponImageUrl() { return weaponImageUrl; }
+    public void setWeaponImageUrl(String weaponImageUrl) { this.weaponImageUrl = weaponImageUrl; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

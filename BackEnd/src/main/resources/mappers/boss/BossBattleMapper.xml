@@ -50,6 +50,9 @@
         <result property="sourceType" column="source_type"/>
         <result property="sourceId" column="source_id"/>
         <result property="description" column="description"/>
+        <result property="weaponName" column="weapon_name"/>
+        <result property="weaponEffectValue" column="weapon_effect_value"/>
+        <result property="weaponImageUrl" column="weapon_image_url"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
@@ -341,9 +344,18 @@
             bbdl.source_type,
             bbdl.source_id,
             bbdl.description,
+            i.name AS weapon_name,
+            i.effect_value AS weapon_effect_value,
+            i.image_url AS weapon_image_url,
             bbdl.created_at
         FROM boss_battle_damage_logs bbdl
         JOIN users u ON u.user_id = bbdl.user_id
+        LEFT JOIN characters c ON c.user_id = bbdl.user_id
+        LEFT JOIN character_equipments ce
+               ON ce.character_id = c.character_id
+              AND ce.slot_type = 'HAND'
+        LEFT JOIN user_items ui ON ui.user_item_id = ce.user_item_id
+        LEFT JOIN items i ON i.item_id = ui.item_id
         WHERE bbdl.battle_id = #{battleId}
         ORDER BY bbdl.created_at DESC, bbdl.damage_log_id DESC
         LIMIT #{limit}

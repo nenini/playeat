@@ -39,7 +39,7 @@ public class BossBattleService {
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 50;
-    private static final int RECENT_DAMAGE_LOG_LIMIT = 10;
+    private static final int RECENT_DAMAGE_LOG_LIMIT = 5;
 
     private final BossBattleRepository bossBattleRepository;
     private final BossBattleParticipantRepository bossBattleParticipantRepository;
@@ -327,7 +327,11 @@ public class BossBattleService {
                 row.getNickname(),
                 row.getDamage(),
                 row.getSourceType(),
+                row.getSourceId(),
                 row.getDescription(),
+                row.getWeaponName(),
+                row.getWeaponEffectValue(),
+                row.getWeaponImageUrl(),
                 row.getCreatedAt()
         );
     }
