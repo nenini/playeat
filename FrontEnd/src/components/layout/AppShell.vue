@@ -2,8 +2,7 @@
   <div class="app-shell">
     <header class="topbar">
       <button class="brand" type="button" @click="$emit('navigate', 'home')">
-        <NyamnyamCharacter stage="baby" :size="36" />
-        <span>NYAMNYAM</span>
+        <BrandLogo :mark-width="46" :mark-height="46" compact />
       </button>
       <nav class="topnav">
         <button v-for="page in pages" :key="page.id" class="nav-tab" :class="{ active: activePage === page.id }" type="button" @click="$emit('navigate', page.id)">
@@ -29,7 +28,7 @@
 <script setup lang="ts">
 import AppIcon from '../common/AppIcon.vue'
 import AppPill from '../common/AppPill.vue'
-import NyamnyamCharacter from '../nyamnyam/NyamnyamCharacter.vue'
+import BrandLogo from '../common/BrandLogo.vue'
 import { pages, type PageId } from '../../services/mock/nyamnyamMock'
 import { computed, ref, watch } from 'vue'
 import { resolveImageUrl } from '../../utils/imageUrl'

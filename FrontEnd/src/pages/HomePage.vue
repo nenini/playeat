@@ -76,7 +76,7 @@
               <strong>{{ safeNumber(myQuest.currentValue) }} / {{ safeNumber(myQuest.targetValue) }} {{ myQuest.unit || '' }}</strong>
             </div>
           </div>
-          <AppButton size="sm" @click="$emit('navigate', questCardTarget)">{{ questCardButton }}</AppButton>
+          <AppButton size="sm" @click="openQuestCardTarget">{{ questCardButton }}</AppButton>
         </div>
       </AppCard>
       <AppCard>
@@ -117,6 +117,7 @@ import BossMonster from '../components/nyamnyam/BossMonster.vue'
 import CharacterAvatar from '../components/nyamnyam/CharacterAvatar.vue'
 import { resolveBossType } from '../utils/bossAssets'
 import { resolveBackgroundAsset } from '../utils/backgroundAssets'
+import { characterDisplayName } from '../utils/characterNames'
 import { mealKinds, type MealKindId, type NyamnyamMood, type PageId, type Stage } from '../services/mock/nyamnyamMock'
 import HeroStat from './parts/HeroStat.vue'
 import { analysisApi, type AnalysisDailyResponse } from '../services/analysisApi'
@@ -134,7 +135,7 @@ import type { MyGuildStatus } from '../types/guild'
 import type { QuestDetail } from '../types/quest'
 
 defineProps<{ stage: Stage, equippedWeapon: string }>()
-defineEmits<{ navigate: [page: PageId] }>()
+const emit = defineEmits<{ navigate: [page: PageId] }>()
 
 const user = ref<UserMeResponse | null>(null)
 const character = ref<CharacterResponse | null>(null)
@@ -162,7 +163,7 @@ const characterMessage = computed(() => {
   return `"${fallbackMoodMessage(characterMood.value)}"`
 })
 const levelText = computed(() => character.value ? `LV.${character.value.level}` : '-')
-const characterSubText = computed(() => character.value ? `${character.value.name} · ${character.value.stage}` : '캐릭터 데이터 없음')
+const characterSubText = computed(() => character.value ? `${characterDisplayName(character.value.appearanceType)} · ${character.value.stage}` : '캐릭터 데이터 없음')
 const characterXp = computed(() => Number(character.value?.xp || 0))
 const requiredXp = computed(() => Math.max(1, Number(character.value?.requiredXp || 1)))
 const streakText = computed(() => character.value ? String(character.value.streakDays || 0) : '-')
@@ -227,6 +228,11 @@ function mealSummary(kindId: MealKindId) {
   const meal = mealByKind.value[kindId]
   if (!meal?.recorded) return '아직 기록 없음'
   return meal.items?.map((item) => item.foodName).join(', ') || '기록 완료'
+}
+
+function openQuestCardTarget() {
+  if (questCardTarget.value === 'boss') sessionStorage.setItem('nyamnyam:boss-panel', 'quests')
+  emit('navigate', questCardTarget.value)
 }
 
 function mealCalories(kindId: MealKindId) {

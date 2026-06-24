@@ -251,6 +251,8 @@ public class UserService {
                 user.getProfileImageUrl(),
                 user.getSelectedCoachId(),
                 user.getStatus(),
+                user.getProvider(),
+                user.getPasswordHash() != null && !user.getPasswordHash().isBlank(),
                 user.getOnboardingCompleted(),
                 user.getCreatedAt()
         );

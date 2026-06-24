@@ -185,11 +185,11 @@
         bp.battle_id,
         bp.guild_id,
         bp.user_id,
-        bp.snapshot_nickname AS nickname,
-        bp.snapshot_profile_image_url AS profile_image_url,
-        bp.snapshot_character_id AS character_id,
-        bp.snapshot_character_name AS character_name,
-        bp.snapshot_character_level AS character_level,
+        COALESCE(u.nickname, bp.snapshot_nickname) AS nickname,
+        CASE WHEN u.user_id IS NOT NULL THEN u.profile_image_url ELSE bp.snapshot_profile_image_url END AS profile_image_url,
+        c.character_id AS character_id,
+        c.name AS character_name,
+        c.level AS character_level,
         q.quest_template_id,
         q.title,
         q.description,
@@ -222,6 +222,8 @@
     <select id="findQuestsByBattleId" resultMap="QuestRowMap">
         SELECT <include refid="QuestSelectColumns"/>
         FROM boss_battle_participants bp
+        LEFT JOIN users u ON u.user_id = bp.user_id
+        LEFT JOIN characters c ON c.user_id = bp.user_id
         LEFT JOIN quests q ON q.battle_id = bp.battle_id
             AND q.user_id = bp.user_id
         WHERE bp.battle_id = #{battleId}
@@ -245,11 +247,11 @@
             q.guild_id,
             q.user_id,
             q.quest_template_id,
-            bp.snapshot_nickname AS nickname,
-            bp.snapshot_profile_image_url AS profile_image_url,
-            bp.snapshot_character_id AS character_id,
-            bp.snapshot_character_name AS character_name,
-            bp.snapshot_character_level AS character_level,
+            COALESCE(u.nickname, bp.snapshot_nickname) AS nickname,
+            CASE WHEN u.user_id IS NOT NULL THEN u.profile_image_url ELSE bp.snapshot_profile_image_url END AS profile_image_url,
+            c.character_id AS character_id,
+            c.name AS character_name,
+            c.level AS character_level,
             q.title,
             q.description,
             q.quest_type,
@@ -279,6 +281,8 @@
         FROM quests q
         JOIN boss_battle_participants bp ON bp.battle_id = q.battle_id
             AND bp.user_id = q.user_id
+        LEFT JOIN users u ON u.user_id = q.user_id
+        LEFT JOIN characters c ON c.user_id = q.user_id
         WHERE q.battle_id = #{battleId}
           AND q.user_id = #{userId}
         LIMIT 1
@@ -289,6 +293,8 @@
         FROM quests q
         JOIN boss_battle_participants bp ON bp.battle_id = q.battle_id
             AND bp.user_id = q.user_id
+        LEFT JOIN users u ON u.user_id = bp.user_id
+        LEFT JOIN characters c ON c.user_id = bp.user_id
         WHERE q.quest_id = #{questId}
     </select>
 
@@ -467,10 +473,10 @@
     <select id="findQuestContributionsByBattleId" resultMap="QuestContributionRowMap">
         SELECT
             bp.user_id,
-            bp.snapshot_nickname AS nickname,
-            bp.snapshot_profile_image_url AS profile_image_url,
-            bp.snapshot_character_name AS character_name,
-            bp.snapshot_character_level AS character_level,
+            COALESCE(u.nickname, bp.snapshot_nickname) AS nickname,
+            CASE WHEN u.user_id IS NOT NULL THEN u.profile_image_url ELSE bp.snapshot_profile_image_url END AS profile_image_url,
+            c.name AS character_name,
+            c.level AS character_level,
             COUNT(q.quest_id) AS total_quest_count,
             SUM(CASE WHEN q.status IN ('COMPLETED', 'REWARDED') THEN 1 ELSE 0 END) AS completed_quest_count,
             SUM(CASE WHEN q.status IN ('COMPLETED', 'REWARDED') THEN q.damage ELSE 0 END) AS total_damage,
@@ -479,15 +485,17 @@
             bp.left_at,
             CASE WHEN bp.user_id = #{currentUserId} THEN TRUE ELSE FALSE END AS is_me
         FROM boss_battle_participants bp
+        LEFT JOIN users u ON u.user_id = bp.user_id
+        LEFT JOIN characters c ON c.user_id = bp.user_id
         LEFT JOIN quests q ON q.battle_id = bp.battle_id
             AND q.user_id = bp.user_id
         WHERE bp.battle_id = #{battleId}
         GROUP BY
             bp.user_id,
-            bp.snapshot_nickname,
-            bp.snapshot_profile_image_url,
-            bp.snapshot_character_name,
-            bp.snapshot_character_level,
+            COALESCE(u.nickname, bp.snapshot_nickname),
+            CASE WHEN u.user_id IS NOT NULL THEN u.profile_image_url ELSE bp.snapshot_profile_image_url END,
+            c.name,
+            c.level,
             bp.status,
             bp.left_at
         ORDER BY completed_quest_count DESC, total_damage DESC, bp.user_id ASC
