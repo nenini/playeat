@@ -8,7 +8,11 @@ public record BossBattleDamageLogResponse(
         String nickname,
         Integer damage,
         String sourceType,
+        Long sourceId,
         String description,
+        String weaponName,
+        String weaponEffectValue,
+        String weaponImageUrl,
         LocalDateTime createdAt
 ) {
 }
