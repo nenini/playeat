@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.diet.repository.DietRepository">
+
+    <resultMap id="DietResultMap" type="com.nyamnyam.coach.diet.entity.Diet">
+        <id property="dietId" column="diet_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="mealType" column="meal_type"/>
+        <result property="eatenAt" column="eaten_at"/>
+        <result property="memo" column="memo"/>
+        <result property="totalCalories" column="total_calories"/>
+        <result property="totalProteinG" column="total_protein_g"/>
+        <result property="totalCarbsG" column="total_carbs_g"/>
+        <result property="totalFatG" column="total_fat_g"/>
+        <result property="totalSugarG" column="total_sugar_g"/>
+        <result property="totalSodiumMg" column="total_sodium_mg"/>
+        <result property="totalFiberG" column="total_fiber_g"/>
+        <result property="totalIronMg" column="total_iron_mg"/>
+        <result property="totalPhosphorusMg" column="total_phosphorus_mg"/>
+        <result property="totalPotassiumMg" column="total_potassium_mg"/>
+        <result property="totalVitaminAUgRae" column="total_vitamin_a_ug_rae"/>
+        <result property="totalBetaCaroteneUg" column="total_beta_carotene_ug"/>
+        <result property="totalRetinolUg" column="total_retinol_ug"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="DietItemRowResultMap" type="com.nyamnyam.coach.diet.repository.row.DietItemRow">
+        <id property="dietItemId" column="diet_item_id"/>
+        <result property="dietId" column="diet_id"/>
+        <result property="foodId" column="food_id"/>
+        <result property="foodName" column="food_name"/>
+        <result property="brand" column="brand"/>
+        <result property="inputAmount" column="input_amount"/>
+        <result property="inputUnit" column="input_unit"/>
+        <result property="amountG" column="amount_g"/>
+        <result property="amountMl" column="amount_ml"/>
+        <result property="calories" column="calories"/>
+        <result property="proteinG" column="protein_g"/>
+        <result property="carbsG" column="carbs_g"/>
+        <result property="fatG" column="fat_g"/>
+        <result property="sugarG" column="sugar_g"/>
+        <result property="sodiumMg" column="sodium_mg"/>
+        <result property="fiberG" column="fiber_g"/>
+    </resultMap>
+
+    <resultMap id="NutritionTargetRowResultMap" type="com.nyamnyam.coach.diet.repository.row.NutritionTargetRow">
+        <result property="targetCalories" column="target_calories"/>
+        <result property="targetProteinG" column="target_protein_g"/>
+        <result property="targetCarbsG" column="target_carbs_g"/>
+        <result property="targetFatG" column="target_fat_g"/>
+        <result property="targetFiberG" column="target_fiber_g"/>
+    </resultMap>
+
+    <sql id="DietColumns">
+        diet_id,
+        user_id,
+        meal_type,
+        eaten_at,
+        memo,
+        total_calories,
+        total_protein_g,
+        total_carbs_g,
+        total_fat_g,
+        total_sugar_g,
+        total_sodium_mg,
+        total_fiber_g,
+        total_iron_mg,
+        total_phosphorus_mg,
+        total_potassium_mg,
+        total_vitamin_a_ug_rae,
+        total_beta_carotene_ug,
+        total_retinol_ug,
+        created_at,
+        updated_at
+    </sql>
+
+    <select id="findByUserIdAndDate" resultMap="DietResultMap">
+        SELECT
+            <include refid="DietColumns"/>
+        FROM diets
+        WHERE user_id = #{userId}
+          AND eaten_at &gt;= #{startAt}
+          AND eaten_at &lt; #{endAt}
+        ORDER BY eaten_at ASC, diet_id ASC
+    </select>
+
+    <select id="findByIdAndUserId" resultMap="DietResultMap">
+        SELECT
+            <include refid="DietColumns"/>
+        FROM diets
+        WHERE diet_id = #{dietId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="findByUserIdAndDateAndMealType" resultMap="DietResultMap">
+        SELECT
+            <include refid="DietColumns"/>
+        FROM diets
+        WHERE user_id = #{userId}
+          AND eaten_at &gt;= #{startAt}
+          AND eaten_at &lt; #{endAt}
+          AND meal_type = #{mealType}
+        LIMIT 1
+    </select>
+
+    <select id="findItemsByDietId" resultMap="DietItemRowResultMap">
+        SELECT
+            di.diet_item_id,
+            di.diet_id,
+            di.food_id,
+            f.name AS food_name,
+            f.brand,
+            di.input_amount,
+            di.input_unit,
+            di.amount_g,
+            di.amount_ml,
+            di.calories,
+            di.protein_g,
+            di.carbs_g,
+            di.fat_g,
+            di.sugar_g,
+            di.sodium_mg,
+            di.fiber_g
+        FROM diet_items di
+        JOIN foods f ON f.food_id = di.food_id
+        WHERE di.diet_id = #{dietId}
+        ORDER BY di.diet_item_id ASC
+    </select>
+
+    <select id="findNutritionTargetByUserId" resultMap="NutritionTargetRowResultMap">
+        SELECT
+            target_calories,
+            target_protein_g,
+            target_carbs_g,
+            target_fat_g,
+            target_fiber_g
+        FROM health_profiles
+        WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insertDiet" parameterType="com.nyamnyam.coach.diet.entity.Diet"
+            useGeneratedKeys="true" keyProperty="dietId">
+        INSERT INTO diets (
+            user_id,
+            meal_type,
+            eaten_at,
+            memo,
+            total_calories,
+            total_protein_g,
+            total_carbs_g,
+            total_fat_g,
+            total_sugar_g,
+            total_sodium_mg,
+            total_fiber_g,
+            total_iron_mg,
+            total_phosphorus_mg,
+            total_potassium_mg,
+            total_vitamin_a_ug_rae,
+            total_beta_carotene_ug,
+            total_retinol_ug
+        )
+        VALUES (
+            #{userId},
+            #{mealType},
+            #{eatenAt},
+            #{memo},
+            #{totalCalories},
+            #{totalProteinG},
+            #{totalCarbsG},
+            #{totalFatG},
+            #{totalSugarG},
+            #{totalSodiumMg},
+            #{totalFiberG},
+            #{totalIronMg},
+            #{totalPhosphorusMg},
+            #{totalPotassiumMg},
+            #{totalVitaminAUgRae},
+            #{totalBetaCaroteneUg},
+            #{totalRetinolUg}
+        )
+    </insert>
+
+    <insert id="insertDietItem" parameterType="com.nyamnyam.coach.diet.entity.DietItem"
+            useGeneratedKeys="true" keyProperty="dietItemId">
+        INSERT INTO diet_items (
+            diet_id,
+            food_id,
+            input_amount,
+            input_unit,
+            amount_g,
+            amount_ml,
+            calories,
+            protein_g,
+            carbs_g,
+            fat_g,
+            sugar_g,
+            sodium_mg,
+            fiber_g,
+            iron_mg,
+            phosphorus_mg,
+            potassium_mg,
+            vitamin_a_ug_rae,
+            beta_carotene_ug,
+            retinol_ug
+        )
+        VALUES (
+            #{dietId},
+            #{foodId},
+            #{inputAmount},
+            #{inputUnit},
+            #{amountG},
+            #{amountMl},
+            #{calories},
+            #{proteinG},
+            #{carbsG},
+            #{fatG},
+            #{sugarG},
+            #{sodiumMg},
+            #{fiberG},
+            #{ironMg},
+            #{phosphorusMg},
+            #{potassiumMg},
+            #{vitaminAUgRae},
+            #{betaCaroteneUg},
+            #{retinolUg}
+        )
+    </insert>
+
+    <update id="updateDiet" parameterType="com.nyamnyam.coach.diet.entity.Diet">
+        UPDATE diets
+        SET meal_type = #{mealType},
+            eaten_at = #{eatenAt},
+            memo = #{memo},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE diet_id = #{dietId}
+          AND user_id = #{userId}
+    </update>
+
+    <update id="updateDietTotals" parameterType="com.nyamnyam.coach.diet.entity.Diet">
+        UPDATE diets
+        SET total_calories = #{totalCalories},
+            total_protein_g = #{totalProteinG},
+            total_carbs_g = #{totalCarbsG},
+            total_fat_g = #{totalFatG},
+            total_sugar_g = #{totalSugarG},
+            total_sodium_mg = #{totalSodiumMg},
+            total_fiber_g = #{totalFiberG},
+            total_iron_mg = #{totalIronMg},
+            total_phosphorus_mg = #{totalPhosphorusMg},
+            total_potassium_mg = #{totalPotassiumMg},
+            total_vitamin_a_ug_rae = #{totalVitaminAUgRae},
+            total_beta_carotene_ug = #{totalBetaCaroteneUg},
+            total_retinol_ug = #{totalRetinolUg},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE diet_id = #{dietId}
+          AND user_id = #{userId}
+    </update>
+
+    <delete id="deleteItemsByDietId">
+        DELETE FROM diet_items
+        WHERE diet_id = #{dietId}
+    </delete>
+
+    <delete id="deleteByIdAndUserId">
+        DELETE FROM diets
+        WHERE diet_id = #{dietId}
+          AND user_id = #{userId}
+    </delete>
+</mapper>

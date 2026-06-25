@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.food.repository.FoodRepository">
+
+    <resultMap id="FoodResultMap" type="com.nyamnyam.coach.food.entity.Food">
+        <id property="foodId" column="food_id"/>
+        <result property="externalFoodCode" column="external_food_code"/>
+        <result property="name" column="name"/>
+        <result property="brand" column="brand"/>
+        <result property="category" column="category"/>
+        <result property="nutritionBasisAmount" column="nutrition_basis_amount"/>
+        <result property="nutritionBasisUnit" column="nutrition_basis_unit"/>
+        <result property="servingAmount" column="serving_amount"/>
+        <result property="servingUnit" column="serving_unit"/>
+        <result property="gramPerPiece" column="gram_per_piece"/>
+        <result property="calories" column="calories"/>
+        <result property="proteinG" column="protein_g"/>
+        <result property="carbsG" column="carbs_g"/>
+        <result property="fatG" column="fat_g"/>
+        <result property="sugarG" column="sugar_g"/>
+        <result property="sodiumMg" column="sodium_mg"/>
+        <result property="fiberG" column="fiber_g"/>
+        <result property="ironMg" column="iron_mg"/>
+        <result property="phosphorusMg" column="phosphorus_mg"/>
+        <result property="potassiumMg" column="potassium_mg"/>
+        <result property="vitaminAUgRae" column="vitamin_a_ug_rae"/>
+        <result property="betaCaroteneUg" column="beta_carotene_ug"/>
+        <result property="retinolUg" column="retinol_ug"/>
+        <result property="source" column="source"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="FrequentFoodRowResultMap" type="com.nyamnyam.coach.food.repository.row.FrequentFoodRow">
+        <id property="foodId" column="food_id"/>
+        <result property="name" column="name"/>
+        <result property="recordCount" column="record_count"/>
+        <result property="lastRecordedAt" column="last_recorded_at"/>
+    </resultMap>
+
+    <sql id="FoodColumns">
+        food_id,
+        external_food_code,
+        name,
+        brand,
+        category,
+        nutrition_basis_amount,
+        nutrition_basis_unit,
+        serving_amount,
+        serving_unit,
+        gram_per_piece,
+        calories,
+        protein_g,
+        carbs_g,
+        fat_g,
+        sugar_g,
+        sodium_mg,
+        fiber_g,
+        iron_mg,
+        phosphorus_mg,
+        potassium_mg,
+        vitamin_a_ug_rae,
+        beta_carotene_ug,
+        retinol_ug,
+        source,
+        created_at
+    </sql>
+
+    <sql id="FoodColumnsWithAlias">
+        f.food_id,
+        f.external_food_code,
+        f.name,
+        f.brand,
+        f.category,
+        f.nutrition_basis_amount,
+        f.nutrition_basis_unit,
+        f.serving_amount,
+        f.serving_unit,
+        f.gram_per_piece,
+        f.calories,
+        f.protein_g,
+        f.carbs_g,
+        f.fat_g,
+        f.sugar_g,
+        f.sodium_mg,
+        f.fiber_g,
+        f.iron_mg,
+        f.phosphorus_mg,
+        f.potassium_mg,
+        f.vitamin_a_ug_rae,
+        f.beta_carotene_ug,
+        f.retinol_ug,
+        f.source,
+        f.created_at
+    </sql>
+
+    <select id="searchByKeyword" resultMap="FoodResultMap">
+        SELECT
+            <include refid="FoodColumnsWithAlias"/>
+        FROM foods f
+        JOIN (
+            SELECT food_id
+            FROM (
+                SELECT
+                    food_id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY name
+                        ORDER BY
+                            CASE WHEN brand IS NULL THEN 0 ELSE 1 END,
+                            CASE WHEN serving_amount IS NOT NULL THEN 0 ELSE 1 END,
+                            CASE WHEN nutrition_basis_unit = 'g' THEN 0 ELSE 1 END,
+                            food_id ASC
+                    ) AS rn
+                FROM foods
+                WHERE name LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+            ) ranked_foods
+            WHERE rn = 1
+        ) representative_foods ON representative_foods.food_id = f.food_id
+        ORDER BY f.name ASC, f.food_id ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByKeyword" resultType="long">
+        SELECT COUNT(DISTINCT name)
+        FROM foods
+        WHERE name LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+    </select>
+
+    <select id="findById" resultMap="FoodResultMap">
+        SELECT
+            <include refid="FoodColumns"/>
+        FROM foods
+        WHERE food_id = #{foodId}
+    </select>
+
+    <select id="findFrequentFoods" resultMap="FrequentFoodRowResultMap">
+        SELECT
+            f.food_id,
+            f.name,
+            COUNT(di.food_id) AS record_count,
+            MAX(d.eaten_at) AS last_recorded_at
+        FROM diet_items di
+        JOIN diets d ON d.diet_id = di.diet_id
+        JOIN foods f ON f.food_id = di.food_id
+        WHERE d.user_id = #{userId}
+        GROUP BY f.food_id, f.name
+        ORDER BY record_count DESC, last_recorded_at DESC, f.food_id ASC
+        LIMIT #{limit}
+    </select>
+</mapper>

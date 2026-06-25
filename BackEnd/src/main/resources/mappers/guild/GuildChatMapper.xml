@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.guild.repository.GuildChatRepository">
+
+    <resultMap id="GuildChatRowMap" type="com.nyamnyam.coach.guild.repository.row.GuildChatRow">
+        <id property="chatId" column="chat_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="characterId" column="character_id"/>
+        <result property="characterName" column="character_name"/>
+        <result property="characterLevel" column="character_level"/>
+        <result property="messageType" column="message_type"/>
+        <result property="message" column="message"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="isMe" column="is_me"/>
+    </resultMap>
+
+    <insert id="insertGuildChat"
+            parameterType="com.nyamnyam.coach.guild.entity.GuildChat"
+            useGeneratedKeys="true"
+            keyProperty="chatId"
+            keyColumn="chat_id">
+        INSERT INTO guild_chats (
+            guild_id,
+            sender_user_id,
+            message_type,
+            content
+        )
+        VALUES (
+            #{guildId},
+            #{senderUserId},
+            COALESCE(#{messageType}, 'USER'),
+            #{content}
+        )
+    </insert>
+
+    <select id="findChatsByGuildId" resultMap="GuildChatRowMap">
+        SELECT
+            t.chat_id,
+            t.guild_id,
+            t.user_id,
+            t.nickname,
+            t.profile_image_url,
+            t.character_id,
+            t.character_name,
+            t.character_level,
+            t.message_type,
+            t.message,
+            t.created_at,
+            t.is_me
+        FROM (
+            SELECT
+                gc.chat_id,
+                gc.guild_id,
+                gc.sender_user_id AS user_id,
+                CASE
+                    WHEN gc.message_type = 'SYSTEM' THEN 'SYSTEM'
+                    ELSE u.nickname
+                END AS nickname,
+                u.profile_image_url,
+                c.character_id,
+                c.name AS character_name,
+                c.level AS character_level,
+                gc.message_type,
+                gc.content AS message,
+                gc.created_at,
+                CASE WHEN gc.sender_user_id = #{userId} THEN TRUE ELSE FALSE END AS is_me
+            FROM guild_chats gc
+            LEFT JOIN users u ON u.user_id = gc.sender_user_id
+            LEFT JOIN characters c ON c.user_id = u.user_id
+            WHERE gc.guild_id = #{guildId}
+              AND gc.deleted_at IS NULL
+            ORDER BY gc.created_at DESC, gc.chat_id DESC
+            LIMIT #{limit} OFFSET #{offset}
+        ) t
+        ORDER BY t.created_at ASC, t.chat_id ASC
+    </select>
+
+    <select id="countChatsByGuildId" resultType="int">
+        SELECT COUNT(1)
+        FROM guild_chats
+        WHERE guild_id = #{guildId}
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="findChatById" resultMap="GuildChatRowMap">
+        SELECT
+            gc.chat_id,
+            gc.guild_id,
+            gc.sender_user_id AS user_id,
+            CASE
+                WHEN gc.message_type = 'SYSTEM' THEN 'SYSTEM'
+                ELSE u.nickname
+            END AS nickname,
+            u.profile_image_url,
+            c.character_id,
+            c.name AS character_name,
+            c.level AS character_level,
+            gc.message_type,
+            gc.content AS message,
+            gc.created_at,
+            CASE WHEN gc.sender_user_id = #{userId} THEN TRUE ELSE FALSE END AS is_me
+        FROM guild_chats gc
+        LEFT JOIN users u ON u.user_id = gc.sender_user_id
+        LEFT JOIN characters c ON c.user_id = u.user_id
+        WHERE gc.chat_id = #{chatId}
+          AND gc.deleted_at IS NULL
+        LIMIT 1
+    </select>
+</mapper>

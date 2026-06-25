@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.nutrition.repository.NutritionReferenceRepository">
+
+    <resultMap id="NutritionReferenceStandardRowResultMap" type="com.nyamnyam.coach.nutrition.repository.row.NutritionReferenceStandardRow">
+        <result property="standardVersion" column="standard_version"/>
+        <result property="sodiumMg" column="sodium_mg"/>
+        <result property="fiberG" column="fiber_g"/>
+    </resultMap>
+
+    <select id="findStandard" resultMap="NutritionReferenceStandardRowResultMap">
+        SELECT
+            standard_version,
+            sodium_mg,
+            fiber_g
+        FROM nutrition_reference_standards
+        WHERE (gender = #{gender} OR gender = 'ALL')
+          AND #{age} BETWEEN age_min AND age_max
+        ORDER BY CASE WHEN gender = #{gender} THEN 0 ELSE 1 END
+        LIMIT 1
+    </select>
+</mapper>

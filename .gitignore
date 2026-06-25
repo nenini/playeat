@@ -1,0 +1,121 @@
+# =========================
+# OS / System files
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+desktop.ini
+
+# =========================
+# IntelliJ IDEA
+# =========================
+.idea/
+.idea.*/
+**/.idea/
+**/.idea.*/
+*.iml
+*.iws
+*.ipr
+out/
+
+# 단, 팀에서 IntelliJ 설정을 공유하기로 했다면 위 .idea/는 조정 가능
+# 지금은 개인 IDE 설정이므로 올리지 않는 것을 추천
+
+# =========================
+# Java / Spring Boot / Maven
+# =========================
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven wrapper jar는 보통 올려도 되지만, 필요 없으면 제외
+# !.mvn/wrapper/maven-wrapper.jar
+
+# =========================
+# Backend local config
+# =========================
+BackEnd/src/main/resources/application-local.yml
+BackEnd/src/main/resources/application-local.yaml
+BackEnd/src/main/resources/application-dev.yml
+BackEnd/src/main/resources/application-dev.yaml
+
+# 실제 secret, DB 계정, API key 등이 들어갈 수 있는 파일
+BackEnd/.env
+BackEnd/.env.local
+BackEnd/.env.*
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+BackEnd/logs/
+
+# =========================
+# Frontend / Node / Vue / Vite
+# =========================
+node_modules/
+dist/
+dist-ssr/
+.vite/
+
+FrontEnd/node_modules/
+FrontEnd/dist/
+FrontEnd/dist-ssr/
+FrontEnd/.vite/
+
+# =========================
+# Frontend env files
+# =========================
+.env
+.env.local
+.env.*.local
+
+FrontEnd/.env
+FrontEnd/.env.local
+FrontEnd/.env.*.local
+FrontEnd/.env.*
+
+# 단, 예시 파일은 올릴 수 있게 허용
+!.env.example
+!FrontEnd/.env.example
+!BackEnd/.env.example
+
+# =========================
+# Package manager logs
+# =========================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Build / Cache
+# =========================
+.cache/
+.temp/
+tmp/
+
+# =========================
+# Coverage
+# =========================
+coverage/
+.nyc_output/
+
+# =========================
+# Docker / local volumes
+# =========================
+docker-data/
+mysql-data/
+redis-data/
+
+# =========================
+# Uploaded / generated files
+# =========================
+uploads/
+generated/
+.DS_Store

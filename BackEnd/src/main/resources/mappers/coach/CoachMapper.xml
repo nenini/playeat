@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.coach.repository.CoachRepository">
+
+    <resultMap id="CoachResultMap" type="com.nyamnyam.coach.coach.entity.Coach">
+        <id property="coachId" column="coach_id"/>
+        <result property="name" column="name"/>
+        <result property="role" column="role"/>
+        <result property="toneDescription" column="tone_description"/>
+        <result property="sampleMessage" column="sample_message"/>
+        <result property="active" column="active"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="CoachColumns">
+        coach_id,
+        name,
+        role,
+        tone_description,
+        sample_message,
+        active,
+        created_at
+    </sql>
+
+    <select id="findActiveCoaches" resultMap="CoachResultMap">
+        SELECT <include refid="CoachColumns"/>
+        FROM coaches
+        WHERE active = TRUE
+        ORDER BY coach_id ASC
+    </select>
+
+    <select id="findById" resultMap="CoachResultMap">
+        SELECT <include refid="CoachColumns"/>
+        FROM coaches
+        WHERE coach_id = #{coachId}
+    </select>
+
+    <select id="findSelectedByUserId" resultMap="CoachResultMap">
+        SELECT
+            c.coach_id,
+            c.name,
+            c.role,
+            c.tone_description,
+            c.sample_message,
+            c.active,
+            c.created_at
+        FROM users u
+        JOIN coaches c ON c.coach_id = u.selected_coach_id
+        WHERE u.user_id = #{userId}
+          AND c.active = TRUE
+    </select>
+
+    <select id="findDefaultCoach" resultMap="CoachResultMap">
+        SELECT <include refid="CoachColumns"/>
+        FROM coaches
+        WHERE active = TRUE
+        ORDER BY coach_id ASC
+        LIMIT 1
+    </select>
+
+    <update id="updateSelectedCoach">
+        UPDATE users
+        SET selected_coach_id = #{coachId}
+        WHERE user_id = #{userId}
+    </update>
+</mapper>

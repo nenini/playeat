@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.coin.repository.CoinRepository">
+
+    <resultMap id="CoinBalanceMap" type="com.nyamnyam.coach.coin.entity.CoinBalance">
+        <id property="userId" column="user_id"/>
+        <result property="balance" column="balance"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="CoinTransactionMap" type="com.nyamnyam.coach.coin.entity.CoinTransaction">
+        <id property="transactionId" column="transaction_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="transactionType" column="transaction_type"/>
+        <result property="amount" column="amount"/>
+        <result property="balanceAfter" column="balance_after"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourceId" column="source_id"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findBalanceByUserId" resultMap="CoinBalanceMap">
+        SELECT user_id, balance, created_at, updated_at
+        FROM user_coin_balances
+        WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insertInitialBalance">
+        INSERT INTO user_coin_balances (user_id, balance)
+        VALUES (#{userId}, 0)
+        ON DUPLICATE KEY UPDATE
+            user_id = user_id
+    </insert>
+
+    <update id="increaseBalance">
+        UPDATE user_coin_balances
+        SET balance = balance + #{amount}
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="decreaseBalance">
+        UPDATE user_coin_balances
+        SET balance = balance - #{amount}
+        WHERE user_id = #{userId}
+          AND balance >= #{amount}
+    </update>
+
+    <insert id="insertTransaction"
+            parameterType="com.nyamnyam.coach.coin.entity.CoinTransaction"
+            useGeneratedKeys="true"
+            keyProperty="transactionId"
+            keyColumn="transaction_id">
+        INSERT INTO coin_transactions (
+            user_id,
+            transaction_type,
+            amount,
+            balance_after,
+            source_type,
+            source_id,
+            description
+        )
+        VALUES (
+            #{userId},
+            #{transactionType},
+            #{amount},
+            #{balanceAfter},
+            #{sourceType},
+            #{sourceId},
+            #{description}
+        )
+    </insert>
+
+    <select id="findTransactionsByUserId" resultMap="CoinTransactionMap">
+        SELECT transaction_id,
+               user_id,
+               transaction_type,
+               amount,
+               balance_after,
+               source_type,
+               source_id,
+               description,
+               created_at
+        FROM coin_transactions
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC, transaction_id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countTransactionsByUserId" resultType="int">
+        SELECT COUNT(1)
+        FROM coin_transactions
+        WHERE user_id = #{userId}
+    </select>
+</mapper>

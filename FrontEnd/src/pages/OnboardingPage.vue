@@ -1,0 +1,300 @@
+<template>
+  <section class="onboarding-page">
+    <header class="onboarding-top">
+      <button class="brand" type="button" @click="$emit('cancel')"><BrandLogo /></button>
+    </header>
+
+    <main class="onboarding-shell">
+      <aside class="step-list">
+        <button v-for="(step, index) in onboardingSteps" :key="step.id" type="button" :class="{ active: currentIndex === index, done: index < currentIndex }" @click="currentIndex = index">
+          <b>{{ index < currentIndex ? '✓' : index + 1 }}</b>
+          <span>{{ step.title }}</span>
+        </button>
+      </aside>
+
+      <form class="step-card" @submit.prevent="next">
+        <div class="bar"><span :style="{ width: `${((currentIndex + 1) / onboardingSteps.length) * 100}%` }"></span></div>
+        <div class="step-head">
+          <div class="quest-chip">PROFILE QUEST · {{ currentIndex + 1 }}</div>
+          <p>{{ currentStep.eyebrow }}</p>
+          <h1>{{ currentStep.title }}</h1>
+          <span>{{ currentStep.description }}</span>
+        </div>
+
+        <div class="question-list">
+          <p v-if="formError" class="form-error">{{ formError }}</p>
+          <div v-if="props.mode === 'signup' && currentIndex === 0" class="character-picker">
+            <div class="character-picker-head">
+              <strong>함께 성장할 캐릭터를 선택해주세요</strong>
+              <span>선택한 캐릭터는 홈, 상점, 길드에서 바로 보여요.</span>
+            </div>
+            <div class="character-options">
+              <button
+                v-for="character in characterChoices"
+                :key="character.value"
+                type="button"
+                :class="{ selected: form.characterAppearanceType === character.value }"
+                @click="form.characterAppearanceType = character.value"
+              >
+                <NyamnyamCharacter stage="egg" mood="normal" :size="68" :appearance-type="character.value" />
+                <b>{{ character.label }}</b>
+              </button>
+            </div>
+          </div>
+          <div v-for="question in currentStep.questions" :key="question.id" class="question">
+            <label>{{ question.label }}</label>
+            <input v-if="question.type === 'date'" v-model="form[question.id]" type="date">
+            <input v-else-if="question.type === 'number'" v-model="form[question.id]" type="number" :placeholder="question.placeholder">
+            <input v-else-if="question.type === 'time'" v-model="form[question.id]" type="time">
+            <div v-else-if="question.type === 'single'" class="choice-grid">
+              <button v-for="option in question.options" :key="option" type="button" :class="{ selected: form[question.id] === option }" @click="form[question.id] = option">{{ option }}</button>
+            </div>
+            <div v-else class="choice-grid multi">
+              <button v-for="option in question.options" :key="option" type="button" :class="{ selected: multiValue(question.id).includes(option) }" @click="toggleMulti(question.id, option)">{{ option }}</button>
+              <div v-if="question.placeholder" class="custom-input">
+                <input v-model="drafts[question.id]" :placeholder="question.placeholder" @keydown.enter.prevent="addCustom(question.id)">
+                <button type="button" @click="addCustom(question.id)">추가</button>
+              </div>
+              <div v-if="customValues(question.id).length" class="custom-tags">
+                <button v-for="item in customValues(question.id)" :key="item" type="button" @click="removeCustom(question.id, item)">{{ item }} ×</button>
+              </div>
+            </div>
+            <small v-if="question.unit">{{ question.unit }}</small>
+          </div>
+        </div>
+
+        <div class="step-actions">
+          <button type="button" class="ghost" :disabled="currentIndex === 0" @click="prev">이전</button>
+          <button type="submit" class="primary" :disabled="loadingProfile">{{ currentIndex === onboardingSteps.length - 1 ? completeButtonText : '다음' }}</button>
+        </div>
+      </form>
+    </main>
+  </section>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import NyamnyamCharacter from '../components/nyamnyam/NyamnyamCharacter.vue'
+import BrandLogo from '../components/common/BrandLogo.vue'
+import { onboardingSteps } from '../services/mock/nyamnyamMock'
+import { userApi, type HealthProfileResponse } from '../services/userApi'
+
+const props = withDefaults(defineProps<{ mode?: 'signup' | 'edit', apiError?: string }>(), {
+  mode: 'signup',
+  apiError: ''
+})
+const emit = defineEmits<{ done: [payload: Record<string, string | string[]>], cancel: [] }>()
+const currentIndex = ref(0)
+const loadingProfile = ref(false)
+const profileLoadError = ref('')
+const localFormError = ref('')
+const drafts = reactive<Record<string, string>>({})
+const form = reactive<Record<string, string | string[]>>({
+  birthday: '',
+  gender: '',
+  height: '',
+  currentWeight: '',
+  targetWeight: '',
+  activityLevel: '',
+  exerciseFrequency: '',
+  mainGoal: '',
+  improveTarget: '',
+  healthFocus: [],
+  changeNeeds: [],
+  difficultReasons: [],
+  dietStyle: '',
+  restrictedFoods: [],
+  allergies: [],
+  recordFrequency: '',
+  calorieTrackingExperience: '',
+  characterAppearanceType: 'NYAMNYAM'
+})
+
+const characterChoices = [
+  { value: 'NYAMNYAM', label: '짹짹이' },
+  { value: 'PENGUIN', label: '뒤뚱이' },
+  { value: 'DOG', label: '멍멍이' }
+]
+
+const currentStep = computed(() => onboardingSteps[currentIndex.value])
+const completeButtonText = computed(() => props.mode === 'edit' ? '수정 내용 저장하기' : '완료하고 시작하기')
+const formError = computed(() => props.apiError || profileLoadError.value || localFormError.value)
+
+function multiValue(id: string) {
+  const value = form[id]
+  return Array.isArray(value) ? value : []
+}
+
+function toggleMulti(id: string, option: string) {
+  const values = multiValue(id)
+  if (option === '없음') {
+    form[id] = values.includes(option) ? [] : [option]
+    return
+  }
+  const next = values.includes(option) ? values.filter((item) => item !== option) : [...values.filter((item) => item !== '없음'), option]
+  form[id] = next
+}
+
+function customValues(id: string) {
+  return multiValue(id).filter((item) => !onboardingSteps.flatMap((step) => step.questions).find((question) => question.id === id)?.options?.includes(item))
+}
+
+function addCustom(id: string) {
+  const value = (drafts[id] || '').trim()
+  if (!value) return
+  const values = multiValue(id).filter((item) => item !== '없음')
+  if (!values.includes(value)) form[id] = [...values, value]
+  drafts[id] = ''
+}
+
+function removeCustom(id: string, item: string) {
+  form[id] = multiValue(id).filter((value) => value !== item)
+}
+
+function prev() {
+  if (currentIndex.value > 0) currentIndex.value -= 1
+}
+
+function withoutCharacterAppearance(payload: Record<string, string | string[]>) {
+  const { characterAppearanceType, ...rest } = payload
+  void characterAppearanceType
+  return rest
+}
+
+function next() {
+  localFormError.value = ''
+  if (!validateCurrentStep()) return
+  if (currentIndex.value < onboardingSteps.length - 1) {
+    currentIndex.value += 1
+    return
+  }
+  emit('done', props.mode === 'signup' ? { ...form } : withoutCharacterAppearance(form))
+}
+
+function validateCurrentStep() {
+  const requiredQuestionIds = new Set([
+    'birthday',
+    'gender',
+    'height',
+    'currentWeight',
+    'activityLevel',
+    'mainGoal'
+  ])
+  const missingQuestion = currentStep.value.questions.find((question) => {
+    if (!requiredQuestionIds.has(question.id)) return false
+    const value = form[question.id]
+    if (Array.isArray(value)) return value.length === 0
+    return !String(value || '').trim()
+  })
+  if (!missingQuestion) return true
+
+  localFormError.value = `${missingQuestion.label} 항목을 입력해 주세요.`
+  return false
+}
+
+async function loadHealthProfile() {
+  if (props.mode !== 'edit') return
+  loadingProfile.value = true
+  profileLoadError.value = ''
+  try {
+    applyHealthProfile(await userApi.getHealthProfile())
+  } catch (error) {
+    console.warn('Health profile load API failed', error)
+    profileLoadError.value = error instanceof Error ? error.message : '건강 프로필을 불러오지 못했습니다.'
+  } finally {
+    loadingProfile.value = false
+  }
+}
+
+function applyHealthProfile(profile: HealthProfileResponse) {
+  form.birthday = profile.birthDate || ''
+  form.gender = genderOption(profile.gender)
+  form.height = profile.heightCm ? String(profile.heightCm) : ''
+  form.currentWeight = profile.weightKg ? String(profile.weightKg) : ''
+  form.targetWeight = profile.targetWeightKg ? String(profile.targetWeightKg) : ''
+  form.activityLevel = activityOption(profile.activityLevel)
+  form.mainGoal = goalOption(profile.healthGoal)
+  form.dietStyle = firstValue(profile.dietStyles)
+  form.restrictedFoods = profile.restrictedFoods?.length ? [...profile.restrictedFoods] : []
+  form.allergies = profile.allergies?.length ? [...profile.allergies] : []
+}
+
+function genderOption(value: unknown) {
+  const key = stringKey(value)
+  const map: Record<string, string> = { FEMALE: '여성', MALE: '남성', OTHER: '선택 안 함' }
+  return map[key] || ''
+}
+
+function goalOption(value: unknown) {
+  const key = stringKey(value)
+  const map: Record<string, string> = {
+    LOSE_WEIGHT: '감량',
+    WEIGHT_LOSS: '감량',
+    MAINTAIN: '유지',
+    GAIN_WEIGHT: '증량',
+    MUSCLE_GAIN: '증량'
+  }
+  return map[key] || ''
+}
+
+function activityOption(value: unknown) {
+  const key = stringKey(value)
+  const map: Record<string, string> = {
+    SEDENTARY: '거의 앉아 있어요',
+    LIGHT: '가벼운 활동이 있어요',
+    MODERATE: '많이 걷거나 움직여요',
+    ACTIVE: '육체 활동이 많아요'
+  }
+  return map[key] || ''
+}
+
+function firstValue(value: unknown) {
+  return Array.isArray(value) ? String(value[0] || '') : ''
+}
+
+function stringKey(value: unknown) {
+  return typeof value === 'string' ? value.trim().toUpperCase() : ''
+}
+
+watch(() => props.mode, () => { void loadHealthProfile() })
+
+onMounted(() => {
+  void loadHealthProfile()
+})
+</script>
+
+<style scoped>
+.onboarding-page { min-height: 100vh; background: linear-gradient(180deg,#fffaf3,#fff0e2); color: var(--ink); }
+.onboarding-top { height: 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 42px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.88); backdrop-filter: blur(16px); box-shadow: 0 4px 18px rgba(100,61,35,.06); position: sticky; top: 0; z-index: 30; }
+.brand { display: inline-flex; align-items: center; gap: 10px; border: 0; background: transparent; cursor: pointer; } .brand span { width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(180deg,#B8DB80,var(--accent-dark)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 3px 0 var(--accent-dark); } .brand strong { font-size: 20px; }
+.progress-label { display: flex; align-items: center; gap: 10px; font-family: var(--mono); color: var(--ink-2); font-weight: 800; } .progress-label span { padding: 5px 8px; border-radius: 999px; background: var(--purple-soft); color: var(--purple); font-size: 9px; }
+.onboarding-shell { max-width: 1180px; margin: 0 auto; padding: 42px; display: grid; grid-template-columns: 300px 1fr; gap: 24px; }
+.step-list { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 92px; align-self: start; }
+.step-list button { display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--border); background: rgba(255,255,255,.82); color: var(--ink-2); cursor: pointer; text-align: left; box-shadow: 0 3px 0 rgba(116,75,49,.07); font-weight: 800; } .step-list button:hover { transform: translateX(4px); border-color: var(--accent); }
+.step-list b { width: 30px; height: 30px; border-radius: 10px; background: var(--surface-alt); display: flex; align-items: center; justify-content: center; font-family: var(--mono); box-shadow: inset 0 -2px 0 rgba(116,75,49,.08); }
+.step-list .active { border-color: var(--accent); background: linear-gradient(145deg,#fff0c8,var(--accent-soft)); color: var(--ink); transform: translateX(6px); box-shadow: 0 4px 0 rgba(143,207,85,.14),var(--shadow); } .step-list .active b { background: linear-gradient(180deg,#B8DB80,var(--accent-dark)); color: #fff; box-shadow: 0 3px 0 var(--accent-dark); } .step-list .done { border-color: #a9d9b8; } .step-list .done b { background: var(--ok); color: #fff; }
+.step-card { background: linear-gradient(160deg,rgba(255,255,255,.98),rgba(255,249,241,.98)); border: 1px solid #e5c5a8; border-radius: 22px; box-shadow: var(--shadow-lg); overflow: hidden; }
+.bar { height: 9px; background: #eadfd4; box-shadow: inset 0 2px 4px rgba(72,43,24,.1); } .bar span { display: block; height: 100%; background: linear-gradient(90deg,#ffad65,var(--accent)); transition: width .7s cubic-bezier(.2,.8,.2,1); position: relative; overflow: hidden; } .bar span:after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation: quest-shine 2.2s infinite; }
+.step-head { padding: 32px 34px 18px; } .quest-chip { display: inline-flex; padding: 5px 9px; margin-bottom: 14px; border: 1px solid var(--accent); border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); font: 900 9px var(--mono); } .step-head p { margin: 0 0 8px; color: var(--accent-dark); font-family: var(--mono); font-size: 11px; letter-spacing: 1.2px; font-weight: 800; } .step-head h1 { margin: 0; font-size: 32px; letter-spacing: -0.6px; } .step-head span { display: block; margin-top: 8px; color: var(--ink-2); font-size: 14px; }
+.question-list { padding: 8px 34px 28px; display: flex; flex-direction: column; gap: 18px; }
+
+.character-picker { padding: 18px; border: 1.5px solid var(--accent); border-radius: 18px; background: linear-gradient(145deg,#fffef7,#f5ffe4); box-shadow: 0 4px 0 rgba(143,207,85,.14); }
+.character-picker-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
+.character-picker-head strong { font-size: 16px; font-weight: 900; }
+.character-picker-head span { color: var(--ink-2); font-size: 12px; }
+.character-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.character-options button { min-height: 124px; border: 1.5px solid var(--border); border-radius: 16px; background: #fff; cursor: pointer; display: grid; place-items: center; gap: 4px; color: var(--ink); box-shadow: 0 3px 0 rgba(116,75,49,.08); }
+.character-options button:hover { transform: translateY(-2px); border-color: var(--accent); }
+.character-options button.selected { border-color: var(--accent); background: linear-gradient(180deg,#fbfff1,#eaffc7); box-shadow: 0 0 0 3px rgba(184,219,128,.22), 0 4px 0 var(--accent-dark); }
+.character-options b { font-size: 14px; padding-top: 8px; display: block; }
+
+.form-error { margin: 0; padding: 12px 14px; border: 1px solid #ffd0c2; border-radius: 12px; background: #fff0e2; color: var(--bad); font-size: 13px; font-weight: 800; }
+.question { position: relative; padding: 19px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,.82); box-shadow: 0 3px 0 rgba(116,75,49,.06); } .question:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(143,207,85,.1); } .question label { display: block; font-size: 14px; font-weight: 900; margin-bottom: 12px; } .question > small { position: absolute; right: 32px; bottom: 31px; color: var(--ink-3); font-family: var(--mono); font-size: 12px; }
+.question input { width: 100%; height: 46px; border: 1.5px solid var(--border-strong); border-radius: 12px; padding: 0 14px; outline: 0; font-size: 14px; background: #fff; } .question input:focus { border-color: var(--accent); }
+.choice-grid { display: flex; flex-wrap: wrap; gap: 8px; } .choice-grid button { padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: #fff; color: var(--ink-2); cursor: pointer; font-weight: 800; box-shadow: 0 2px 0 rgba(116,75,49,.08); } .choice-grid button:hover { transform: translateY(-2px); border-color: var(--accent); } .choice-grid button.selected { border-color: var(--accent); background: linear-gradient(180deg,#B8DB80,var(--accent-dark)); color: #fff; box-shadow: 0 3px 0 var(--accent-dark); }
+.custom-input { display: inline-flex; gap: 4px; align-items: center; width: 260px; max-width: 100%; } .custom-input input { flex: 1; min-width: 0; } .custom-input button { border-radius: 10px; background: var(--surface-alt); }
+.custom-tags { width: 100%; display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; } .custom-tags button { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
+.step-actions { border-top: 1px solid var(--border); padding: 18px 34px 22px; display: flex; justify-content: space-between; gap: 12px; background: rgba(255,255,255,.78); } .step-actions button { height: 46px; padding: 0 24px; border-radius: 12px; font-weight: 900; cursor: pointer; } .step-actions .ghost { border: 1px solid var(--border-strong); background: #fff; color: var(--ink-2); box-shadow: 0 3px 0 rgba(116,75,49,.1); } .step-actions .ghost:disabled,.step-actions .primary:disabled { opacity: .4; cursor: not-allowed; } .step-actions .primary { border: 0; background: linear-gradient(180deg,#B8DB80,var(--accent-dark)); color: #fff; min-width: 180px; box-shadow: 0 4px 0 var(--accent-dark),0 10px 20px rgba(143,207,85,.18); }
+@keyframes quest-shine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@media (max-width: 860px) { .character-options { grid-template-columns: 1fr; } .character-picker-head { align-items: flex-start; flex-direction: column; }  .onboarding-shell { grid-template-columns: 1fr; padding: 24px 18px; } .step-list { position: static; display: grid; grid-template-columns: repeat(2, 1fr); } .onboarding-top { padding: 0 20px; } }
+</style>

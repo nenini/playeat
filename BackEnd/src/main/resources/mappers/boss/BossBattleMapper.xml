@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.boss.repository.BossBattleRepository">
+
+    <resultMap id="BossBattleRowMap" type="com.nyamnyam.coach.boss.repository.row.BossBattleRow">
+        <id property="battleId" column="battle_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="guildName" column="guild_name"/>
+        <result property="bossId" column="boss_id"/>
+        <result property="seasonId" column="season_id"/>
+        <result property="bossName" column="boss_name"/>
+        <result property="difficulty" column="difficulty"/>
+        <result property="bossImageUrl" column="boss_image_url"/>
+        <result property="status" column="status"/>
+        <result property="maxHp" column="max_hp"/>
+        <result property="currentHp" column="current_hp"/>
+        <result property="totalDamage" column="total_damage"/>
+        <result property="startedAt" column="started_at"/>
+        <result property="endedAt" column="ended_at"/>
+        <result property="endsAt" column="ends_at"/>
+    </resultMap>
+
+    <resultMap id="BossBattleConditionRowMap" type="com.nyamnyam.coach.boss.repository.row.BossBattleConditionRow">
+        <id property="battleConditionId" column="battle_condition_id"/>
+        <result property="battleId" column="battle_id"/>
+        <result property="conditionId" column="condition_id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="targetType" column="target_type"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="thresholdUnit" column="threshold_unit"/>
+        <result property="targetValue" column="target_value"/>
+        <result property="requiredDays" column="required_days"/>
+        <result property="currentValue" column="current_value"/>
+        <result property="damage" column="damage"/>
+        <result property="unit" column="unit"/>
+        <result property="completed" column="completed"/>
+        <result property="sortOrder" column="sort_order"/>
+    </resultMap>
+
+    <resultMap id="BossBattleDamageLogRowMap" type="com.nyamnyam.coach.boss.repository.row.BossBattleDamageLogRow">
+        <id property="damageLogId" column="damage_log_id"/>
+        <result property="battleId" column="battle_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="damage" column="damage"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourceId" column="source_id"/>
+        <result property="description" column="description"/>
+        <result property="weaponName" column="weapon_name"/>
+        <result property="weaponEffectValue" column="weapon_effect_value"/>
+        <result property="weaponImageUrl" column="weapon_image_url"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="BossRowMap" type="com.nyamnyam.coach.boss.repository.row.BossRow">
+        <id property="bossId" column="boss_id"/>
+        <result property="seasonId" column="season_id"/>
+        <result property="seasonName" column="season_name"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="difficulty" column="difficulty"/>
+        <result property="maxHp" column="max_hp"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="rewardExp" column="reward_exp"/>
+        <result property="rewardCoin" column="reward_coin"/>
+        <result property="status" column="status"/>
+        <result property="startsAt" column="starts_at"/>
+        <result property="endsAt" column="ends_at"/>
+    </resultMap>
+
+    <resultMap id="BossCommonConditionRowMap" type="com.nyamnyam.coach.boss.repository.row.BossCommonConditionRow">
+        <id property="conditionId" column="condition_id"/>
+        <result property="conditionTemplateId" column="condition_template_id"/>
+        <result property="seasonId" column="season_id"/>
+        <result property="bossId" column="boss_id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="targetType" column="target_type"/>
+        <result property="conditionCategory" column="condition_category"/>
+        <result property="metricType" column="metric_type"/>
+        <result property="comparisonType" column="comparison_type"/>
+        <result property="aggregationType" column="aggregation_type"/>
+        <result property="evaluationScope" column="evaluation_scope"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="thresholdMinValue" column="threshold_min_value"/>
+        <result property="thresholdMaxValue" column="threshold_max_value"/>
+        <result property="thresholdUnit" column="threshold_unit"/>
+        <result property="targetValue" column="target_value"/>
+        <result property="requiredDays" column="required_days"/>
+        <result property="unit" column="unit"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="requiredForClear" column="required_for_clear"/>
+        <result property="verificationSupported" column="verification_supported"/>
+    </resultMap>
+
+    <sql id="BattleSelectColumns">
+        bb.battle_id,
+        bb.guild_id,
+        g.name AS guild_name,
+        bb.boss_id,
+        bb.season_id,
+        b.name AS boss_name,
+        b.difficulty,
+        b.image_url AS boss_image_url,
+        bb.status,
+        bb.max_hp,
+        bb.current_hp,
+        bb.total_damage,
+        bb.started_at,
+        bb.ended_at,
+        CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME) AS ends_at
+    </sql>
+
+    <select id="findActiveBossById" resultMap="BossRowMap">
+        SELECT
+            b.boss_id,
+            b.season_id,
+            s.name AS season_name,
+            b.name,
+            b.description,
+            b.difficulty,
+            b.max_hp,
+            b.image_url,
+            b.reward_exp,
+            b.reward_coin,
+            b.status,
+            COALESCE(b.starts_at, CAST(CONCAT(s.start_date, ' 00:00:00') AS DATETIME)) AS starts_at,
+            CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME) AS ends_at
+        FROM bosses b
+        JOIN boss_seasons s ON s.season_id = b.season_id
+        WHERE b.boss_id = #{bossId}
+    </select>
+
+    <select id="findCurrentSeasonId" resultType="long">
+        SELECT season_id
+        FROM boss_seasons
+        WHERE active = TRUE
+          AND CURDATE() BETWEEN start_date AND end_date
+        ORDER BY start_date DESC, season_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="existsInProgressBattleByGuildId" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM boss_battles
+        WHERE guild_id = #{guildId}
+          AND status = 'IN_PROGRESS'
+    </select>
+
+    <select id="existsBattleByGuildIdAndSeasonId" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM boss_battles
+        WHERE guild_id = #{guildId}
+          AND season_id = #{seasonId}
+    </select>
+
+    <select id="countActiveGuildMembers" resultType="int">
+        SELECT COUNT(1)
+        FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
+        WHERE gm.guild_id = #{guildId}
+          AND gm.left_at IS NULL
+          AND u.status = 'ACTIVE'
+    </select>
+
+    <insert id="insertBossBattle"
+            parameterType="com.nyamnyam.coach.boss.entity.BossBattle"
+            useGeneratedKeys="true"
+            keyProperty="battleId"
+            keyColumn="battle_id">
+        INSERT INTO boss_battles (
+            guild_id,
+            boss_id,
+            season_id,
+            status,
+            max_hp,
+            current_hp,
+            total_damage
+        )
+        VALUES (
+            #{guildId},
+            #{bossId},
+            #{seasonId},
+            COALESCE(#{status}, 'IN_PROGRESS'),
+            #{maxHp},
+            #{currentHp},
+            COALESCE(#{totalDamage}, 0)
+        )
+    </insert>
+
+    <select id="findBossCommonConditionsByBossId" resultMap="BossCommonConditionRowMap">
+        SELECT
+            condition_id,
+            condition_template_id,
+            season_id,
+            boss_id,
+            title,
+            description,
+            target_type,
+            condition_category,
+            metric_type,
+            comparison_type,
+            aggregation_type,
+            evaluation_scope,
+            threshold_value,
+            threshold_min_value,
+            threshold_max_value,
+            threshold_unit,
+            target_value,
+            required_days,
+            unit,
+            sort_order,
+            required_for_clear,
+            verification_supported
+        FROM boss_common_conditions
+        WHERE boss_id = #{bossId}
+        ORDER BY sort_order ASC, condition_id ASC
+    </select>
+
+    <insert id="insertBossBattleCondition"
+            parameterType="com.nyamnyam.coach.boss.entity.BossBattleCondition"
+            useGeneratedKeys="true"
+            keyProperty="battleConditionId"
+            keyColumn="battle_condition_id">
+        INSERT INTO boss_battle_conditions (
+            battle_id,
+            condition_id,
+            condition_template_id,
+            title,
+            description,
+            target_type,
+            condition_category,
+            metric_type,
+            comparison_type,
+            aggregation_type,
+            evaluation_scope,
+            threshold_value,
+            threshold_min_value,
+            threshold_max_value,
+            threshold_unit,
+            target_value,
+            required_days,
+            current_value,
+            damage,
+            unit,
+            completed,
+            sort_order,
+            required_for_clear,
+            verification_supported
+        )
+        VALUES (
+            #{battleId},
+            #{conditionId},
+            #{conditionTemplateId},
+            #{title},
+            #{description},
+            #{targetType},
+            #{conditionCategory},
+            #{metricType},
+            #{comparisonType},
+            #{aggregationType},
+            #{evaluationScope},
+            #{thresholdValue},
+            #{thresholdMinValue},
+            #{thresholdMaxValue},
+            #{thresholdUnit},
+            #{targetValue},
+            #{requiredDays},
+            COALESCE(#{currentValue}, 0),
+            COALESCE(#{damage}, 0),
+            #{unit},
+            COALESCE(#{completed}, FALSE),
+            COALESCE(#{sortOrder}, 0),
+            COALESCE(#{requiredForClear}, TRUE),
+            COALESCE(#{verificationSupported}, TRUE)
+        )
+    </insert>
+
+    <select id="findCurrentBattleByGuildId" resultMap="BossBattleRowMap">
+        SELECT <include refid="BattleSelectColumns"/>
+        FROM boss_battles bb
+        JOIN guilds g ON g.guild_id = bb.guild_id
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        JOIN boss_seasons s ON s.season_id = bb.season_id
+        WHERE bb.guild_id = #{guildId}
+          AND bb.status IN ('IN_PROGRESS', 'DEFEATED')
+          AND CURRENT_TIMESTAMP BETWEEN
+              COALESCE(b.starts_at, CAST(CONCAT(s.start_date, ' 00:00:00') AS DATETIME))
+              AND CAST(CONCAT(CAST(COALESCE(b.ends_at, s.end_date) AS DATE), ' 23:59:59') AS DATETIME)
+        ORDER BY bb.started_at DESC, bb.battle_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="existsBossBattleRewardClaim" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM reward_claims
+        WHERE user_id = #{userId}
+          AND source_type = 'BOSS_BATTLE'
+          AND source_id = #{battleId}
+    </select>
+
+    <select id="findBattleDetailById" resultMap="BossBattleRowMap">
+        SELECT <include refid="BattleSelectColumns"/>
+        FROM boss_battles bb
+        JOIN guilds g ON g.guild_id = bb.guild_id
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        JOIN boss_seasons s ON s.season_id = bb.season_id
+        WHERE bb.battle_id = #{battleId}
+    </select>
+
+    <select id="findBattleConditionsByBattleId" resultMap="BossBattleConditionRowMap">
+        SELECT
+            battle_condition_id,
+            battle_id,
+            condition_id,
+            title,
+            description,
+            target_type,
+            threshold_value,
+            threshold_unit,
+            target_value,
+            required_days,
+            current_value,
+            damage,
+            unit,
+            completed,
+            sort_order
+        FROM boss_battle_conditions
+        WHERE battle_id = #{battleId}
+        ORDER BY sort_order ASC, battle_condition_id ASC
+    </select>
+
+    <select id="findRecentDamageLogsByBattleId" resultMap="BossBattleDamageLogRowMap">
+        SELECT
+            bbdl.damage_log_id,
+            bbdl.battle_id,
+            bbdl.user_id,
+            u.nickname,
+            bbdl.damage,
+            bbdl.source_type,
+            bbdl.source_id,
+            bbdl.description,
+            i.name AS weapon_name,
+            i.effect_value AS weapon_effect_value,
+            i.image_url AS weapon_image_url,
+            bbdl.created_at
+        FROM boss_battle_damage_logs bbdl
+        JOIN users u ON u.user_id = bbdl.user_id
+        LEFT JOIN characters c ON c.user_id = bbdl.user_id
+        LEFT JOIN character_equipments ce
+               ON ce.character_id = c.character_id
+              AND ce.slot_type = 'HAND'
+        LEFT JOIN user_items ui ON ui.user_item_id = ce.user_item_id
+        LEFT JOIN items i ON i.item_id = ui.item_id
+        WHERE bbdl.battle_id = #{battleId}
+        ORDER BY bbdl.created_at DESC, bbdl.damage_log_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findBattleHpById" resultMap="BossBattleRowMap">
+        SELECT <include refid="BattleSelectColumns"/>
+        FROM boss_battles bb
+        JOIN guilds g ON g.guild_id = bb.guild_id
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        JOIN boss_seasons s ON s.season_id = bb.season_id
+        WHERE bb.battle_id = #{battleId}
+    </select>
+
+    <select id="findBattleHistoryByGuildId" resultMap="BossBattleRowMap">
+        SELECT <include refid="BattleSelectColumns"/>
+        FROM boss_battles bb
+        JOIN guilds g ON g.guild_id = bb.guild_id
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        JOIN boss_seasons s ON s.season_id = bb.season_id
+        WHERE bb.guild_id = #{guildId}
+        ORDER BY bb.started_at DESC, bb.battle_id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countBattleHistoryByGuildId" resultType="int">
+        SELECT COUNT(1)
+        FROM boss_battles
+        WHERE guild_id = #{guildId}
+    </select>
+
+    <select id="findGuildIdByBattleId" resultType="long">
+        SELECT guild_id
+        FROM boss_battles
+        WHERE battle_id = #{battleId}
+    </select>
+</mapper>

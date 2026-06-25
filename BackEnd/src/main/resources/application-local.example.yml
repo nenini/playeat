@@ -1,0 +1,75 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/nyamnyam?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: nyamnyam
+    password: nyamnyam1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: redis1234
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+  ai:
+    model:
+      chat: none
+      embedding: openai
+    openai:
+      base-url: ${GMS_OPENAI_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com}
+      api-key: ${GMS_KEY:placeholder-set-gms-key-for-rag}
+      embedding:
+        embeddings-path: /v1/embeddings
+        options:
+          model: text-embedding-3-small
+    vectorstore:
+      qdrant:
+        host: localhost
+        port: 6334
+        collection-name: nyamnyam_health_guides
+        use-tls: false
+        initialize-schema: true
+
+jwt:
+  # openssl rand -base64 64 로 생성한 값으로 교체하세요
+  secret: jwt-key
+  access-token-expiration: 1800000
+  refresh-token-expiration: 604800000
+
+gms:
+  enabled: false
+  base-url: https://gms.ssafy.io/gmsapi/api.openai.com/v1
+  model: gpt-5-mini
+  embedding-model: text-embedding-3-small
+  api-key: ${GMS_KEY:}
+  timeout-ms: 60000
+
+rag:
+  health-guides:
+    seed-location: classpath:rag/health-guides/health-guides.jsonl
+    ingestion-enabled: true
+    top-k: 5
+    similarity-threshold: 0.5
+app:
+  upload:
+    root-dir: ${UPLOAD_ROOT_DIR:uploads}
+    profile-image-dir: ${PROFILE_IMAGE_UPLOAD_DIR:${UPLOAD_ROOT_DIR:uploads}/profile-images}
+    profile-image-path-prefix: /uploads/profile-images
+
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    token-uri: https://oauth2.googleapis.com/token
+    user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
