@@ -276,25 +276,7 @@ PlayEat은 이 분석 결과를 단순한 숫자로 끝내지 않고 캐릭터 �
 
 ## 시스템 아키텍처
 
-```mermaid
-flowchart LR
-    User["User"]
-    FE["Vue 3 Frontend"]
-    BE["Spring Boot Backend"]
-    DB["MySQL"]
-    Redis["Redis"]
-    Qdrant["Qdrant Vector DB"]
-    AI["OpenAI-compatible GMS API"]
-    Upload["Local Upload Storage"]
-
-    User --> FE
-    FE --> BE
-    BE --> DB
-    BE --> Redis
-    BE --> Qdrant
-    BE --> AI
-    BE --> Upload
-```
+![ERD](./images/architecture.png)
 
 ## 화면 구성
 
