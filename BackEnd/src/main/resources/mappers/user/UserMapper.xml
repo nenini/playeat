@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.user.repository.UserRepository">
+
+    <resultMap id="UserResultMap" type="com.nyamnyam.coach.user.entity.User">
+        <id property="userId" column="user_id"/>
+        <result property="email" column="email"/>
+        <result property="passwordHash" column="password_hash"/>
+        <result property="nickname" column="nickname"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="provider" column="provider"/>
+        <result property="providerId" column="provider_id"/>
+        <result property="selectedCoachId" column="selected_coach_id"/>
+        <result property="status" column="status"/>
+        <result property="onboardingCompleted" column="onboarding_completed"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="deactivatedAt" column="deactivated_at"/>
+    </resultMap>
+
+    <insert id="save"
+            parameterType="com.nyamnyam.coach.user.entity.User"
+            useGeneratedKeys="true"
+            keyProperty="userId"
+            keyColumn="user_id">
+        INSERT INTO users (
+            email,
+            password_hash,
+            nickname,
+            profile_image_url,
+            provider,
+            provider_id,
+            selected_coach_id,
+            status,
+            onboarding_completed
+        )
+        VALUES (
+            #{email},
+            #{passwordHash},
+            #{nickname},
+            #{profileImageUrl},
+            COALESCE(#{provider}, 'LOCAL'),
+            #{providerId},
+            #{selectedCoachId},
+            COALESCE(#{status}, 'ACTIVE'),
+            COALESCE(#{onboardingCompleted}, FALSE)
+        )
+    </insert>
+
+    <select id="findById" resultMap="UserResultMap">
+        SELECT
+            user_id,
+            email,
+            password_hash,
+            nickname,
+            profile_image_url,
+            provider,
+            provider_id,
+            selected_coach_id,
+            status,
+            onboarding_completed,
+            created_at,
+            updated_at,
+            deactivated_at
+        FROM users
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="findByEmail" resultMap="UserResultMap">
+        SELECT
+            user_id,
+            email,
+            password_hash,
+            nickname,
+            profile_image_url,
+            provider,
+            provider_id,
+            selected_coach_id,
+            status,
+            onboarding_completed,
+            created_at,
+            updated_at,
+            deactivated_at
+        FROM users
+        WHERE email = #{email}
+    </select>
+
+    <select id="findByProviderAndProviderId" resultMap="UserResultMap">
+        SELECT
+            user_id,
+            email,
+            password_hash,
+            nickname,
+            profile_image_url,
+            provider,
+            provider_id,
+            selected_coach_id,
+            status,
+            onboarding_completed,
+            created_at,
+            updated_at,
+            deactivated_at
+        FROM users
+        WHERE provider = #{provider}
+          AND provider_id = #{providerId}
+        LIMIT 1
+    </select>
+
+    <select id="findActiveUserIds" resultType="long">
+        SELECT user_id
+        FROM users
+        WHERE status = 'ACTIVE'
+        ORDER BY user_id ASC
+    </select>
+
+    <select id="existsByEmail" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM users
+        WHERE email = #{email}
+    </select>
+
+    <update id="releaseInactiveEmail">
+        UPDATE users
+        SET
+            email = CONCAT('deleted-', user_id, '-', REPLACE(UUID(), '-', ''), '@invalid.local'),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND status = 'INACTIVE'
+    </update>
+
+    <update id="updateProfile">
+        UPDATE users
+        SET
+            nickname = #{nickname},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE users
+        SET
+            password_hash = #{passwordHash},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateProfileImage">
+        UPDATE users
+        SET
+            profile_image_url = #{profileImageUrl},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="deleteProfileImage">
+        UPDATE users
+        SET
+            profile_image_url = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="completeOnboarding">
+        UPDATE users
+        SET
+            selected_coach_id = #{selectedCoachId},
+            onboarding_completed = TRUE,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="deactivate">
+        UPDATE users
+        SET
+            email = CONCAT('deleted-', user_id, '-', REPLACE(UUID(), '-', ''), '@invalid.local'),
+            status = 'INACTIVE',
+            deactivated_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+</mapper>

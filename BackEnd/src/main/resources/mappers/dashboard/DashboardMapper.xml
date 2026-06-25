@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.nyamnyam.coach.dashboard.repository.DashboardRepository">
+
+    <resultMap id="GuildBasicInfoRowMap" type="com.nyamnyam.coach.dashboard.repository.row.GuildBasicInfoRow">
+        <id property="guildId" column="guild_id"/>
+        <result property="guildName" column="guild_name"/>
+    </resultMap>
+
+    <resultMap id="BattleDashboardRowMap" type="com.nyamnyam.coach.dashboard.repository.row.BattleDashboardRow">
+        <id property="battleId" column="battle_id"/>
+        <result property="guildId" column="guild_id"/>
+        <result property="bossName" column="boss_name"/>
+        <result property="difficulty" column="difficulty"/>
+        <result property="status" column="status"/>
+        <result property="maxHp" column="max_hp"/>
+        <result property="currentHp" column="current_hp"/>
+        <result property="totalDamage" column="total_damage"/>
+    </resultMap>
+
+    <resultMap id="DailyCountRowMap" type="com.nyamnyam.coach.dashboard.repository.row.DailyCountRow">
+        <id property="statDate" column="stat_date"/>
+        <result property="countValue" column="count_value"/>
+    </resultMap>
+
+    <select id="findGuildBasicInfo" resultMap="GuildBasicInfoRowMap">
+        SELECT guild_id,
+               name AS guild_name
+        FROM guilds
+        WHERE guild_id = #{guildId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="countActiveGuildMembers" resultType="int">
+        SELECT COUNT(1)
+        FROM guild_members gm
+        JOIN users u ON u.user_id = gm.user_id
+        WHERE gm.guild_id = #{guildId}
+          AND gm.left_at IS NULL
+          AND u.status = 'ACTIVE'
+    </select>
+
+    <select id="countRecordedMemberDates" resultType="int">
+        SELECT COUNT(DISTINCT CONCAT(d.user_id, '-', CAST(d.eaten_at AS DATE)))
+        FROM diets d
+        JOIN guild_members gm ON gm.user_id = d.user_id
+        JOIN users u ON u.user_id = gm.user_id
+        WHERE gm.guild_id = #{guildId}
+          AND gm.left_at IS NULL
+          AND u.status = 'ACTIVE'
+          AND CAST(d.eaten_at AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
+    </select>
+
+    <select id="findDailyRecordedMembers" resultMap="DailyCountRowMap">
+        SELECT CAST(d.eaten_at AS DATE) AS stat_date,
+               COUNT(DISTINCT d.user_id) AS count_value
+        FROM diets d
+        JOIN guild_members gm ON gm.user_id = d.user_id
+        JOIN users u ON u.user_id = gm.user_id
+        WHERE gm.guild_id = #{guildId}
+          AND gm.left_at IS NULL
+          AND u.status = 'ACTIVE'
+          AND CAST(d.eaten_at AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
+        GROUP BY CAST(d.eaten_at AS DATE)
+        ORDER BY stat_date ASC
+    </select>
+
+    <select id="findCurrentOrLatestBattleByGuildId" resultMap="BattleDashboardRowMap">
+        SELECT bb.battle_id,
+               bb.guild_id,
+               b.name AS boss_name,
+               b.difficulty,
+               bb.status,
+               bb.max_hp,
+               bb.current_hp,
+               bb.total_damage
+        FROM boss_battles bb
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        WHERE bb.guild_id = #{guildId}
+        ORDER BY CASE WHEN bb.status = 'IN_PROGRESS' THEN 0 ELSE 1 END,
+                 bb.started_at DESC,
+                 bb.battle_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findBattleDashboardById" resultMap="BattleDashboardRowMap">
+        SELECT bb.battle_id,
+               bb.guild_id,
+               b.name AS boss_name,
+               b.difficulty,
+               bb.status,
+               bb.max_hp,
+               bb.current_hp,
+               bb.total_damage
+        FROM boss_battles bb
+        JOIN bosses b ON b.boss_id = bb.boss_id
+        WHERE bb.battle_id = #{battleId}
+    </select>
+
+    <select id="countQuestsByGuildAndWeek" resultType="int">
+        SELECT COUNT(1)
+        FROM quests
+        WHERE guild_id = #{guildId}
+          AND CAST(created_at AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
+    </select>
+
+    <select id="countCompletedQuestsByGuildAndWeek" resultType="int">
+        SELECT COUNT(1)
+        FROM quests
+        WHERE guild_id = #{guildId}
+          AND status IN ('COMPLETED', 'REWARDED')
+          AND CAST(COALESCE(completed_at, updated_at) AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
+    </select>
+
+    <select id="findDailyCompletedQuests" resultMap="DailyCountRowMap">
+        SELECT CAST(COALESCE(completed_at, updated_at) AS DATE) AS stat_date,
+               COUNT(1) AS count_value
+        FROM quests
+        WHERE guild_id = #{guildId}
+          AND status IN ('COMPLETED', 'REWARDED')
+          AND CAST(COALESCE(completed_at, updated_at) AS DATE) BETWEEN #{weekStartDate} AND #{weekEndDate}
+        GROUP BY CAST(COALESCE(completed_at, updated_at) AS DATE)
+        ORDER BY stat_date ASC
+    </select>
+
+    <select id="countQuestsByBattleId" resultType="int">
+        SELECT COUNT(1)
+        FROM quests
+        WHERE battle_id = #{battleId}
+    </select>
+
+    <select id="countCompletedQuestsByBattleId" resultType="int">
+        SELECT COUNT(1)
+        FROM quests
+        WHERE battle_id = #{battleId}
+          AND status IN ('COMPLETED', 'REWARDED')
+    </select>
+
+    <select id="countBattleConditionsByBattleId" resultType="int">
+        SELECT COUNT(1)
+        FROM boss_battle_conditions
+        WHERE battle_id = #{battleId}
+    </select>
+
+    <select id="countCompletedBattleConditionsByBattleId" resultType="int">
+        SELECT COUNT(1)
+        FROM boss_battle_conditions
+        WHERE battle_id = #{battleId}
+          AND completed = TRUE
+    </select>
+</mapper>
