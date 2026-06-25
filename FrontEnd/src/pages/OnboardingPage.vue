@@ -87,6 +87,7 @@ const emit = defineEmits<{ done: [payload: Record<string, string | string[]>], c
 const currentIndex = ref(0)
 const loadingProfile = ref(false)
 const profileLoadError = ref('')
+const localFormError = ref('')
 const drafts = reactive<Record<string, string>>({})
 const form = reactive<Record<string, string | string[]>>({
   birthday: '',
@@ -117,7 +118,7 @@ const characterChoices = [
 
 const currentStep = computed(() => onboardingSteps[currentIndex.value])
 const completeButtonText = computed(() => props.mode === 'edit' ? '수정 내용 저장하기' : '완료하고 시작하기')
-const formError = computed(() => props.apiError || profileLoadError.value)
+const formError = computed(() => props.apiError || profileLoadError.value || localFormError.value)
 
 function multiValue(id: string) {
   const value = form[id]
@@ -161,11 +162,34 @@ function withoutCharacterAppearance(payload: Record<string, string | string[]>) 
 }
 
 function next() {
+  localFormError.value = ''
+  if (!validateCurrentStep()) return
   if (currentIndex.value < onboardingSteps.length - 1) {
     currentIndex.value += 1
     return
   }
   emit('done', props.mode === 'signup' ? { ...form } : withoutCharacterAppearance(form))
+}
+
+function validateCurrentStep() {
+  const requiredQuestionIds = new Set([
+    'birthday',
+    'gender',
+    'height',
+    'currentWeight',
+    'activityLevel',
+    'mainGoal'
+  ])
+  const missingQuestion = currentStep.value.questions.find((question) => {
+    if (!requiredQuestionIds.has(question.id)) return false
+    const value = form[question.id]
+    if (Array.isArray(value)) return value.length === 0
+    return !String(value || '').trim()
+  })
+  if (!missingQuestion) return true
+
+  localFormError.value = `${missingQuestion.label} 항목을 입력해 주세요.`
+  return false
 }
 
 async function loadHealthProfile() {

@@ -14,13 +14,23 @@ import java.time.Period;
 @Component
 public class NutritionTargetCalculator {
 
+    // Energy: KDRI 2020 adult EER equations for normal-weight adults.
+    // Macros: representative targets inside KDRI 2020 energy intake ranges.
+    // Sodium/fiber: KDRI table values are preferred; KDRI-labeled defaults are used only as fallback.
     private static final String DEFAULT_STANDARD_VERSION = "KDRI_2020";
     private static final BigDecimal DEFAULT_CALORIES = BigDecimal.valueOf(2000);
-    private static final BigDecimal DEFAULT_PROTEIN_G = BigDecimal.valueOf(90);
-    private static final BigDecimal DEFAULT_CARBS_G = BigDecimal.valueOf(260);
-    private static final BigDecimal DEFAULT_FAT_G = BigDecimal.valueOf(65);
     private static final BigDecimal DEFAULT_SODIUM_MG = BigDecimal.valueOf(2000);
     private static final BigDecimal DEFAULT_FIBER_G = BigDecimal.valueOf(25);
+    private static final BigDecimal MINIMUM_CALORIES = BigDecimal.valueOf(1200);
+    // KDRI gives maintenance EER; weight-goal adjustment is a service policy applied after EER.
+    private static final BigDecimal MAX_WEIGHT_GOAL_CALORIE_ADJUSTMENT = BigDecimal.valueOf(500);
+    private static final BigDecimal LOSE_WEIGHT_ADJUSTMENT_RATIO = BigDecimal.valueOf(0.15);
+    private static final BigDecimal GAIN_WEIGHT_ADJUSTMENT_RATIO = BigDecimal.valueOf(0.10);
+    private static final BigDecimal CARBS_ENERGY_RATIO = BigDecimal.valueOf(0.60);
+    private static final BigDecimal PROTEIN_ENERGY_RATIO = BigDecimal.valueOf(0.15);
+    private static final BigDecimal FAT_ENERGY_RATIO = BigDecimal.valueOf(0.25);
+    private static final BigDecimal CARBS_OR_PROTEIN_KCAL_PER_G = BigDecimal.valueOf(4);
+    private static final BigDecimal FAT_KCAL_PER_G = BigDecimal.valueOf(9);
 
     private final NutritionReferenceRepository nutritionReferenceRepository;
 
@@ -30,23 +40,21 @@ public class NutritionTargetCalculator {
 
     public NutritionTargetValues calculate(HealthProfileRequest request) {
         int age = age(request.birthDate());
+        String gender = normalizeGender(request.gender());
         NutritionReferenceStandardRow standard = nutritionReferenceRepository
-                .findStandard(normalizeGender(request.gender()), age)
+                .findStandard(gender, age)
                 .orElse(null);
 
-        BigDecimal calories = calculatedCalories(request);
-        BigDecimal protein = calories.multiply(BigDecimal.valueOf(0.18))
-                .divide(BigDecimal.valueOf(4), 0, RoundingMode.HALF_UP);
-        BigDecimal carbs = calories.multiply(BigDecimal.valueOf(0.52))
-                .divide(BigDecimal.valueOf(4), 0, RoundingMode.HALF_UP);
-        BigDecimal fat = calories.multiply(BigDecimal.valueOf(0.30))
-                .divide(BigDecimal.valueOf(9), 0, RoundingMode.HALF_UP);
+        BigDecimal calories = calculatedCalories(request, age, gender);
+        BigDecimal protein = gramsFromEnergy(calories, PROTEIN_ENERGY_RATIO, CARBS_OR_PROTEIN_KCAL_PER_G);
+        BigDecimal carbs = gramsFromEnergy(calories, CARBS_ENERGY_RATIO, CARBS_OR_PROTEIN_KCAL_PER_G);
+        BigDecimal fat = gramsFromEnergy(calories, FAT_ENERGY_RATIO, FAT_KCAL_PER_G);
 
         return new NutritionTargetValues(
-                scale(defaultIfNull(calories, DEFAULT_CALORIES)),
-                scale(defaultIfNull(protein, DEFAULT_PROTEIN_G)),
-                scale(defaultIfNull(carbs, DEFAULT_CARBS_G)),
-                scale(defaultIfNull(fat, DEFAULT_FAT_G)),
+                scale(calories),
+                scale(protein),
+                scale(carbs),
+                scale(fat),
                 scale(standard == null ? DEFAULT_SODIUM_MG : defaultIfNull(standard.getSodiumMg(), DEFAULT_SODIUM_MG)),
                 scale(standard == null ? DEFAULT_FIBER_G : defaultIfNull(standard.getFiberG(), DEFAULT_FIBER_G)),
                 standard == null || standard.getStandardVersion() == null
@@ -56,41 +64,45 @@ public class NutritionTargetCalculator {
         );
     }
 
-    private BigDecimal calculatedCalories(HealthProfileRequest request) {
+    private BigDecimal calculatedCalories(HealthProfileRequest request, int age, String gender) {
         if (request.heightCm() == null || request.weightKg() == null || request.birthDate() == null) {
             return DEFAULT_CALORIES;
         }
 
-        int age = age(request.birthDate());
-        BigDecimal bmr = request.weightKg().multiply(BigDecimal.valueOf(10))
-                .add(request.heightCm().multiply(BigDecimal.valueOf(6.25)))
-                .subtract(BigDecimal.valueOf(age * 5L));
-
-        if ("FEMALE".equalsIgnoreCase(request.gender())) {
-            bmr = bmr.subtract(BigDecimal.valueOf(161));
+        BigDecimal heightM = request.heightCm().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+        BigDecimal calories;
+        if ("FEMALE".equals(gender)) {
+            calories = BigDecimal.valueOf(354)
+                    .subtract(BigDecimal.valueOf(6.91).multiply(BigDecimal.valueOf(age)))
+                    .add(activityCoefficient(request.activityLevel(), gender)
+                            .multiply(BigDecimal.valueOf(9.36).multiply(request.weightKg())
+                                    .add(BigDecimal.valueOf(726).multiply(heightM))));
         } else {
-            bmr = bmr.add(BigDecimal.valueOf(5));
+            calories = BigDecimal.valueOf(662)
+                    .subtract(BigDecimal.valueOf(9.53).multiply(BigDecimal.valueOf(age)))
+                    .add(activityCoefficient(request.activityLevel(), gender)
+                            .multiply(BigDecimal.valueOf(15.91).multiply(request.weightKg())
+                                    .add(BigDecimal.valueOf(539.6).multiply(heightM))));
         }
 
-        BigDecimal calories = bmr.multiply(activityFactor(request.activityLevel()));
         if ("LOSE_WEIGHT".equalsIgnoreCase(request.healthGoal())) {
-            calories = calories.subtract(BigDecimal.valueOf(300));
+            calories = calories.subtract(weightGoalAdjustment(calories, LOSE_WEIGHT_ADJUSTMENT_RATIO));
         } else if ("GAIN_WEIGHT".equalsIgnoreCase(request.healthGoal())) {
-            calories = calories.add(BigDecimal.valueOf(300));
+            calories = calories.add(weightGoalAdjustment(calories, GAIN_WEIGHT_ADJUSTMENT_RATIO));
         }
-        return calories.max(BigDecimal.valueOf(1200)).setScale(0, RoundingMode.HALF_UP);
+        return calories.max(MINIMUM_CALORIES).setScale(0, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal activityFactor(String activityLevel) {
+    private BigDecimal activityCoefficient(String activityLevel, String gender) {
         if (activityLevel == null) {
-            return BigDecimal.valueOf(1.2);
+            return BigDecimal.ONE;
         }
+        boolean female = "FEMALE".equals(gender);
         return switch (activityLevel.toUpperCase()) {
-            case "LIGHT" -> BigDecimal.valueOf(1.375);
-            case "MODERATE" -> BigDecimal.valueOf(1.55);
-            case "ACTIVE" -> BigDecimal.valueOf(1.725);
-            case "VERY_ACTIVE" -> BigDecimal.valueOf(1.9);
-            default -> BigDecimal.valueOf(1.2);
+            case "LIGHT" -> female ? BigDecimal.valueOf(1.12) : BigDecimal.valueOf(1.11);
+            case "MODERATE" -> female ? BigDecimal.valueOf(1.27) : BigDecimal.valueOf(1.25);
+            case "ACTIVE", "VERY_ACTIVE" -> female ? BigDecimal.valueOf(1.45) : BigDecimal.valueOf(1.48);
+            default -> BigDecimal.ONE;
         };
     }
 
@@ -114,6 +126,15 @@ public class NutritionTargetCalculator {
 
     private BigDecimal defaultIfNull(BigDecimal value, BigDecimal defaultValue) {
         return value == null ? defaultValue : value;
+    }
+
+    private BigDecimal gramsFromEnergy(BigDecimal calories, BigDecimal energyRatio, BigDecimal kcalPerGram) {
+        return calories.multiply(energyRatio)
+                .divide(kcalPerGram, 0, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal weightGoalAdjustment(BigDecimal calories, BigDecimal ratio) {
+        return calories.multiply(ratio).min(MAX_WEIGHT_GOAL_CALORIE_ADJUSTMENT);
     }
 
     private BigDecimal scale(BigDecimal value) {
