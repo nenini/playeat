@@ -213,7 +213,10 @@
               </div>
               <p v-else>격파 조건 데이터가 없습니다.</p></AppCard
             >
-            <AppCard :padding="10" class="reward" :class="{ claimed: isBattleCleared && battle?.rewardClaimed }"
+            <AppCard
+              :padding="10"
+              class="reward"
+              :class="{ claimed: isBattleCleared && battle?.rewardClaimed }"
               ><div class="section-title-main">레이드 클리어 보상</div>
               <div class="reward-loot">
                 <span
@@ -789,15 +792,21 @@ async function loadBattleData(id: number) {
 
 async function reloadQuestProgress() {
   if (!battleId.value) return;
-  const [detail, myQuestData, questList, contributionList, hpData, dashboardData] =
-    await Promise.all([
-      bossBattleApi.getBossBattle(battleId.value),
-      questApi.getMyBattleQuests(battleId.value),
-      questApi.getBattleQuests(battleId.value),
-      questApi.getBattleQuestContributions(battleId.value),
-      bossBattleApi.getBossBattleHp(battleId.value),
-      bossBattleApi.getBossBattleDashboard(battleId.value),
-    ]);
+  const [
+    detail,
+    myQuestData,
+    questList,
+    contributionList,
+    hpData,
+    dashboardData,
+  ] = await Promise.all([
+    bossBattleApi.getBossBattle(battleId.value),
+    questApi.getMyBattleQuests(battleId.value),
+    questApi.getBattleQuests(battleId.value),
+    questApi.getBattleQuestContributions(battleId.value),
+    bossBattleApi.getBossBattleHp(battleId.value),
+    bossBattleApi.getBossBattleDashboard(battleId.value),
+  ]);
   battle.value = detail;
   myQuest.value = myQuestData;
   quests.value = questList.quests ?? [];
@@ -893,16 +902,21 @@ async function claimQuestReward(questId: number) {
     async () => {
       await questApi.claimQuestReward(questId);
       if (!battleId.value) return;
-      const [detail, myQuestData, questList, contributionList, hpData, dashboardData] = await Promise.all(
-        [
-          bossBattleApi.getBossBattle(battleId.value),
-          questApi.getMyBattleQuests(battleId.value),
-          questApi.getBattleQuests(battleId.value),
-          questApi.getBattleQuestContributions(battleId.value),
-          bossBattleApi.getBossBattleHp(battleId.value),
-          bossBattleApi.getBossBattleDashboard(battleId.value),
-        ],
-      );
+      const [
+        detail,
+        myQuestData,
+        questList,
+        contributionList,
+        hpData,
+        dashboardData,
+      ] = await Promise.all([
+        bossBattleApi.getBossBattle(battleId.value),
+        questApi.getMyBattleQuests(battleId.value),
+        questApi.getBattleQuests(battleId.value),
+        questApi.getBattleQuestContributions(battleId.value),
+        bossBattleApi.getBossBattleHp(battleId.value),
+        bossBattleApi.getBossBattleDashboard(battleId.value),
+      ]);
       battle.value = detail;
       myQuest.value = myQuestData;
       quests.value = questList.quests ?? [];
@@ -938,16 +952,13 @@ async function verifyConditions() {
 
 async function claimBattleReward() {
   if (!battleId.value) return;
-  await runAction(
-    "battle-reward",
-    async () => {
-      await bossBattleApi.claimBossBattleReward(battleId.value!);
-      [battle.value, dashboard.value] = await Promise.all([
-        bossBattleApi.getBossBattle(battleId.value!),
-        bossBattleApi.getBossBattleDashboard(battleId.value!),
-      ]);
-    },
-  );
+  await runAction("battle-reward", async () => {
+    await bossBattleApi.claimBossBattleReward(battleId.value!);
+    [battle.value, dashboard.value] = await Promise.all([
+      bossBattleApi.getBossBattle(battleId.value!),
+      bossBattleApi.getBossBattleDashboard(battleId.value!),
+    ]);
+  });
 }
 
 function questMember(quest: QuestSummary) {
@@ -961,7 +972,8 @@ function questMember(quest: QuestSummary) {
       ? `${contribution.totalDamage} HP 기여`
       : quest.questType || "개인 퀘스트",
     lv: contribution?.characterLevel ?? quest.characterLevel ?? "-",
-    profileImageUrl: contribution?.profileImageUrl || quest.profileImageUrl || "",
+    profileImageUrl:
+      contribution?.profileImageUrl || quest.profileImageUrl || "",
     quest: quest.title,
     progress: quest.currentValue,
     total: quest.targetValue || 1,
