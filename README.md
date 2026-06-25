@@ -317,6 +317,16 @@ PlayEat은 이 분석 결과를 단순한 숫자로 끝내지 않고 캐릭터 �
 - Swagger UI: `http://localhost:8080/api/swagger-ui.html`
 - OpenAPI Docs: `http://localhost:8080/api/v3/api-docs`
 
+### Swagger 화면
+
+| Swagger 1 | Swagger 2 |
+| --------- | --------- |
+| ![Swagger 1](./images/swagger1.png) | ![Swagger 2](./images/swagger2.png) |
+
+| Swagger 3 | Swagger 4 |
+| --------- | --------- |
+| ![Swagger 3](./images/swagger3.png) | ![Swagger 4](./images/swagger4.png) |
+
 ## 실행 방법
 
 ### Backend
