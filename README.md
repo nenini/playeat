@@ -27,11 +27,10 @@ PlayEat은 이 분석 결과를 단순한 숫자로 끝내지 않고 캐릭터 �
 
 ## 팀원 소개
 
-| 이름 | 역할 | GitHub |
-| --- | --- | --- |
-| TODO | Frontend / Backend | TODO |
-| TODO | Frontend / Backend | TODO |
-| TODO | Frontend / Backend | TODO |
+| 이름 | 역할 | 주요 담당 | GitHub |
+| --- | --- | --- | --- |
+| 강민수 | Backend / Frontend | 백엔드 코어, AI, 인증/사용자/건강 프로필, 음식/식단/영양 분석, 캐릭터 성장 로직, AI 코칭/리포트/RAG, 프론트 API 통합 및 설계 문서 | [minsu42](https://github.com/minsu42) |
+| 고예린 | Frontend / Backend | 프로젝트 초기 세팅, 프론트 초기 화면/디자인, 길드/보스전/퀘스트/보상, 코인/아이템/상점, 랭킹/대시보드, UI/API 보정 | [nenini](https://github.com/nenini) |
 
 ## 주요 기능
 
