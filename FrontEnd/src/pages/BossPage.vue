@@ -405,7 +405,7 @@ type RecentAttack = {
   attackerName: string;
 };
 
-const SHOW_ATTACK_REPLAY_TEST_BUTTON = true;
+const SHOW_ATTACK_REPLAY_TEST_BUTTON = false;
 
 defineEmits<{ navigate: [page: PageId] }>();
 
