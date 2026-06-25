@@ -151,24 +151,33 @@ function arrayValue(value: unknown) {
 }
 
 function mapGender(value: unknown): string | null {
-  const map: Record<string, string> = { '여성': 'FEMALE', '남성': 'MALE', '기타': 'OTHER', '선택 안 함': 'OTHER' }
   const raw = stringOrNull(value)
-  return (raw && map[raw]) || null
+  if (!raw) return null
+  if (['FEMALE', 'MALE', 'OTHER'].includes(raw.toUpperCase())) return raw.toUpperCase()
+  if (raw.includes('여')) return 'FEMALE'
+  if (raw.includes('남')) return 'MALE'
+  return 'OTHER'
 }
 
 function mapHealthGoal(value: unknown): string | null {
-  const map: Record<string, string> = { '감량': 'LOSE_WEIGHT', '증량': 'GAIN_WEIGHT', '유지': 'MAINTAIN' }
   const raw = stringOrNull(value)
-  return (raw && map[raw]) || null
+  if (!raw) return null
+  const normalized = raw.toUpperCase()
+  if (['LOSE_WEIGHT', 'GAIN_WEIGHT', 'MAINTAIN'].includes(normalized)) return normalized
+  if (raw.includes('감량')) return 'LOSE_WEIGHT'
+  if (raw.includes('증량')) return 'GAIN_WEIGHT'
+  if (raw.includes('유지')) return 'MAINTAIN'
+  return null
 }
 
 function mapActivityLevel(value: unknown): string | null {
-  const map: Record<string, string> = {
-    '거의 앉아 있어요': 'SEDENTARY',
-    '가벼운 활동이 있어요': 'LIGHT',
-    '많이 걷거나 움직여요': 'MODERATE',
-    '육체 활동이 많아요': 'ACTIVE'
-  }
   const raw = stringOrNull(value)
-  return (raw && map[raw]) || null
+  if (!raw) return null
+  const normalized = raw.toUpperCase()
+  if (['SEDENTARY', 'LIGHT', 'MODERATE', 'ACTIVE', 'VERY_ACTIVE'].includes(normalized)) return normalized
+  if (raw.includes('거의')) return 'SEDENTARY'
+  if (raw.includes('가벼운')) return 'LIGHT'
+  if (raw.includes('많이')) return 'MODERATE'
+  if (raw.includes('육체')) return 'ACTIVE'
+  return null
 }
