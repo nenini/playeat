@@ -28,11 +28,10 @@ class ConditionEvaluationServiceTest {
         BattleStateRow battle = battle();
         BattleConditionStateRow condition = condition("TOTAL_COUNT");
         LocalDate today = LocalDate.of(2026, 6, 21);
-        LocalDateTime endAt = LocalDate.of(2026, 6, 22).atStartOfDay();
         when(questRepository.countGuildBattleSatisfiedDiets(
                 1L,
-                battle.getStartedAt(),
-                endAt,
+                LocalDate.of(2026, 6, 15),
+                today,
                 "SUGAR",
                 "LESS_THAN_OR_EQUAL",
                 new BigDecimal("20"),
@@ -45,8 +44,8 @@ class ConditionEvaluationServiceTest {
         assertThat(currentValue).isEqualTo(3);
         verify(questRepository).countGuildBattleSatisfiedDiets(
                 1L,
-                battle.getStartedAt(),
-                endAt,
+                LocalDate.of(2026, 6, 15),
+                today,
                 "SUGAR",
                 "LESS_THAN_OR_EQUAL",
                 new BigDecimal("20"),

@@ -87,6 +87,9 @@ class GuildServiceTest {
     @Mock
     private CharacterEquipmentRepository characterEquipmentRepository;
 
+    @Mock
+    private GuildChatService guildChatService;
+
     private GuildService guildService;
 
     @BeforeEach
@@ -99,7 +102,8 @@ class GuildServiceTest {
                 userRepository,
                 guildValidator,
                 guildScoreService,
-                characterEquipmentRepository
+                characterEquipmentRepository,
+                guildChatService
         );
     }
 

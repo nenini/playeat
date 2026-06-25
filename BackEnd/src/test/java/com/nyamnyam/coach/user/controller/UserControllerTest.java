@@ -72,6 +72,8 @@ class UserControllerTest {
                         "/uploads/profile-images/profile.png",
                         1L,
                         "ACTIVE",
+                        "LOCAL",
+                        true,
                         false,
                         LocalDateTime.of(2026, 5, 26, 10, 0)
                 ));

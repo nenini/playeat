@@ -83,8 +83,8 @@ class QuestConditionRepositoryTest {
     private int count(String metricType, String comparisonType, String threshold) {
         return questRepository.countGuildBattleSatisfiedDiets(
                 BATTLE_ID,
-                START_AT,
-                END_AT,
+                START_AT.toLocalDate(),
+                END_AT.toLocalDate(),
                 metricType,
                 comparisonType,
                 new BigDecimal(threshold),
